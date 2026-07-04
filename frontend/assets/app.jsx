@@ -847,20 +847,20 @@ const { useState, useEffect } = React;
                                     <div className="comm-label">qx (il)</div>
                                     <div className="comm-value">{pricingResult.engineData.qx_annual}</div>
                                   </div>
-                                  <div className="commutation-box" title="SÖ">
-                                    <div className="comm-label">SÖ</div>
+                                  <div className="commutation-box" title="Sığorta ödənişləri">
+                                    <div className="comm-label">SÖ (Sığorta ödənişləri)</div>
                                     <div className="comm-value">{pricingResult.engineData.liability_benefits}</div>
                                   </div>
-                                  <div className="commutation-box" title="ZTX">
-                                    <div className="comm-label">ZTX</div>
+                                  <div className="commutation-box" title="Zərərlərin tənzimləmə xərcləri">
+                                    <div className="comm-label">ZTX (Zərərlərin tənzimləmə x. )</div>
                                     <div className="comm-value">{pricingResult.engineData.liability_risk_margin}</div>
                                   </div>
-                                  <div className="commutation-box" title="İAX">
-                                    <div className="comm-label">İAX</div>
+                                  <div className="commutation-box" title="İnzibati və Administrativ xərclər">
+                                    <div className="comm-label">İAX (İnzibati və Adm. x. )</div>
                                     <div className="comm-value">{pricingResult.engineData.liability_expenses}</div>
                                   </div>
-                                  <div className="commutation-box" title="SH">
-                                    <div className="comm-label">SH</div>
+                                  <div className="commutation-box" title="Sığorta haqları">
+                                    <div className="comm-label">SH (Sığorta haqları)</div>
                                     <div className="comm-value">{pricingResult.engineData.asset_premiums}</div>
                                   </div>
                                   <div className="commutation-box" style={{ gridColumn: 'span 2', background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }} title="Yekun Reserve">

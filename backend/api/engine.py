@@ -207,9 +207,13 @@ class ActuarialValuationEngine:
             )
 
         balance_index = min(max(elapsed_m, 0), len(outstanding_balance) - 1) if len(outstanding_balance) > 0 else 0
+        # SÖ (Sığorta ödənişləri)
         res_so = benefits_payable.sum()
+        # ZTX (Zərərlərin tənzimləmə xərcləri)
         res_ztx = expenses_mortality.sum()
+        # İAX (İnzibati və Administrativ xərclər)
         res_iax = expenses_maintenance.sum()
+        # SH (Sığorta haqları)
         res_sh = present_value_premiums.sum()
         
         components = {
