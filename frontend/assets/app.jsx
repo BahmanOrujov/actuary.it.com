@@ -81,7 +81,7 @@ const { useState, useEffect } = React;
         marginMortality: 0.03,
         marginInvestment: 0.0,
         costAcquisitionInitial: 0.0,
-        costAcquisition: 0.01,
+        costAcquisition: 0.003,
         paymentFrequency: 12
       });
 
@@ -931,7 +931,7 @@ const { useState, useEffect } = React;
                             </div>
                             <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                               <label className="form-label">{lang === 'AZ' ? 'Dövrü Akvizisiya (betta)' : 'Acquisition Cost (betta)'}</label>
-                              <input type="number" step="0.01" className="input-field" value={reserveParams.costAcquisition} onChange={e => setReserveParams({ ...reserveParams, costAcquisition: parseFloat(e.target.value) || 0 })} />
+                              <input type="number" step="0.001" className="input-field" value={reserveParams.costAcquisition} onChange={e => setReserveParams({ ...reserveParams, costAcquisition: parseFloat(e.target.value) || 0 })} />
                             </div>
                             <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                               <label className="form-label">{lang === 'AZ' ? 'İnzibati Xərclər (gamma)' : 'Maintenance Exp. (gamma)'}</label>
