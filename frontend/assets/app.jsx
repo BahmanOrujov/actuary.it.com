@@ -84,7 +84,7 @@ const { useState, useEffect } = React;
             .then(res => res.text())
             .then(text => {
               const lines = text.trim().split('\n').slice(1);
-              const data = lines.map(line => {
+              const data = lines.map((line, idx) => {
                 const parts = line.split(',');
                 let x, lxStr, dxStr;
                 if (parts.length > 3) {
@@ -97,6 +97,7 @@ const { useState, useEffect } = React;
                   dxStr = parts[2];
                 }
                 return { 
+                  month: idx + 1,
                   x: parseInt(x), 
                   lx: parseFloat(lxStr), 
                   dx: parseFloat(dxStr) 
@@ -1305,11 +1306,12 @@ const { useState, useEffect } = React;
                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'right' }}>
                                <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-glass)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--border-color)', zIndex: 10 }}>
                                  <tr>
-                                   <th style={{ padding: '0.75rem', textAlign: 'center' }}>X (Ay)</th>
+                                   <th style={{ padding: '0.75rem', textAlign: 'center' }}>Ay</th>
+                                   <th style={{ padding: '0.75rem', textAlign: 'center' }}>X (Yaş)</th>
                                    <th style={{ padding: '0.75rem' }}>l(x)</th>
                                    <th style={{ padding: '0.75rem' }}>d(x)</th>
-                                   <th style={{ padding: '0.75rem' }}>q(x)</th>
-                                   <th style={{ padding: '0.75rem' }}>p(x)</th>
+                                   <th style={{ padding: '0.75rem' }}>q(x) (%)</th>
+                                   <th style={{ padding: '0.75rem' }}>p(x) (%)</th>
                                    <th style={{ padding: '0.75rem' }}>D(x)</th>
                                    <th style={{ padding: '0.75rem' }}>C(x)</th>
                                    <th style={{ padding: '0.75rem' }}>N(x)</th>
@@ -1319,11 +1321,12 @@ const { useState, useEffect } = React;
                                <tbody>
                                  {mortalityTable.map((row, i) => (
                                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                     <td style={{ padding: '0.5rem', textAlign: 'center' }}>{row.month}</td>
                                      <td style={{ padding: '0.5rem', textAlign: 'center' }}>{row.x}</td>
                                      <td style={{ padding: '0.5rem' }}>{row.lx?.toFixed(2)}</td>
                                      <td style={{ padding: '0.5rem' }}>{row.dx?.toFixed(6)}</td>
-                                     <td style={{ padding: '0.5rem' }}>{row.qx?.toFixed(6)}</td>
-                                     <td style={{ padding: '0.5rem' }}>{row.px?.toFixed(6)}</td>
+                                     <td style={{ padding: '0.5rem' }}>{(row.qx * 100)?.toFixed(10)}%</td>
+                                     <td style={{ padding: '0.5rem' }}>{(row.px * 100)?.toFixed(10)}%</td>
                                      <td style={{ padding: '0.5rem' }}>{row.Dx?.toFixed(2)}</td>
                                      <td style={{ padding: '0.5rem' }}>{row.Cx?.toFixed(4)}</td>
                                      <td style={{ padding: '0.5rem' }}>{row.Nx?.toFixed(2)}</td>
