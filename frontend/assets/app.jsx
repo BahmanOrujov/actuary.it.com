@@ -34,10 +34,10 @@ const { useState, useEffect } = React;
       const [lang, setLang] = useState('AZ');
       const [activeTab, setActiveTab] = useState('home');
       const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-      const [softwareTab, setSoftwareTab] = useState('dashboard');
       const [selectedCv, setSelectedCv] = useState(null);
-      const [sidebarOpen, setSidebarOpen] = useState(true);
       const [selectedArticle, setSelectedArticle] = useState(null);
+      const [softwareTab, setSoftwareTab] = useState('pricing');
+      const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
       const [articleText, setArticleText] = useState('');
       const [loadingArticle, setLoadingArticle] = useState(false);
       const [formulaCategory, setFormulaCategory] = useState('docs');
@@ -697,7 +697,7 @@ const { useState, useEffect } = React;
                 {softwareTab === 'pricing' && (
                   <div>
                     <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.pricingTitle}</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                    <div className="responsive-grid-2">
                       {/* Inputs */}
                       <div className="glass-card">
                         <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.pricingSubTitle}</h3>
@@ -817,7 +817,7 @@ const { useState, useEffect } = React;
                 {softwareTab === 'reserve' && (
                   <div>
                     <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.reserveTitle}</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '2rem' }}>
+                    <div className="responsive-grid-1-5">
                       <div className="glass-card" style={{ height: 'fit-content' }}>
                         <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.reserveScenario}</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -892,7 +892,7 @@ const { useState, useEffect } = React;
                 {softwareTab === 'portfolio' && (
                   <div>
                     <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.portfolioDashboard}</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+                    <div className="responsive-grid-2" style={{ marginBottom: '2rem' }}>
                       <div className="glass-card">
                         <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>{t.productDist}</h3>
                         <div className="mock-chart-container" style={{ justifyContent: 'space-around', alignItems: 'flex-end', height: '240px' }}>
@@ -962,7 +962,7 @@ const { useState, useEffect } = React;
                     {searchedPolicy ? (
                       <div className="glass-card">
                         <h3 style={{ marginBottom: '1.5rem', fontSize: '1.25rem' }}>{t.policyDetailsTitle}</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', fontSize: '0.95rem' }}>
+                        <div className="responsive-grid-2" style={{ gap: '1.5rem', fontSize: '0.95rem' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <div><span style={{ color: 'var(--text-secondary)' }}>{t.customerName}</span> <strong>{searchedPolicy.name}</strong></div>
                             <div><span style={{ color: 'var(--text-secondary)' }}>{t.policyIdCert}</span> <strong>{searchedPolicy.id} / {searchedPolicy.cert}</strong></div>
@@ -1088,7 +1088,7 @@ const { useState, useEffect } = React;
                 {softwareTab === 'reports' && (
                   <div>
                     <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.reportGeneratorTitle}</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem' }}>
+                    <div className="responsive-grid-1-2-1">
                       <div className="glass-card">
                         <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.reportTypesTitle}</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

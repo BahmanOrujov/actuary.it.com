@@ -1188,3 +1188,25 @@
   .hero-title { font-size: 2rem !important; }
   .nav-tabs button { flex: 1 1 100%; }
 }
+
+/* Responsive Grid Classes for overriding inline styles */
+.responsive-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+.responsive-grid-1-5 {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 2rem;
+}
+.responsive-grid-1-2-1 {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 2rem;
+}
+@media (max-width: 768px) {
+  .responsive-grid-2, .responsive-grid-1-5, .responsive-grid-1-2-1 {
+    grid-template-columns: 1fr !important;
+  }
+}
