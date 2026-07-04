@@ -741,9 +741,9 @@ const { useState, useEffect } = React;
                 )}
 
                 {/* SUB-TAB: PRICING ENGINE */}
-                {softwareTab === 'pricing' && (
+                {softwareTab === 'reserve' && (
                   <div>
-                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.pricingTitle}</h2>
+                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.reserveTitle}</h2>
                     <div className="responsive-grid-2">
                       {/* Inputs */}
                       <div className="glass-card">
@@ -885,9 +885,9 @@ const { useState, useEffect } = React;
                 )}
 
                 {/* SUB-TAB: RESERVE ENGINE */}
-                {softwareTab === 'reserve' && (
+                {softwareTab === 'pricing' && (
                   <div>
-                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.reserveTitle}</h2>
+                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.pricingTitle}</h2>
                     <div className="responsive-grid-1-5">
                       <div className="glass-card" style={{ height: 'fit-content' }}>
                         <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.reserveScenario}</h3>
@@ -1049,14 +1049,14 @@ const { useState, useEffect } = React;
 
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
                           <button className="btn-secondary" onClick={() => {
-                            setPricingParams({ ...pricingParams, age: searchedPolicy.age, gender: searchedPolicy.gender, product: searchedPolicy.product });
+                            setReserveParams({ ...reserveParams, policyId: searchedPolicy.id });
                             setSoftwareTab('pricing');
                             alert(lang==='AZ'?"Müqavilə parametrləri yükləndi.":"Policy parameters loaded.");
                           }}>
                             {t.loadParamsPricing}
                           </button>
                           <button className="btn-secondary" onClick={() => {
-                            setReserveParams({ ...reserveParams, policyId: searchedPolicy.id });
+                            setPricingParams({ ...pricingParams, age: searchedPolicy.age, gender: searchedPolicy.gender, product: searchedPolicy.product });
                             setSoftwareTab('reserve');
                             alert(lang==='AZ'?"Müqavilə parametrləri yükləndi.":"Policy parameters loaded.");
                           }}>
