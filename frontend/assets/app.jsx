@@ -76,7 +76,23 @@ const { useState, useEffect } = React;
 
       const [reserveResult, setReserveResult] = useState(null);
 
-      const [searchPolicyId, setSearchPolicyId] = useState('');
+      const [mortalityTable, setMortalityTable] = useState([]);
+
+      useEffect(() => {
+        if (softwareTab === 'pricing' && mortalityTable.length === 0) {
+          fetch('./assets/Monthlydeathtable.csv')
+            .then(res => res.text())
+            .then(text => {
+              const lines = text.trim().split('\n').slice(1, 101);
+              const data = lines.map(line => {
+                const [x, lx, dx] = line.split(',');
+                return { x, lx: lx?.replace(/"/g, ''), dx };
+              });
+              setMortalityTable(data);
+            })
+            .catch(err => console.error(err));
+        }
+      }, [softwareTab]);      const [searchPolicyId, setSearchPolicyId] = useState('');
       const [searchedPolicy, setSearchedPolicy] = useState(null);
 
       const [reportsList, setReportsList] = useState([]);
@@ -647,7 +663,7 @@ const { useState, useEffect } = React;
                 {softwareTab === 'pricing' && (
                   <div>
                     <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.pricingTitle}</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem' }}>
                       {/* Inputs */}
                       <div className="glass-card">
                         <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.pricingSubTitle}</h3>
@@ -759,6 +775,32 @@ const { useState, useEffect } = React;
                           )}
                         </div>
                       </div>
+
+                      {/* Mortality Table Strip */}
+                      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: '600px' }}>
+                        <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>{lang === 'AZ' ? 'Aylıq Ölüm Cədvəli' : 'Monthly Death Table'}</h3>
+                        <div style={{ overflowY: 'auto', flexGrow: 1, paddingRight: '0.5rem' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                            <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-glass)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--border-color)' }}>
+                              <tr>
+                                <th style={{ padding: '0.5rem' }}>X (Ay)</th>
+                                <th style={{ padding: '0.5rem' }}>l(x)</th>
+                                <th style={{ padding: '0.5rem' }}>d(x)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {mortalityTable.map((row, i) => (
+                                <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                  <td style={{ padding: '0.5rem' }}>{row.x}</td>
+                                  <td style={{ padding: '0.5rem' }}>{row.lx}</td>
+                                  <td style={{ padding: '0.5rem' }}>{parseFloat(row.dx).toFixed(2)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
                 )}
