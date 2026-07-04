@@ -40,8 +40,7 @@ const { useState, useEffect } = React;
       const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
       const [articleText, setArticleText] = useState('');
       const [loadingArticle, setLoadingArticle] = useState(false);
-      const [formulaCategory, setFormulaCategory] = useState('docs');
-      const [activePdf, setActivePdf] = useState('telimat');
+      const [formulaCategory, setFormulaCategory] = useState('mortality');
 
       const t = translations[lang];
 
@@ -1016,35 +1015,12 @@ const { useState, useEffect } = React;
                      
                      {/* Category tabs */}
                      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', flexWrap: 'wrap' }}>
-                       <button className={`btn-secondary ${formulaCategory === 'docs' ? 'active' : ''}`} style={formulaCategory === 'docs' ? { background: 'rgba(99, 102, 241, 0.15)', borderColor: 'var(--color-primary)' } : {}} onClick={() => setFormulaCategory('docs')}>
-                         {lang === 'AZ' ? "Rəsmi Sənədlər (PDF)" : "Official Documents (PDF)"}
-                       </button>
                        <button className={`btn-secondary ${formulaCategory === 'mortality' ? 'active' : ''}`} style={formulaCategory === 'mortality' ? { background: 'rgba(99, 102, 241, 0.15)', borderColor: 'var(--color-primary)' } : {}} onClick={() => setFormulaCategory('mortality')}>
                          {lang === 'AZ' ? "Ölüm Cədvəli" : "Mortality Table"}
                        </button>
                      </div>
 
                      <div className="glass-card" style={{ padding: '2rem' }}>
-                       {/* CATEGORY: NON-LIFE */}
-                       {formulaCategory === 'docs' && (
-                         <div>
-                           <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-                             <button className="btn-secondary" style={activePdf === 'telimat' ? { background: 'var(--color-primary)', color: 'white', borderColor: 'var(--color-primary)' } : {}} onClick={() => setActivePdf('telimat')}>
-                               📄 {lang === 'AZ' ? "Aktuar Hesablamalar Təlimatı" : "Actuarial Calculations Instruction"}
-                             </button>
-                             <button className="btn-secondary" style={activePdf === 'qaydalar' ? { background: 'var(--color-primary)', color: 'white', borderColor: 'var(--color-primary)' } : {}} onClick={() => setActivePdf('qaydalar')}>
-                               📄 {lang === 'AZ' ? "Ehtiyatların Formalaşdırılması Qaydaları" : "Reserving Rules Guidelines"}
-                             </button>
-                           </div>
-                           <div style={{ background: 'rgba(255,255,255,0.01)', borderRadius: '12px', padding: '0.75rem', border: '1px solid var(--border-color)' }}>
-                             {activePdf === 'telimat' ? (
-                               <iframe src="./docs/Aktuar_Hesablamalar_Telimat.pdf" width="100%" height="800px" style={{ border: 'none', borderRadius: '8px' }}></iframe>
-                             ) : (
-                               <iframe src="./docs/Sigorta_Ehtiyatlari_Qaydalar.pdf" width="100%" height="800px" style={{ border: 'none', borderRadius: '8px' }}></iframe>
-                             )}
-                           </div>
-                         </div>
-                       )}
 
                        {/* CATEGORY: MORTALITY TABLE */}
                        {formulaCategory === 'mortality' && (
