@@ -69,6 +69,7 @@ const { useState, useEffect } = React;
 
       const [reserveParams, setReserveParams] = useState({
         policyId: 'POL-2401',
+        valuationDate: '2026-01-01',
         birthDate: '1996-01-01',
         startDate: '2025-01-01',
         endDate: '2045-01-01',
@@ -162,6 +163,7 @@ const { useState, useEffect } = React;
         try {
           const payload = {
             params: {
+              valuation_date: reserveParams.valuationDate,
               interest_rate_annual: parseFloat(reserveParams.interest) / 100 || 0.05,
               expense_maintenance: parseFloat(reserveParams.expenseMaintenance) || 0.0025,
               margin_mortality: parseFloat(reserveParams.marginMortality) || 0.03,
@@ -889,6 +891,10 @@ const { useState, useEffect } = React;
                             </select>
                           </div>
 
+                          <div className="form-group">
+                            <label className="form-label">{lang === 'AZ' ? 'Hesabat tarixi' : 'Valuation Date'}</label>
+                            <input type="date" className="input-field" value={reserveParams.valuationDate} onChange={e => setReserveParams({ ...reserveParams, valuationDate: e.target.value })} />
+                          </div>
                           <div className="form-group">
                             <label className="form-label">{lang === 'AZ' ? 'Doğum tarixi' : 'Birth Date'}</label>
                             <input type="date" className="input-field" value={reserveParams.birthDate} onChange={e => setReserveParams({ ...reserveParams, birthDate: e.target.value })} />
