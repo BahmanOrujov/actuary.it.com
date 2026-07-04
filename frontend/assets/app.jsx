@@ -137,13 +137,53 @@ const { useState, useEffect } = React;
       const [generatingReport, setGeneratingReport] = useState(null);
 
       // --- ALL MATHEMATICAL CALCULATIONS CLEANED TO ZERO AS REQUESTED ---
-      const calculatePricing = () => {
-        setPricingResult({
-          commutations: { Dx: 0, Nx: 0, Cx: 0, Mx: 0 },
-          netPremium: 0,
-          grossPremium: 0,
-          monthlyPremium: 0
-        });
+      const calculatePricing = async () => {
+        try {
+          const payload = {
+            params: {
+              interest_rate_annual: pricingParams.discountRate / 100,
+              expense_maintenance: 0.0025, // Default for now
+              margin_mortality: 0.03, // Default for now
+              cost_acquisition: 0.01, // Default for now
+              payment_frequency: 12
+            },
+            policy: {
+              policy_id: "POL-" + Math.floor(Math.random() * 10000),
+              dob: pricingParams.birthDate,
+              inception_date: pricingParams.startDate,
+              maturity_date: pricingParams.endDate,
+              sum_insured_initial: parseFloat(pricingParams.sumAssured) || 0,
+              net_premium: parseFloat(pricingParams.premium) || 0,
+              credit_apr: parseFloat(pricingParams.creditInterest) || 0,
+              policy_type: pricingParams.insuranceClass
+            }
+          };
+
+          const response = await fetch('http://localhost:8000/api/valuation/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const res = await response.json();
+          if (res.status === 'success') {
+            setPricingResult({
+              commutations: { 
+                Dx: 0, Nx: 0, Cx: 0, Mx: 0 
+              },
+              netPremium: res.data.asset_premiums,
+              grossPremium: res.data.net_mathematical_reserve,
+              monthlyPremium: res.data.liability_benefits,
+              engineData: res.data
+            });
+          } else {
+            console.error(res.message);
+            alert("Hesablama xətası: " + res.message);
+          }
+        } catch (error) {
+          console.error(error);
+          alert("Serverə qoşulmaq mümkün olmadı. Backend-in işlədiyinə əmin olun.");
+        }
       };
 
       const calculateReserve = () => {
@@ -788,25 +828,49 @@ const { useState, useEffect } = React;
                               </div>
 
                               <div style={{ marginTop: '1rem' }}>
-                                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{t.commutationLabel}</h4>
+                                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{lang === 'AZ' ? 'Aktuar Mühərrik Göstəriciləri' : 'Actuarial Engine Metrics'}</h4>
+                                {pricingResult.engineData ? (
                                 <div className="commutation-grid">
-                                  <div className="commutation-box">
-                                    <div className="comm-label">Dx</div>
-                                    <div className="comm-value">{pricingResult.commutations.Dx}</div>
+                                  <div className="commutation-box" title="Tam Yaş (İllik)">
+                                    <div className="comm-label">Tam Yaş</div>
+                                    <div className="comm-value">{pricingResult.engineData.age_years}</div>
                                   </div>
-                                  <div className="commutation-box">
-                                    <div className="comm-label">Nx</div>
-                                    <div className="comm-value">{pricingResult.commutations.Nx}</div>
+                                  <div className="commutation-box" title="Yaş (Aylıq)">
+                                    <div className="comm-label">Yaş (ay)</div>
+                                    <div className="comm-value">{pricingResult.engineData.age_months}</div>
                                   </div>
-                                  <div className="commutation-box">
-                                    <div className="comm-label">Cx</div>
-                                    <div className="comm-value">{pricingResult.commutations.Cx}</div>
+                                  <div className="commutation-box" title="Aylıq Ölüm Ehtimalı">
+                                    <div className="comm-label">qx (ay)</div>
+                                    <div className="comm-value">{pricingResult.engineData.qx_monthly}</div>
                                   </div>
-                                  <div className="commutation-box">
-                                    <div className="comm-label">Mx</div>
-                                    <div className="comm-value">{pricingResult.commutations.Mx}</div>
+                                  <div className="commutation-box" title="İllik Ölüm Ehtimalı">
+                                    <div className="comm-label">qx (il)</div>
+                                    <div className="comm-value">{pricingResult.engineData.qx_annual}</div>
+                                  </div>
+                                  <div className="commutation-box" title="SÖ">
+                                    <div className="comm-label">SÖ</div>
+                                    <div className="comm-value">{pricingResult.engineData.liability_benefits}</div>
+                                  </div>
+                                  <div className="commutation-box" title="ZTX">
+                                    <div className="comm-label">ZTX</div>
+                                    <div className="comm-value">{pricingResult.engineData.liability_risk_margin}</div>
+                                  </div>
+                                  <div className="commutation-box" title="İAX">
+                                    <div className="comm-label">İAX</div>
+                                    <div className="comm-value">{pricingResult.engineData.liability_expenses}</div>
+                                  </div>
+                                  <div className="commutation-box" title="SH">
+                                    <div className="comm-label">SH</div>
+                                    <div className="comm-value">{pricingResult.engineData.asset_premiums}</div>
+                                  </div>
+                                  <div className="commutation-box" style={{ gridColumn: 'span 2', background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }} title="Yekun Reserve">
+                                    <div className="comm-label">Reserve</div>
+                                    <div className="comm-value" style={{ color: 'var(--color-primary)' }}>{pricingResult.engineData.final_reserve}</div>
                                   </div>
                                 </div>
+                                ) : (
+                                  <div style={{ color: 'var(--text-muted)' }}>Məlumat yoxdur</div>
+                                )}
                               </div>
                             </div>
                           ) : (
