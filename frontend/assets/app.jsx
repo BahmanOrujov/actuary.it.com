@@ -79,7 +79,7 @@ const { useState, useEffect } = React;
         interest: 5.0,
         expenseMaintenance: 0.0025,
         marginMortality: 0.03,
-        marginInvestment: 0.0,
+        marginInvestment: 0.015,
         costAcquisitionInitial: 0.0,
         costAcquisition: 0.003,
         paymentFrequency: 12
@@ -926,10 +926,6 @@ const { useState, useEffect } = React;
                           <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border-color)', marginTop: '0.5rem' }}>
                             <h4 style={{ marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{lang === 'AZ' ? 'Aktuar Sabitlər' : 'Actuarial Constants'}</h4>
                             <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                              <label className="form-label">{lang === 'AZ' ? 'İlk Akvizisiya (alpha)' : 'Initial Acq. (alpha)'}</label>
-                              <input type="number" step="0.01" className="input-field" value={reserveParams.costAcquisitionInitial} onChange={e => setReserveParams({ ...reserveParams, costAcquisitionInitial: parseFloat(e.target.value) || 0 })} />
-                            </div>
-                            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                               <label className="form-label">{lang === 'AZ' ? 'Dövrü Akvizisiya (betta)' : 'Acquisition Cost (betta)'}</label>
                               <input type="number" step="0.001" className="input-field" value={reserveParams.costAcquisition} onChange={e => setReserveParams({ ...reserveParams, costAcquisition: parseFloat(e.target.value) || 0 })} />
                             </div>
@@ -941,10 +937,13 @@ const { useState, useEffect } = React;
                               <label className="form-label">{lang === 'AZ' ? 'Ölüm Marjası (ro1)' : 'Mortality Margin (ro1)'}</label>
                               <input type="number" step="0.01" className="input-field" value={reserveParams.marginMortality} onChange={e => setReserveParams({ ...reserveParams, marginMortality: parseFloat(e.target.value) || 0 })} />
                             </div>
-                            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                              <label className="form-label">{lang === 'AZ' ? 'İnvestisiya Marjası (ro2)' : 'Investment Margin (ro2)'}</label>
-                              <input type="number" step="0.01" className="input-field" value={reserveParams.marginInvestment} onChange={e => setReserveParams({ ...reserveParams, marginInvestment: parseFloat(e.target.value) || 0 })} />
-                            </div>
+                            
+                            {reserveParams.policyType === 'life_endowment' && (
+                              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                                <label className="form-label">{lang === 'AZ' ? 'İnvestisiya Marjası (ro2)' : 'Investment Margin (ro2)'}</label>
+                                <input type="number" step="0.01" className="input-field" value={reserveParams.marginInvestment} onChange={e => setReserveParams({ ...reserveParams, marginInvestment: parseFloat(e.target.value) || 0 })} />
+                              </div>
+                            )}
                             <div className="form-group" style={{ marginBottom: '0' }}>
                               <label className="form-label">{lang === 'AZ' ? 'Ödəniş Tezliyi (payment_frequency)' : 'Payment Frequency'}</label>
                               <input type="number" className="input-field" value={reserveParams.paymentFrequency} onChange={e => setReserveParams({ ...reserveParams, paymentFrequency: parseInt(e.target.value) || 12 })} />
