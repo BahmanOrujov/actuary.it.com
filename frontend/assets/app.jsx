@@ -85,11 +85,21 @@ const { useState, useEffect } = React;
             .then(text => {
               const lines = text.trim().split('\n').slice(1);
               const data = lines.map(line => {
-                const [x, lx, dx] = line.split(',');
+                const parts = line.split(',');
+                let x, lxStr, dxStr;
+                if (parts.length > 3) {
+                  x = parts[0];
+                  dxStr = parts[parts.length - 1];
+                  lxStr = parts.slice(1, parts.length - 1).join('').replace(/"/g, '');
+                } else {
+                  x = parts[0];
+                  lxStr = parts[1]?.replace(/"/g, '');
+                  dxStr = parts[2];
+                }
                 return { 
                   x: parseInt(x), 
-                  lx: parseFloat(lx?.replace(/"/g, '')), 
-                  dx: parseFloat(dx) 
+                  lx: parseFloat(lxStr), 
+                  dx: parseFloat(dxStr) 
                 };
               });
               
