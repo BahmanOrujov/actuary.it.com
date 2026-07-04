@@ -375,8 +375,8 @@ const { useState, useEffect } = React;
 
                 <div className="cv-contact-grid">
                   <div>📧 <strong>Email:</strong> {selectedCv.email}</div>
-                  <div>📞 <strong>Phone:</strong> {selectedCv.phone}</div>
                   <div>🔗 <strong>LinkedIn:</strong> <a href={`https://${selectedCv.linkedin}`} target="_blank" style={{color: 'var(--color-primary)'}}>{selectedCv.linkedin}</a></div>
+                  <div>📞 <strong>Phone:</strong> {selectedCv.phone}</div>
                   <div>🌐 <strong>{t.cvLang}:</strong> {selectedCv.languages[lang]}</div>
                 </div>
 
