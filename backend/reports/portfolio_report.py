@@ -1,3 +1,1 @@
-# Portfolio Report generator implementation placeholder
-def generate_portfolio_report(data):
-    pass
+# Hesablama m?ntiqi silinib. Yenid?n qurulacaq.

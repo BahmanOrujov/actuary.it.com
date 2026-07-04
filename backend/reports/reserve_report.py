@@ -1,3 +1,1 @@
-# Reserve Report generator implementation placeholder
-def generate_reserve_report(data):
-    pass
+# Hesablama m?ntiqi silinib. Yenid?n qurulacaq.
