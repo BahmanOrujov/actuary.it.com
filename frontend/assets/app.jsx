@@ -182,8 +182,8 @@ const { useState, useEffect } = React;
             }
           };
 
-          // NOTE: Change this to your Render URL after deployment (e.g., 'https://actuary-backend.onrender.com')
-          const API_BASE_URL = 'http://localhost:8000';
+          // Render URL
+          const API_BASE_URL = 'https://actuary-it-com.onrender.com';
           const response = await fetch(`${API_BASE_URL}/api/valuation/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
