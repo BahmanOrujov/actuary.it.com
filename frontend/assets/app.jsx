@@ -170,7 +170,7 @@ const { useState, useEffect } = React;
               margin_investment: parseFloat(reserveParams.marginInvestment) || 0.0,
               cost_acquisition_initial: parseFloat(reserveParams.costAcquisitionInitial) || 0.0,
               cost_acquisition: parseFloat(reserveParams.costAcquisition) || 0.01,
-              payment_frequency: parseInt(reserveParams.paymentFrequency) || 12
+              payment_frequency: reserveParams.policyType === 'credit' ? 1 : (parseInt(reserveParams.paymentFrequency) || 12)
             },
             policy: {
               policy_id: reserveParams.policyId,
@@ -950,10 +950,12 @@ const { useState, useEffect } = React;
                                 <input type="number" step="0.01" className="input-field" value={reserveParams.marginInvestment} onChange={e => setReserveParams({ ...reserveParams, marginInvestment: parseFloat(e.target.value) || 0 })} />
                               </div>
                             )}
-                            <div className="form-group" style={{ marginBottom: '0' }}>
-                              <label className="form-label">{lang === 'AZ' ? 'Ödəniş Tezliyi (payment_frequency)' : 'Payment Frequency'}</label>
-                              <input type="number" className="input-field" value={reserveParams.paymentFrequency} onChange={e => setReserveParams({ ...reserveParams, paymentFrequency: parseInt(e.target.value) || 12 })} />
-                            </div>
+                            {reserveParams.policyType !== 'credit' && (
+                              <div className="form-group" style={{ marginBottom: '0' }}>
+                                <label className="form-label">{lang === 'AZ' ? 'Ödəniş Tezliyi (payment_frequency)' : 'Payment Frequency'}</label>
+                                <input type="number" className="input-field" value={reserveParams.paymentFrequency} onChange={e => setReserveParams({ ...reserveParams, paymentFrequency: parseInt(e.target.value) || 12 })} />
+                              </div>
+                            )}
                           </div>
                           <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={calculateReserve}>
                             {t.btnCalculateReserve}
