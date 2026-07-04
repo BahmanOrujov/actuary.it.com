@@ -137,25 +137,42 @@ const { useState, useEffect } = React;
       const [generatingReport, setGeneratingReport] = useState(null);
 
       // --- ALL MATHEMATICAL CALCULATIONS CLEANED TO ZERO AS REQUESTED ---
-      const calculatePricing = async () => {
+      const calculatePricing = () => {
+        setPricingResult({
+          commutations: { Dx: 0, Nx: 0, Cx: 0, Mx: 0 },
+          netPremium: 0,
+          grossPremium: 0,
+          monthlyPremium: 0
+        });
+      };
+
+      const calculateReserve = async () => {
         try {
+          const currentYearNum = parseInt(reserveParams.currentYear) || 1;
+          const today = new Date("2026-01-01"); 
+          const inception = new Date(today);
+          inception.setFullYear(today.getFullYear() - currentYearNum);
+          
+          const dob = new Date(inception);
+          dob.setFullYear(inception.getFullYear() - 30); // 30 yaşlı sığortalı
+
           const payload = {
             params: {
-              interest_rate_annual: pricingParams.discountRate / 100,
-              expense_maintenance: 0.0025, // Default for now
-              margin_mortality: 0.03, // Default for now
-              cost_acquisition: 0.01, // Default for now
+              interest_rate_annual: parseFloat(reserveParams.interest) / 100 || 0.05,
+              expense_maintenance: 0.0025,
+              margin_mortality: 0.03,
+              cost_acquisition: 0.01,
               payment_frequency: 12
             },
             policy: {
-              policy_id: "POL-" + Math.floor(Math.random() * 10000),
-              dob: pricingParams.birthDate,
-              inception_date: pricingParams.startDate,
-              maturity_date: pricingParams.endDate,
-              sum_insured_initial: parseFloat(pricingParams.sumAssured) || 0,
-              net_premium: parseFloat(pricingParams.premium) || 0,
-              credit_apr: parseFloat(pricingParams.creditInterest) || 0,
-              policy_type: pricingParams.insuranceClass
+              policy_id: reserveParams.policyId,
+              dob: dob.toISOString().split('T')[0],
+              inception_date: inception.toISOString().split('T')[0],
+              maturity_date: new Date(inception.setFullYear(inception.getFullYear() + 20)).toISOString().split('T')[0],
+              sum_insured_initial: 100000,
+              net_premium: 500,
+              credit_apr: 10,
+              policy_type: "life_endowment"
             }
           };
 
@@ -167,14 +184,11 @@ const { useState, useEffect } = React;
 
           const res = await response.json();
           if (res.status === 'success') {
-            setPricingResult({
-              commutations: { 
-                Dx: 0, Nx: 0, Cx: 0, Mx: 0 
-              },
-              netPremium: res.data.asset_premiums,
-              grossPremium: res.data.net_mathematical_reserve,
-              monthlyPremium: res.data.liability_benefits,
-              engineData: res.data
+            setReserveResult({
+              policyId: reserveParams.policyId,
+              currentYear: reserveParams.currentYear,
+              engineData: res.data,
+              tableData: []
             });
           } else {
             console.error(res.message);
@@ -182,23 +196,8 @@ const { useState, useEffect } = React;
           }
         } catch (error) {
           console.error(error);
-          alert("Serverə qoşulmaq mümkün olmadı. Backend-in işlədiyinə əmin olun.");
+          alert("Serverə qoşulmaq mümkün olmadı.");
         }
-      };
-
-      const calculateReserve = () => {
-        const totalTerm = 20;
-        const tableData = [];
-        for (let year = 1; year <= totalTerm; year++) {
-          if ([1, 5, 10, 20].includes(year) || year === parseInt(reserveParams.currentYear)) {
-            tableData.push({ year, reserve: 0 });
-          }
-        }
-        setReserveResult({
-          policyId: reserveParams.policyId,
-          currentYear: reserveParams.currentYear,
-          tableData
-        });
       };
 
       const searchPolicy = () => {
@@ -741,9 +740,9 @@ const { useState, useEffect } = React;
                 )}
 
                 {/* SUB-TAB: PRICING ENGINE */}
-                {softwareTab === 'reserve' && (
+                {softwareTab === 'pricing' && (
                   <div>
-                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.reserveTitle}</h2>
+                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.pricingTitle}</h2>
                     <div className="responsive-grid-2">
                       {/* Inputs */}
                       <div className="glass-card">
@@ -828,49 +827,25 @@ const { useState, useEffect } = React;
                               </div>
 
                               <div style={{ marginTop: '1rem' }}>
-                                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{lang === 'AZ' ? 'Aktuar Mühərrik Göstəriciləri' : 'Actuarial Engine Metrics'}</h4>
-                                {pricingResult.engineData ? (
+                                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{t.commutationLabel}</h4>
                                 <div className="commutation-grid">
-                                  <div className="commutation-box" title="Tam Yaş (İllik)">
-                                    <div className="comm-label">Tam Yaş</div>
-                                    <div className="comm-value">{pricingResult.engineData.age_years}</div>
+                                  <div className="commutation-box">
+                                    <div className="comm-label">Dx</div>
+                                    <div className="comm-value">{pricingResult.commutations.Dx}</div>
                                   </div>
-                                  <div className="commutation-box" title="Yaş (Aylıq)">
-                                    <div className="comm-label">Yaş (ay)</div>
-                                    <div className="comm-value">{pricingResult.engineData.age_months}</div>
+                                  <div className="commutation-box">
+                                    <div className="comm-label">Nx</div>
+                                    <div className="comm-value">{pricingResult.commutations.Nx}</div>
                                   </div>
-                                  <div className="commutation-box" title="Aylıq Ölüm Ehtimalı">
-                                    <div className="comm-label">qx (ay)</div>
-                                    <div className="comm-value">{pricingResult.engineData.qx_monthly}</div>
+                                  <div className="commutation-box">
+                                    <div className="comm-label">Cx</div>
+                                    <div className="comm-value">{pricingResult.commutations.Cx}</div>
                                   </div>
-                                  <div className="commutation-box" title="İllik Ölüm Ehtimalı">
-                                    <div className="comm-label">qx (il)</div>
-                                    <div className="comm-value">{pricingResult.engineData.qx_annual}</div>
-                                  </div>
-                                  <div className="commutation-box" title="Sığorta ödənişləri">
-                                    <div className="comm-label">SÖ (Sığorta ödənişləri)</div>
-                                    <div className="comm-value">{pricingResult.engineData.liability_benefits}</div>
-                                  </div>
-                                  <div className="commutation-box" title="Zərərlərin tənzimləmə xərcləri">
-                                    <div className="comm-label">ZTX (Zərərlərin tənzimləmə x. )</div>
-                                    <div className="comm-value">{pricingResult.engineData.liability_risk_margin}</div>
-                                  </div>
-                                  <div className="commutation-box" title="İnzibati və Administrativ xərclər">
-                                    <div className="comm-label">İAX (İnzibati və Adm. x. )</div>
-                                    <div className="comm-value">{pricingResult.engineData.liability_expenses}</div>
-                                  </div>
-                                  <div className="commutation-box" title="Sığorta haqları">
-                                    <div className="comm-label">SH (Sığorta haqları)</div>
-                                    <div className="comm-value">{pricingResult.engineData.asset_premiums}</div>
-                                  </div>
-                                  <div className="commutation-box" style={{ gridColumn: 'span 2', background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }} title="Yekun Reserve">
-                                    <div className="comm-label">Reserve</div>
-                                    <div className="comm-value" style={{ color: 'var(--color-primary)' }}>{pricingResult.engineData.final_reserve}</div>
+                                  <div className="commutation-box">
+                                    <div className="comm-label">Mx</div>
+                                    <div className="comm-value">{pricingResult.commutations.Mx}</div>
                                   </div>
                                 </div>
-                                ) : (
-                                  <div style={{ color: 'var(--text-muted)' }}>Məlumat yoxdur</div>
-                                )}
                               </div>
                             </div>
                           ) : (
@@ -885,9 +860,9 @@ const { useState, useEffect } = React;
                 )}
 
                 {/* SUB-TAB: RESERVE ENGINE */}
-                {softwareTab === 'pricing' && (
+                {softwareTab === 'reserve' && (
                   <div>
-                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.pricingTitle}</h2>
+                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.reserveTitle}</h2>
                     <div className="responsive-grid-1-5">
                       <div className="glass-card" style={{ height: 'fit-content' }}>
                         <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.reserveScenario}</h3>
@@ -914,27 +889,50 @@ const { useState, useEffect } = React;
                         <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.reserveOutputTitle}</h3>
                         {reserveResult ? (
                           <div>
-                            <div className="table-container" style={{ marginBottom: '2rem' }}>
-                              <table className="custom-table">
-                                <thead>
-                                  <tr>
-                                    <th>{t.tableColYear}</th>
-                                    <th>{t.tableColNet}</th>
-                                    <th>{t.tableColGross}</th>
-                                    <th>{t.tableColProspective}</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {reserveResult.tableData.map((row, index) => (
-                                    <tr key={index} style={parseInt(reserveResult.currentYear) === row.year ? { background: 'rgba(99, 102, 241, 0.08)' } : {}}>
-                                      <td>{lang==='AZ'?'İl':'Year'} {row.year} {parseInt(reserveResult.currentYear) === row.year && (lang==='AZ'?' (Cari)':' (Current)')}</td>
-                                      <td>{row.reserve}</td>
-                                      <td>{row.reserve}</td>
-                                      <td style={{ color: 'var(--color-tertiary)', fontWeight: 'bold' }}>{row.reserve}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                            <div style={{ marginTop: '1rem', marginBottom: '2rem' }}>
+                              <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{lang === 'AZ' ? 'Aktuar Mühərrik Göstəriciləri' : 'Actuarial Engine Metrics'}</h4>
+                              {reserveResult.engineData ? (
+                              <div className="commutation-grid">
+                                <div className="commutation-box" title="Tam Yaş (İllik)">
+                                  <div className="comm-label">Tam Yaş</div>
+                                  <div className="comm-value">{reserveResult.engineData.age_years}</div>
+                                </div>
+                                <div className="commutation-box" title="Yaş (Aylıq)">
+                                  <div className="comm-label">Yaş (ay)</div>
+                                  <div className="comm-value">{reserveResult.engineData.age_months}</div>
+                                </div>
+                                <div className="commutation-box" title="Aylıq Ölüm Ehtimalı">
+                                  <div className="comm-label">qx (ay)</div>
+                                  <div className="comm-value">{reserveResult.engineData.qx_monthly}</div>
+                                </div>
+                                <div className="commutation-box" title="İllik Ölüm Ehtimalı">
+                                  <div className="comm-label">qx (il)</div>
+                                  <div className="comm-value">{reserveResult.engineData.qx_annual}</div>
+                                </div>
+                                <div className="commutation-box" title="Sığorta ödənişləri">
+                                  <div className="comm-label">SÖ (Sığorta ödənişləri)</div>
+                                  <div className="comm-value">{reserveResult.engineData.liability_benefits}</div>
+                                </div>
+                                <div className="commutation-box" title="Zərərlərin tənzimləmə xərcləri">
+                                  <div className="comm-label">ZTX (Zərərlərin tənzimləmə x. )</div>
+                                  <div className="comm-value">{reserveResult.engineData.liability_risk_margin}</div>
+                                </div>
+                                <div className="commutation-box" title="İnzibati və Administrativ xərclər">
+                                  <div className="comm-label">İAX (İnzibati və Adm. x. )</div>
+                                  <div className="comm-value">{reserveResult.engineData.liability_expenses}</div>
+                                </div>
+                                <div className="commutation-box" title="Sığorta haqları">
+                                  <div className="comm-label">SH (Sığorta haqları)</div>
+                                  <div className="comm-value">{reserveResult.engineData.asset_premiums}</div>
+                                </div>
+                                <div className="commutation-box" style={{ gridColumn: 'span 2', background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.3)' }} title="Yekun Reserve">
+                                  <div className="comm-label">Reserve</div>
+                                  <div className="comm-value" style={{ color: 'var(--color-primary)' }}>{reserveResult.engineData.final_reserve || reserveResult.engineData.net_mathematical_reserve}</div>
+                                </div>
+                              </div>
+                              ) : (
+                                <div style={{ color: 'var(--text-muted)' }}>Məlumat yoxdur</div>
+                              )}
                             </div>
 
                             {/* Chart Mockup */}
@@ -1049,14 +1047,14 @@ const { useState, useEffect } = React;
 
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
                           <button className="btn-secondary" onClick={() => {
-                            setReserveParams({ ...reserveParams, policyId: searchedPolicy.id });
+                            setPricingParams({ ...pricingParams, age: searchedPolicy.age, gender: searchedPolicy.gender, product: searchedPolicy.product });
                             setSoftwareTab('pricing');
                             alert(lang==='AZ'?"Müqavilə parametrləri yükləndi.":"Policy parameters loaded.");
                           }}>
                             {t.loadParamsPricing}
                           </button>
                           <button className="btn-secondary" onClick={() => {
-                            setPricingParams({ ...pricingParams, age: searchedPolicy.age, gender: searchedPolicy.gender, product: searchedPolicy.product });
+                            setReserveParams({ ...reserveParams, policyId: searchedPolicy.id });
                             setSoftwareTab('reserve');
                             alert(lang==='AZ'?"Müqavilə parametrləri yükləndi.":"Policy parameters loaded.");
                           }}>
