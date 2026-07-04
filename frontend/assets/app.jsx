@@ -121,7 +121,7 @@ const { useState, useEffect } = React;
           policyCount: 250,
           errors: 0,
           warnings: 3,
-          fileName: 'Policy Portfolio.xlsx'
+          fileName: 'Policies.xlsx'
         });
       };
 
@@ -491,7 +491,7 @@ const { useState, useEffect } = React;
                           <span>👤</span>
                         </div>
                         <div className="kpi-value">{importedState.status === 'success' ? '36.8' : '0.0'}</div>
-                        <div className="kpi-footer">Policy Portfolio</div>
+                        <div className="kpi-footer">Policies</div>
                       </div>
                       <div className="glass-card kpi-card">
                         <div className="kpi-header">
@@ -559,7 +559,7 @@ const { useState, useEffect } = React;
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
                       <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <h3 style={{ fontSize: '1.1rem' }}>1. Policy Portfolio.xlsx</h3>
+                        <h3 style={{ fontSize: '1.1rem' }}>1. Policies.xlsx</h3>
                         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                           {lang === 'AZ' ? 'Müqavilə ID, müştəri adı, məhsul, başlama tarixi, sığorta məbləği, premium və s.' : 'Policy ID, customer name, product, start date, sum assured, premium etc.'}
                         </p>
