@@ -873,7 +873,7 @@ const { useState, useEffect } = React;
                       <div className="glass-card" style={{ height: 'fit-content' }}>
                         <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.reserveScenario}</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                          <div className="form-group">
+                          <div className="form-group" style={{ display: 'none' }}>
                             <label className="form-label">{t.labelPolicyId}</label>
                             <input type="text" className="input-field" value={reserveParams.policyId} onChange={e => setReserveParams({ ...reserveParams, policyId: e.target.value })} />
                           </div>
