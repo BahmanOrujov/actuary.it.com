@@ -79,15 +79,38 @@ const { useState, useEffect } = React;
       const [mortalityTable, setMortalityTable] = useState([]);
 
       useEffect(() => {
-        if (softwareTab === 'pricing' && mortalityTable.length === 0) {
+        if ((softwareTab === 'pricing' || softwareTab === 'formula-explorer') && mortalityTable.length === 0) {
           fetch('./assets/Monthlydeathtable.csv')
             .then(res => res.text())
             .then(text => {
-              const lines = text.trim().split('\n').slice(1, 101);
+              const lines = text.trim().split('\n').slice(1);
               const data = lines.map(line => {
                 const [x, lx, dx] = line.split(',');
-                return { x, lx: lx?.replace(/"/g, ''), dx };
+                return { 
+                  x: parseInt(x), 
+                  lx: parseFloat(lx?.replace(/"/g, '')), 
+                  dx: parseFloat(dx) 
+                };
               });
+              
+              const v = 1.0 / (1.0 + 0.05); // using 5% default for display
+              for (let i = 0; i < data.length; i++) {
+                data[i].qx = data[i].dx / data[i].lx;
+                const lx_plus_1 = i + 1 < data.length ? data[i+1].lx : 0;
+                data[i].px = (data[i].lx - lx_plus_1) / data[i].lx;
+                data[i].Dx = data[i].lx * Math.pow(v, i);
+                data[i].Cx = data[i].dx * Math.pow(v, i + 1);
+              }
+              
+              let Nx_sum = 0;
+              let Mx_sum = 0;
+              for (let i = data.length - 1; i >= 0; i--) {
+                Nx_sum += data[i].Dx;
+                Mx_sum += data[i].Cx;
+                data[i].Nx = Nx_sum;
+                data[i].Mx = Mx_sum;
+              }
+              
               setMortalityTable(data);
             })
             .catch(err => console.error(err));
@@ -663,7 +686,7 @@ const { useState, useEffect } = React;
                 {softwareTab === 'pricing' && (
                   <div>
                     <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.pricingTitle}</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                       {/* Inputs */}
                       <div className="glass-card">
                         <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.pricingSubTitle}</h3>
@@ -775,32 +798,6 @@ const { useState, useEffect } = React;
                           )}
                         </div>
                       </div>
-
-                      {/* Mortality Table Strip */}
-                      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: '600px' }}>
-                        <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>{lang === 'AZ' ? 'Aylıq Ölüm Cədvəli' : 'Monthly Death Table'}</h3>
-                        <div style={{ overflowY: 'auto', flexGrow: 1, paddingRight: '0.5rem' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
-                            <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-glass)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--border-color)' }}>
-                              <tr>
-                                <th style={{ padding: '0.5rem' }}>X (Ay)</th>
-                                <th style={{ padding: '0.5rem' }}>l(x)</th>
-                                <th style={{ padding: '0.5rem' }}>d(x)</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {mortalityTable.map((row, i) => (
-                                <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                  <td style={{ padding: '0.5rem' }}>{row.x}</td>
-                                  <td style={{ padding: '0.5rem' }}>{row.lx}</td>
-                                  <td style={{ padding: '0.5rem' }}>{parseFloat(row.dx).toFixed(2)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-
                     </div>
                   </div>
                 )}
@@ -1011,6 +1008,9 @@ const { useState, useEffect } = React;
                        </button>
                        <button className={`btn-secondary ${formulaCategory === 'docs' ? 'active' : ''}`} style={formulaCategory === 'docs' ? { background: 'rgba(99, 102, 241, 0.15)', borderColor: 'var(--color-primary)' } : {}} onClick={() => setFormulaCategory('docs')}>
                          {lang === 'AZ' ? "Rəsmi Sənədlər (PDF)" : "Official Documents (PDF)"}
+                       </button>
+                       <button className={`btn-secondary ${formulaCategory === 'mortality' ? 'active' : ''}`} style={formulaCategory === 'mortality' ? { background: 'rgba(99, 102, 241, 0.15)', borderColor: 'var(--color-primary)' } : {}} onClick={() => setFormulaCategory('mortality')}>
+                         {lang === 'AZ' ? "Ölüm Cədvəli" : "Mortality Table"}
                        </button>
                      </div>
 
@@ -1281,6 +1281,47 @@ const { useState, useEffect } = React;
                              ) : (
                                <iframe src="./docs/Sigorta_Ehtiyatlari_Qaydalar.pdf" width="100%" height="800px" style={{ border: 'none', borderRadius: '8px' }}></iframe>
                              )}
+                           </div>
+                         </div>
+                       )}
+
+                       {/* CATEGORY: MORTALITY TABLE */}
+                       {formulaCategory === 'mortality' && (
+                         <div style={{ height: '700px', display: 'flex', flexDirection: 'column' }}>
+                           <h3 style={{ marginBottom: '1rem', fontSize: '1.25rem', color: 'var(--color-primary)' }}>
+                             {lang === 'AZ' ? 'Aylıq Ölüm Cədvəli və Kommutasiya Ədədləri (1272 Ay)' : 'Monthly Mortality Table & Commutation (1272 Months)'}
+                           </h3>
+                           <div style={{ overflowY: 'auto', flexGrow: 1, paddingRight: '0.5rem', background: 'rgba(0,0,0,0.1)', borderRadius: '8px' }}>
+                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'right' }}>
+                               <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-glass)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--border-color)', zIndex: 10 }}>
+                                 <tr>
+                                   <th style={{ padding: '0.75rem', textAlign: 'center' }}>X (Ay)</th>
+                                   <th style={{ padding: '0.75rem' }}>l(x)</th>
+                                   <th style={{ padding: '0.75rem' }}>d(x)</th>
+                                   <th style={{ padding: '0.75rem' }}>q(x)</th>
+                                   <th style={{ padding: '0.75rem' }}>p(x)</th>
+                                   <th style={{ padding: '0.75rem' }}>D(x)</th>
+                                   <th style={{ padding: '0.75rem' }}>C(x)</th>
+                                   <th style={{ padding: '0.75rem' }}>N(x)</th>
+                                   <th style={{ padding: '0.75rem' }}>M(x)</th>
+                                 </tr>
+                               </thead>
+                               <tbody>
+                                 {mortalityTable.map((row, i) => (
+                                   <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                     <td style={{ padding: '0.5rem', textAlign: 'center' }}>{row.x}</td>
+                                     <td style={{ padding: '0.5rem' }}>{row.lx?.toFixed(2)}</td>
+                                     <td style={{ padding: '0.5rem' }}>{row.dx?.toFixed(6)}</td>
+                                     <td style={{ padding: '0.5rem' }}>{row.qx?.toFixed(6)}</td>
+                                     <td style={{ padding: '0.5rem' }}>{row.px?.toFixed(6)}</td>
+                                     <td style={{ padding: '0.5rem' }}>{row.Dx?.toFixed(2)}</td>
+                                     <td style={{ padding: '0.5rem' }}>{row.Cx?.toFixed(4)}</td>
+                                     <td style={{ padding: '0.5rem' }}>{row.Nx?.toFixed(2)}</td>
+                                     <td style={{ padding: '0.5rem' }}>{row.Mx?.toFixed(4)}</td>
+                                   </tr>
+                                 ))}
+                               </tbody>
+                             </table>
                            </div>
                          </div>
                        )}
