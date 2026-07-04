@@ -118,7 +118,7 @@ class ActuarialValuationEngine:
 
         if pd.notna(calculated_reserve) and calculated_reserve > 0:
             return get_max(calculated_reserve, capital_03_pct)
-        if p_type == "kredit":
+        if p_type in ["kredit", "credit"]:
             return get_max(calculated_reserve, capital_03_pct)
         if pd.notna(calculated_reserve) and calculated_reserve <= 0:
             return get_max(capital_03_pct, capital_qx)
@@ -193,7 +193,7 @@ class ActuarialValuationEngine:
             
         pure_endowment = survival_rate[-1] * cumulative_survival[-2] * present_value_vector[-1] if len(survival_rate) >= 2 else 0.0
         
-        if policy.policy_type.lower() == "kredit":
+        if policy.policy_type.lower() in ["kredit", "credit"]:
             present_value_premiums = np.zeros_like(outstanding_balance, dtype=float)
         else:
             remaining_after_valuation = total_months - elapsed_m
