@@ -141,9 +141,12 @@ class ActuarialValuationEngine:
         outstanding_balance = np.zeros_like(time_horizon, dtype=float)
         active_mask = remaining_term > 0
         if np.any(active_mask):
-            outstanding_balance[active_mask] = np.abs(
-                FinancialPrimitives.project_outstanding_balance(fixed_installment, monthly_apr, remaining_term[active_mask])
-            )
+            if policy.policy_type.lower() == "life_endowment":
+                outstanding_balance[active_mask] = policy.sum_insured_initial
+            else:
+                outstanding_balance[active_mask] = np.abs(
+                    FinancialPrimitives.project_outstanding_balance(fixed_installment, monthly_apr, remaining_term[active_mask])
+                )
             
         projected_ages = entry_age_months + time_horizon - 1
         raw_mortality = np.zeros_like(time_horizon, dtype=float)
@@ -211,6 +214,8 @@ class ActuarialValuationEngine:
         balance_index = min(max(elapsed_m, 0), len(outstanding_balance) - 1) if len(outstanding_balance) > 0 else 0
         # SÖ (Sığorta ödənişləri)
         res_so = benefits_payable.sum()
+        if policy.policy_type.lower() == "life_endowment":
+            res_so += policy.sum_insured_initial * pure_endowment * (1.0 + self.cfg.margin_investment)
         # ZTX (Zərərlərin tənzimləmə xərcləri)
         res_ztx = expenses_mortality.sum()
         # İAX (İnzibati və Administrativ xərclər)
