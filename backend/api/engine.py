@@ -11,7 +11,9 @@ class ValuationParameters:
     interest_rate_annual: float = 0.05
     expense_maintenance: float = 0.0025  # gamma
     margin_mortality: float = 0.03       # ro1
-    cost_acquisition: float = 0.01       # betta
+    margin_investment: float = 0.0       # ro2
+    cost_acquisition_initial: float = 0.0 # alpha
+    cost_acquisition: float = 0.003    # betta
     payment_frequency: int = 12
     default_policy_type: str = "Ipoteka"
 

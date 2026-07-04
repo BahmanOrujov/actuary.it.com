@@ -79,6 +79,8 @@ const { useState, useEffect } = React;
         interest: 5.0,
         expenseMaintenance: 0.0025,
         marginMortality: 0.03,
+        marginInvestment: 0.0,
+        costAcquisitionInitial: 0.0,
         costAcquisition: 0.01,
         paymentFrequency: 12
       });
@@ -163,6 +165,8 @@ const { useState, useEffect } = React;
               interest_rate_annual: parseFloat(reserveParams.interest) / 100 || 0.05,
               expense_maintenance: parseFloat(reserveParams.expenseMaintenance) || 0.0025,
               margin_mortality: parseFloat(reserveParams.marginMortality) || 0.03,
+              margin_investment: parseFloat(reserveParams.marginInvestment) || 0.0,
+              cost_acquisition_initial: parseFloat(reserveParams.costAcquisitionInitial) || 0.0,
               cost_acquisition: parseFloat(reserveParams.costAcquisition) || 0.01,
               payment_frequency: parseInt(reserveParams.paymentFrequency) || 12
             },
@@ -920,6 +924,14 @@ const { useState, useEffect } = React;
                           <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border-color)', marginTop: '0.5rem' }}>
                             <h4 style={{ marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{lang === 'AZ' ? 'Aktuar Sabitlər' : 'Actuarial Constants'}</h4>
                             <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                              <label className="form-label">{lang === 'AZ' ? 'İlk Akvizisiya (alpha)' : 'Initial Acq. (alpha)'}</label>
+                              <input type="number" step="0.01" className="input-field" value={reserveParams.costAcquisitionInitial} onChange={e => setReserveParams({ ...reserveParams, costAcquisitionInitial: parseFloat(e.target.value) || 0 })} />
+                            </div>
+                            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                              <label className="form-label">{lang === 'AZ' ? 'Dövrü Akvizisiya (betta)' : 'Acquisition Cost (betta)'}</label>
+                              <input type="number" step="0.01" className="input-field" value={reserveParams.costAcquisition} onChange={e => setReserveParams({ ...reserveParams, costAcquisition: parseFloat(e.target.value) || 0 })} />
+                            </div>
+                            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                               <label className="form-label">{lang === 'AZ' ? 'İnzibati Xərclər (gamma)' : 'Maintenance Exp. (gamma)'}</label>
                               <input type="number" step="0.0001" className="input-field" value={reserveParams.expenseMaintenance} onChange={e => setReserveParams({ ...reserveParams, expenseMaintenance: parseFloat(e.target.value) || 0 })} />
                             </div>
@@ -928,8 +940,8 @@ const { useState, useEffect } = React;
                               <input type="number" step="0.01" className="input-field" value={reserveParams.marginMortality} onChange={e => setReserveParams({ ...reserveParams, marginMortality: parseFloat(e.target.value) || 0 })} />
                             </div>
                             <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                              <label className="form-label">{lang === 'AZ' ? 'Akvizisiya Xərcləri (betta)' : 'Acquisition Cost (betta)'}</label>
-                              <input type="number" step="0.01" className="input-field" value={reserveParams.costAcquisition} onChange={e => setReserveParams({ ...reserveParams, costAcquisition: parseFloat(e.target.value) || 0 })} />
+                              <label className="form-label">{lang === 'AZ' ? 'İnvestisiya Marjası (ro2)' : 'Investment Margin (ro2)'}</label>
+                              <input type="number" step="0.01" className="input-field" value={reserveParams.marginInvestment} onChange={e => setReserveParams({ ...reserveParams, marginInvestment: parseFloat(e.target.value) || 0 })} />
                             </div>
                             <div className="form-group" style={{ marginBottom: '0' }}>
                               <label className="form-label">{lang === 'AZ' ? 'Ödəniş Tezliyi (payment_frequency)' : 'Payment Frequency'}</label>
