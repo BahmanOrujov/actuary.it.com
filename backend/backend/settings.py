@@ -22,6 +22,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -62,6 +63,13 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Read SECRET_KEY and DEBUG from environment for Render
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-minimal-key-for-dev')
+DEBUG = os.environ.get('RENDER', '') == ''
+ALLOWED_HOSTS = ['*'] if DEBUG else [os.environ.get('RENDER_EXTERNAL_HOSTNAME', '*'), '*']
