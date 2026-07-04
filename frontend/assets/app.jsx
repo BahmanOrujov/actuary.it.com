@@ -105,10 +105,15 @@ const { useState, useEffect } = React;
               });
               
               const v = 1.0 / (1.0 + 0.05); // using 5% default for display
+              // Recompute lx sequentially starting from month 2
+              for (let i = 1; i < data.length; i++) {
+                data[i].lx = data[i-1].lx - data[i-1].dx;
+              }
+              
               for (let i = 0; i < data.length; i++) {
                 data[i].qx = data[i].dx / data[i].lx;
                 const lx_plus_1 = i + 1 < data.length ? data[i+1].lx : 0;
-                data[i].px = (data[i].lx - lx_plus_1) / data[i].lx;
+                data[i].px = lx_plus_1 / data[i].lx;
                 data[i].Dx = data[i].lx * Math.pow(v, i);
                 data[i].Cx = data[i].dx * Math.pow(v, i + 1);
               }
