@@ -1013,17 +1013,7 @@ const { useState, useEffect } = React;
                               )}
                             </div>
 
-                            {/* Chart Mockup */}
-                            <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>{t.reserveChartTitle}</h4>
-                            <div className="mock-chart-container">
-                              {reserveResult.tableData.map((row, idx) => (
-                                <div key={idx} className="chart-bar-wrapper">
-                                  <div className="chart-value">{row.reserve}</div>
-                                  <div className="chart-bar" style={{ height: `10%`, width: '32px' }}></div>
-                                  <div className="chart-label">{lang==='AZ'?'İl':'Year'} {row.year}</div>
-                                </div>
-                              ))}
-                            </div>
+
                           </div>
                         ) : (
                           <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)' }}>
