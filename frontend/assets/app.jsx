@@ -262,17 +262,17 @@ const { useState, useEffect } = React;
                 <div className="hero-badge" style={{ animation: 'float 3s ease-in-out infinite' }}>
                   <span>🚀</span> {lang === 'AZ' ? 'Yeni Nəsil Hesablama Platforması' : 'Next-Gen Calculation Platform'}
                 </div>
-                <h1 className="hero-title text-gradient" style={{ fontSize: '4rem', letterSpacing: '-0.02em', lineHeight: '1.1' }}>
+                <h1 className="hero-title text-gradient">
                   {lang === 'AZ' ? 'Aktuar Təhlilində' : 'The Future of'} <br />
                   <span className="text-gradient-primary">{lang === 'AZ' ? 'Gələcəyin Standartı' : 'Actuarial Analysis'}</span>
                 </h1>
-                <p className="hero-description" style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', maxWidth: '700px', margin: '1.5rem auto' }}>
+                <p className="hero-description">
                   {lang === 'AZ' 
                     ? 'ARPP (Actuary Calculator & Reporting Platform) vasitəsilə ən mürəkkəb riyazi modelləri saniyələr içində icra edin. Tarifləşdirmə, ehtiyatların qiymətləndirilməsi və beynəlxalq standartlara uyğun avtomatlaşdırılmış hesabatlar.'
                     : 'Execute the most complex mathematical models in seconds with ARPP. Pricing, reserve valuation, and automated reporting in compliance with international standards.'}
                 </p>
 
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '3rem' }}>
+                <div className="hero-buttons">
                   <button className="btn-primary" onClick={() => setActiveTab('create-report')} style={{ padding: '1rem 2.5rem', fontSize: '1.1rem', borderRadius: '50px' }}>
                     {t.btnStartPlatform} <span style={{ marginLeft: '8px' }}>→</span>
                   </button>

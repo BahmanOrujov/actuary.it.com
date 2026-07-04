@@ -345,12 +345,12 @@
     }
 
     .hero-description {
-      font-size: 1.1rem;
-      color: var(--text-secondary);
-      max-width: 800px;
-      margin-bottom: 3rem;
-      text-align: justify;
-    }
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  max-width: 800px;
+  margin: 1.5rem auto 3rem;
+  text-align: center;
+}
 
     .hero-extended-text {
       text-align: justify;
