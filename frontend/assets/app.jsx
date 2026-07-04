@@ -222,14 +222,13 @@ const { useState, useEffect } = React;
 
           {/* HEADER NAV */}
           <header className="app-header">
-            <div className="logo-area" onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }} style={{ cursor: 'pointer' }}>
-              <div className="logo-badge">α</div>
+            <div className="logo-area" onClick={() => { if (window.innerWidth <= 768) { setMobileMenuOpen(!mobileMenuOpen); } else { setActiveTab('home'); setMobileMenuOpen(false); } }} style={{ cursor: 'pointer' }}>
+              <div className="logo-badge" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span className="desktop-logo">α</span>
+                <span className="mobile-logo">{mobileMenuOpen ? <IconX /> : <IconMenu />}</span>
+              </div>
               <span className="text-gradient-primary">ARPP</span>
             </div>
-
-            <button className="mobile-menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              {mobileMenuOpen ? <IconX /> : <IconMenu />}
-            </button>
             
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <nav className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>

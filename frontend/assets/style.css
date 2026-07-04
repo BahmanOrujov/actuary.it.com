@@ -1231,3 +1231,21 @@
       width: 100%;
     }
   }
+
+/* Global Horizontal Scroll Fix */
+html, body {
+  overflow-x: hidden !important;
+  width: 100%;
+  position: relative;
+}
+* {
+  overflow-wrap: break-word;
+}
+
+/* Mobile Logo Hamburger Toggle */
+.mobile-logo { display: none; }
+.desktop-logo { display: inline-block; }
+@media (max-width: 768px) {
+  .mobile-logo { display: inline-flex; align-items: center; justify-content: center; }
+  .desktop-logo { display: none; }
+}
