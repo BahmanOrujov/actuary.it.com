@@ -55,12 +55,15 @@ const { useState, useEffect } = React;
       });
 
       const [pricingParams, setPricingParams] = useState({
-        age: 35,
-        gender: 'Male',
-        product: 'Endowment',
-        term: 20,
-        sumAssured: 100000,
-        interest: 5.0
+        insuranceClass: 'life_endowment',
+        birthDate: '',
+        startDate: '',
+        endDate: '',
+        sumAssured: '',
+        premium: '',
+        discountRate: 5.0,
+        creditInterest: 10.0,
+        salary: ''
       });
 
       const [pricingResult, setPricingResult] = useState(null);
@@ -650,36 +653,58 @@ const { useState, useEffect } = React;
                         <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.pricingSubTitle}</h3>
                         <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
                           <div className="form-group">
-                            <label className="form-label">{t.labelAge}</label>
-                            <input type="number" className="input-field" value={pricingParams.age} onChange={e => setPricingParams({ ...pricingParams, age: parseInt(e.target.value) || 0 })} />
-                          </div>
-                          <div className="form-group">
-                            <label className="form-label">{t.labelGender}</label>
-                            <select className="select-field" value={pricingParams.gender} onChange={e => setPricingParams({ ...pricingParams, gender: e.target.value })}>
-                              <option value="Male">{lang==='AZ'?'Kişi':'Male'}</option>
-                              <option value="Female">{lang==='AZ'?'Qadın':'Female'}</option>
+                            <label className="form-label">{lang === 'AZ' ? 'Sığorta Sinifi' : 'Insurance Class'}</label>
+                            <select className="select-field" value={pricingParams.insuranceClass} onChange={e => setPricingParams({ ...pricingParams, insuranceClass: e.target.value })}>
+                              <option value="life_endowment">{lang === 'AZ' ? 'Həyatın yığım sığortası' : 'Endowment Life Insurance'}</option>
+                              <option value="credit">{lang === 'AZ' ? 'Kredit həyat sığortası' : 'Credit Life Insurance'}</option>
+                              <option value="mortgage">{lang === 'AZ' ? 'İpoteka sığortası' : 'Mortgage Life Insurance'}</option>
+                              <option value="compulsory">{lang === 'AZ' ? 'İstehsalatda bədbəxt hadisələrdən icbari sığorta' : 'Compulsory Workers\' Compensation'}</option>
                             </select>
                           </div>
                           <div className="form-group">
-                            <label className="form-label">{t.labelProduct}</label>
-                            <select className="select-field" value={pricingParams.product} onChange={e => setPricingParams({ ...pricingParams, product: e.target.value })}>
-                              <option value="Term Life">{lang==='AZ'?'Müddətli Həyat Sığortası':'Term Life'}</option>
-                              <option value="Endowment">{lang==='AZ'?'Qarışıq Həyat Sığortası':'Endowment'}</option>
-                              <option value="Annuity">{lang==='AZ'?'Anuitet':'Annuity'}</option>
-                            </select>
+                            <label className="form-label">{lang === 'AZ' ? 'Doğum tarixi' : 'Birth Date'}</label>
+                            <input type="date" className="input-field" value={pricingParams.birthDate} onChange={e => setPricingParams({ ...pricingParams, birthDate: e.target.value })} />
                           </div>
                           <div className="form-group">
-                            <label className="form-label">{t.labelTerm}</label>
-                            <input type="number" className="input-field" value={pricingParams.term} onChange={e => setPricingParams({ ...pricingParams, term: parseInt(e.target.value) || 0 })} />
+                            <label className="form-label">{lang === 'AZ' ? 'Müqavilənin başlama tarixi' : 'Start Date'}</label>
+                            <input type="date" className="input-field" value={pricingParams.startDate} onChange={e => setPricingParams({ ...pricingParams, startDate: e.target.value })} />
                           </div>
                           <div className="form-group">
-                            <label className="form-label">{t.labelSum}</label>
-                            <input type="number" className="input-field" value={pricingParams.sumAssured} onChange={e => setPricingParams({ ...pricingParams, sumAssured: parseInt(e.target.value) || 0 })} />
+                            <label className="form-label">{lang === 'AZ' ? 'Müqavilənin bitmə tarixi' : 'End Date'}</label>
+                            <input type="date" className="input-field" value={pricingParams.endDate} onChange={e => setPricingParams({ ...pricingParams, endDate: e.target.value })} />
                           </div>
                           <div className="form-group">
-                            <label className="form-label">{t.labelInterest}</label>
-                            <input type="number" step="0.1" className="input-field" value={pricingParams.interest} onChange={e => setPricingParams({ ...pricingParams, interest: parseFloat(e.target.value) || 0 })} />
+                            <label className="form-label">{lang === 'AZ' ? 'Uçot dərəcəsi (%)' : 'Discount Rate (%)'}</label>
+                            <input type="number" step="0.1" className="input-field" value={pricingParams.discountRate} onChange={e => setPricingParams({ ...pricingParams, discountRate: parseFloat(e.target.value) || 0 })} />
                           </div>
+                          
+                          {pricingParams.insuranceClass === 'life_endowment' && (
+                            <div className="form-group">
+                              <label className="form-label">{lang === 'AZ' ? 'Sığorta haqqı' : 'Premium'}</label>
+                              <input type="number" className="input-field" value={pricingParams.premium} onChange={e => setPricingParams({ ...pricingParams, premium: parseFloat(e.target.value) || 0 })} />
+                            </div>
+                          )}
+
+                          {(pricingParams.insuranceClass === 'credit' || pricingParams.insuranceClass === 'mortgage') && (
+                            <>
+                              <div className="form-group">
+                                <label className="form-label">{lang === 'AZ' ? 'Sığorta məbləği' : 'Sum Assured'}</label>
+                                <input type="number" className="input-field" value={pricingParams.sumAssured} onChange={e => setPricingParams({ ...pricingParams, sumAssured: parseFloat(e.target.value) || 0 })} />
+                              </div>
+                              <div className="form-group">
+                                <label className="form-label">{lang === 'AZ' ? 'Kredit Faizi (%)' : 'Credit Interest (%)'}</label>
+                                <input type="number" step="0.1" className="input-field" value={pricingParams.creditInterest} onChange={e => setPricingParams({ ...pricingParams, creditInterest: parseFloat(e.target.value) || 0 })} />
+                              </div>
+                            </>
+                          )}
+
+                          {pricingParams.insuranceClass === 'compulsory' && (
+                            <div className="form-group">
+                              <label className="form-label">{lang === 'AZ' ? 'Əməkhaqqı' : 'Salary'}</label>
+                              <input type="number" className="input-field" value={pricingParams.salary} onChange={e => setPricingParams({ ...pricingParams, salary: parseFloat(e.target.value) || 0 })} />
+                            </div>
+                          )}
+
                         </div>
                         <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={calculatePricing}>
                           {t.btnCalculate}
