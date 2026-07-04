@@ -1,0 +1,11 @@
+POST-PANDEMIC RECOVERY SHOWN IN LIFE EXPECTANCY FORECASTS BY THE IFoA
+Date: July 3, 2026
+
+The Continuous Mortality Investigation (CMI) committee of the UK's Institute and Faculty of Actuaries (IFoA) has released its latest CMI_2025 mortality projection model.
+
+Key Findings from CMI_2025:
+1. Dissipation of Pandemic Anomalies: The heavy impact of anomalous mortality rates observed between 2020 and 2023 has faded. The committee calibrated the new model using stable data from 2024 and 2025.
+2. Rising Life Expectancy: A marginal recovery in life expectancy improvements has been recorded in the UK.
+3. Impact on Pensions: The new projections suggest pension schemes must increase their liability valuations (reserves) by 0.5% to 1% to cover longer payout durations.
+
+This table acts as a global benchmark for life insurers and pension actuaries, finding immediate integration into valuation software.

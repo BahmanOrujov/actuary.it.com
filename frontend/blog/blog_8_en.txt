@@ -1,0 +1,11 @@
+UN REPORT HIGHLIGHTS AUTOMATED PAYOUTS PROTECTING FARMERS FROM SEVERE DROUGHTS
+Date: July 3, 2026
+
+According to an annual report on UN-backed agricultural programs, the adoption of parametric insurance in developing economies has increased by 40% year-on-year.
+
+Why Parametric?
+Unlike traditional indemnity insurance, parametric models require no physical loss adjusters to evaluate claims. Payouts are triggered automatically using satellite data or meteorological records:
+- For example, if precipitation falls below a threshold (drought index), payouts are credited to farmers' accounts within days.
+- This allows agricultural workers to maintain liquidity ahead of the next planting cycle.
+
+Actuaries in this segment focus on defining optimal triggers to minimize basis risk for policyholders.

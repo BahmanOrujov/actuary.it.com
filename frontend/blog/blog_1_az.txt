@@ -1,0 +1,11 @@
+BEYNƏLXALQ AKTUAR ASSOSİASİYASI (IAA) SÜNİ İNTELLEKTİN AKTUAR SAHƏSİNDƏ TƏTBİQİ ÜZRƏ YENİ QAYDALAR DƏRC ETDİ
+Tarix: 03 İyul 2026
+
+Beynəlxalq Aktuar Assosiasiyası (IAA) sığorta tariflərinin hesablanması (pricing) və ehtiyatların qiymətləndirilməsində (reserving) Generativ Süni İntellekt və Böyük Dil Modellərinin (LLM) istifadəsinə dair ilk rəsmi qlobal standartları açıqlayıb.
+
+Yeni tənzimləmə prinsiplərinə əsasən:
+1. Modellərin Şəffaflığı (Explainability): Aktuarlar tərəfindən istifadə edilən AI modelləri 'qara qutu' olmamalı, onların qəbul etdiyi qərarların arxasındakı riyazi məntiq şəffaf şəkildə izah edilə bilməlidir.
+2. Məlumat Məxfiliyi: Müştərilərin fərdi və tibbi məlumatları qapalı bulud platformalarında və ya lokal (on-premise) serverlərdə emal edilməlidir. Açıq qaynaqlı LLM platformalarına bu verilənlərin ötürülməsi qadağandır.
+3. İnsan Nəzarəti (Human-in-the-Loop): AI tərəfindən generasiya edilmiş heç bir tarif və ya hesabat aktuar mütəxəssisin rəsmi təsdiqi və imzası olmadan tətbiq edilə bilməz.
+
+IAA-nın rəhbəri qeyd edib ki, bu standartlar texnologiyanın inkişafı ilə yarana biləcək sistemik riskləri minimuma endirmək və sığortaçıların maliyyə dayanıqlığını qorumaq məqsədi daşıyır. Yaxın aylarda yerli tənzimləyici orqanların da bu qaydaları öz qanunvericiliklərinə inteqrasiya edəcəyi gözlənilir.

@@ -1,0 +1,11 @@
+İQLİM DƏYİŞİKLİYİNƏ QARŞI SÜRƏTLİ ÖDƏNİŞ: TETİKLƏYİCİ İNDEKSLƏR FERMERLƏRİ İFLASDANDAN QORUYUR
+Tarix: 03 İyul 2026
+
+Birləşmiş Millətlər Təşkilatının (BMT) dəstəklədiyi aqrar layihələrin illik hesabatına görə, inkişaf etməkdə olan ölkələrdə parametrik sığortanın tətbiqi keçən illə müqayisədə 40% artıb.
+
+Niyə Parametrik Sığorta?
+Ənənəvi sığortadan fərqli olaraq, parametrik sığorta zərərin qiymətləndirilməsi üçün ekspertlərin sahəyə gəlməsini tələb etmir. Ödənişlər peyk məlumatları və ya rəsmi meteoroloji stansiyaların göstəriciləri əsasında avtomatik tetiklenir:
+- Məsələn, yağıntının miqdarı müəyyən həddən aşağı düşdükdə (quraqlıq zamanı) bir neçə gün ərzində fermerlərin hesabına kompensasiya köçürülür.
+- Bu, kənd təsərrüfatı işçilərinə növbəti əkin mövsümünə qədər maliyyə dayanıqlığını qorumağa kömək edir.
+
+Aktuarlar bu layihələrdə optimal coğrafi indeksləri (triggers) müəyyən edərək Baza Riskinin (Basis Risk) minimuma endirilməsi üzərində çalışırlar.

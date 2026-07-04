@@ -1,0 +1,11 @@
+ACTUARIAL EXAMINATION UPDATE: PYTHON AND MACHINE LEARNING BECOME CORE COMPETENCIES
+Date: July 3, 2026
+
+The Society of Actuaries (SOA) and the Casualty Actuarial Society (CAS) have announced significant changes to their education and exam syllabus.
+
+Key Updates:
+1. Python Integration: Starting late 2026, preliminary and intermediate exams will require candidates to build models in Python alongside traditional Excel spreadsheets.
+2. Predictive Analytics: Forecasting exams will expand deep coverage of machine learning models and stochastic frameworks. Candidates must demonstrate proficiency in Big Data visualization.
+3. Transition Phase: A 6-month transition period and free online resources will be provided to help existing candidates adapt to the new topics.
+
+The organizations emphasized that these updates are vital to keeping the actuarial profession aligned with financial technology and data science trends. Next-generation actuaries must master programming and AI tools.

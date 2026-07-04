@@ -1,0 +1,8 @@
+# Requirements placeholder
+django
+djangorestframework
+django-cors-headers
+pandas
+openpyxl
+reportlab
+numpy

@@ -1,0 +1,11 @@
+AKTUAR İMTAHANLARINDA MÜASİR DƏYİŞİKLİK: PYTON VƏ MAŞIN ÖYRƏNMƏSİ ARTIQ MƏCBURİ BİLİKLƏR SIRASINDADIR
+Tarix: 03 İyul 2026
+
+Dünyanın iki ən böyük aktuar cəmiyyəti - Society of Actuaries (SOA) və Casualty Actuarial Society (CAS) birgə təhsil və sertifikatlaşdırma proqramlarında mühüm yeniliklər elan ediblər.
+
+Yeniliklərin Təfərrüatları:
+1. Python İnteqrasiyası: 2026-cı ilin sonundan etibarən ilkin və orta səviyyə imtahanlarında namizədlərdən Excel ilə yanaşı Python proqramlaşdırma dilində modellər qurmaq tələb olunacaq.
+2. Prediktiv Analitika: Proqnozlaşdırma imtahanları maşın öyrənməsi (machine learning) və stoxastik modelləri daha dərindən əhatə edəcək. Namizədlər böyük verilənlərin (Big Data) vizuallaşdırılmasını bacarmalıdırlar.
+3. Keçid Mərhələsi: Mövcud tələbələr üçün yeni mövzulara adaptasiya olmaq məqsədilə 6 aylıq keçid dövrü və pulsuz onlayn resurslar təqdim ediləcək.
+
+SOA və CAS bəyan ediblər ki, bu dəyişikliklər aktuar peşəsini müasir maliyyə texnologiyaları və data elmi ilə eyni səviyyədə saxlamaq üçün zəruridir. Yeni nəsil aktuarlar proqramlaşdırma və AI alətlərindən mükəmməl istifadə etməlidirlər.

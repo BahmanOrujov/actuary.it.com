@@ -1,0 +1,1299 @@
+const { useState, useEffect } = React;
+
+
+    // --- ICONS (SVG Inline Components) ---
+    const IconInfo = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '6px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+    const IconUsers = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '6px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>;
+    const IconBook = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '6px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>;
+    const IconCpu = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '6px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>;
+    const IconChevronRight = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style={{display: 'inline-block', verticalAlign: 'middle'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>;
+    const IconUpload = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24" style={{display: 'inline-block', verticalAlign: 'middle'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>;
+    const IconCheck = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '4px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>;
+    const IconDownload = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '4px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
+    const IconAlertCircle = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '4px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+    const IconFileText = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '4px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
+    const IconPieChart = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '4px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>;
+    const IconActivity = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '4px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
+    const IconLayers = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '4px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>;
+    const IconDatabase = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '4px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>;
+    const IconFilePlus = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '4px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
+    const IconBarChart2 = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '4px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 20V10m-6 10V4m-6 16v-8" /></svg>;
+    const IconDashboard = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '6px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" /></svg>;
+    const IconDollar = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '6px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+    const IconTrendingUp = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '6px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>;
+    const IconFolder = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '6px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>;
+    const IconSearch = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '6px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
+    const IconCalculator = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '6px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>;
+    const IconMenu = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>;
+    const IconX = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
+    
+
+    // --- TRANSLATIONS DICTIONARY (Bilingual support AZ / EN) ---
+
+    function App() {
+      const [lang, setLang] = useState('AZ');
+      const [activeTab, setActiveTab] = useState('home');
+      const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+      const [softwareTab, setSoftwareTab] = useState('dashboard');
+      const [selectedCv, setSelectedCv] = useState(null);
+      const [sidebarOpen, setSidebarOpen] = useState(true);
+      const [selectedArticle, setSelectedArticle] = useState(null);
+      const [articleText, setArticleText] = useState('');
+      const [loadingArticle, setLoadingArticle] = useState(false);
+      const [formulaCategory, setFormulaCategory] = useState('non-life');
+      const [activePdf, setActivePdf] = useState('telimat');
+
+      const t = translations[lang];
+
+      // App calculations state
+      const [importedState, setImportedState] = useState({
+        status: 'idle', 
+        policyCount: 0,
+        errors: 0,
+        warnings: 0,
+        fileName: ''
+      });
+
+      const [pricingParams, setPricingParams] = useState({
+        age: 35,
+        gender: 'Male',
+        product: 'Endowment',
+        term: 20,
+        sumAssured: 100000,
+        interest: 5.0
+      });
+
+      const [pricingResult, setPricingResult] = useState(null);
+
+      const [reserveParams, setReserveParams] = useState({
+        policyId: 'POL-2401',
+        currentYear: 5,
+        interest: 5.0
+      });
+
+      const [reserveResult, setReserveResult] = useState(null);
+
+      const [searchPolicyId, setSearchPolicyId] = useState('');
+      const [searchedPolicy, setSearchedPolicy] = useState(null);
+
+      const [reportsList, setReportsList] = useState([]);
+      const [generatingReport, setGeneratingReport] = useState(null);
+
+      // --- ALL MATHEMATICAL CALCULATIONS CLEANED TO ZERO AS REQUESTED ---
+      const calculatePricing = () => {
+        setPricingResult({
+          commutations: { Dx: 0, Nx: 0, Cx: 0, Mx: 0 },
+          netPremium: 0,
+          grossPremium: 0,
+          monthlyPremium: 0
+        });
+      };
+
+      const calculateReserve = () => {
+        const totalTerm = 20;
+        const tableData = [];
+        for (let year = 1; year <= totalTerm; year++) {
+          if ([1, 5, 10, 20].includes(year) || year === parseInt(reserveParams.currentYear)) {
+            tableData.push({ year, reserve: 0 });
+          }
+        }
+        setReserveResult({
+          policyId: reserveParams.policyId,
+          currentYear: reserveParams.currentYear,
+          tableData
+        });
+      };
+
+      const searchPolicy = () => {
+        if (!searchPolicyId) return;
+        const mockDb = {
+          'POL-2401': { id: 'POL-2401', cert: 'CERT-98210', name: 'Nurlan Aliyev', gender: 'Male', age: 34, product: 'Endowment', premium: 0, reserve: 0, status: 'Active' },
+          'POL-2402': { id: 'POL-2402', cert: 'CERT-98211', name: 'Leyla Mammadova', gender: 'Female', age: 29, product: 'Term Life', premium: 0, reserve: 0, status: 'Active' },
+          'POL-2403': { id: 'POL-2403', cert: 'CERT-98212', name: 'Emin Huseynov', gender: 'Male', age: 45, product: 'Annuity', premium: 0, reserve: 0, status: 'Active' }
+        };
+        const found = mockDb[searchPolicyId.toUpperCase()] || null;
+        setSearchedPolicy(found);
+      };
+
+      const handleFileUpload = (e) => {
+        setImportedState({
+          status: 'success',
+          policyCount: 250,
+          errors: 0,
+          warnings: 3,
+          fileName: 'Policy Portfolio.xlsx'
+        });
+      };
+
+      const generateReportAction = (type) => {
+        setGeneratingReport(type);
+        setTimeout(() => {
+          setReportsList(prev => [
+            {
+              id: `REP-${Math.floor(1000 + Math.random() * 9000)}`,
+              type,
+              date: new Date().toLocaleDateString(),
+              size: '0.0 KB (Empty)'
+            },
+            ...prev
+          ]);
+          setGeneratingReport(null);
+        }, 1200);
+      };
+
+      const openArticle = async (article, index) => {
+        setSelectedArticle(article);
+        setLoadingArticle(true);
+        setArticleText('');
+        try {
+          const response = await fetch(`./blog/blog_${index + 1}_${lang.toLowerCase()}.txt`);
+          if (response.ok) {
+            const text = await response.text();
+            setArticleText(text);
+          } else {
+            setArticleText(lang === 'AZ' ? "Məqalə tapılmadı." : "Article not found.");
+          }
+        } catch (err) {
+          setArticleText(lang === 'AZ' ? "Xəta baş verdi." : "An error occurred.");
+        } finally {
+          setLoadingArticle(false);
+        }
+      };
+
+      return (
+        <React.Fragment>
+          <div className="bg-glow-container">
+            <div className="bg-glow-1"></div>
+            <div className="bg-glow-2"></div>
+          </div>
+
+          {/* HEADER NAV */}
+          <header className="app-header">
+            <div className="logo-area" onClick={() => { setActiveTab('home'); setMobileMenuOpen(!mobileMenuOpen); }} style={{ cursor: 'pointer' }}>
+              <div className="logo-badge">α</div>
+              <span className="text-gradient-primary">ARPP</span>
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <nav className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+                <button className={`nav-link ${activeTab === 'actuaries' ? 'active' : ''}`} onClick={() => { setActiveTab('actuaries'); setMobileMenuOpen(false); }}>
+                  <IconUsers /> {t.actuaries}
+                </button>
+                <button className={`nav-link ${activeTab === 'blog' ? 'active' : ''}`} onClick={() => { setActiveTab('blog'); setMobileMenuOpen(false); }}>
+                  <IconBook /> {t.blog}
+                </button>
+                <button className={`nav-link ${activeTab === 'create-report' ? 'active' : ''}`} onClick={() => { setActiveTab('create-report'); setMobileMenuOpen(false); }}>
+                  <IconCpu /> {t.createReport}
+                </button>
+                <button className={`nav-link ${activeTab === 'software' ? 'active' : ''}`} onClick={() => { setActiveTab('software'); setMobileMenuOpen(false); }}>
+                  <IconChevronRight /> Software
+                </button>
+              </nav>
+
+              {/* Language Switcher */}
+              <div className="lang-switcher">
+                <button className={`lang-btn ${lang === 'AZ' ? 'active' : ''}`} onClick={() => setLang('AZ')}>AZ</button>
+                <button className={`lang-btn ${lang === 'EN' ? 'active' : ''}`} onClick={() => setLang('EN')}>EN</button>
+              </div>
+            </div>
+          </header>
+
+          {/* LANDING PAGE: HOME */}
+          {activeTab === 'home' && (
+            <div style={{ padding: '2rem 5%', display: 'flex', flexDirection: 'column', gap: '4rem', alignItems: 'center' }}>
+              
+              <section className="landing-hero" style={{ maxWidth: '900px', margin: '4rem auto 2rem', textAlign: 'center', padding: '0 1rem' }}>
+                <div className="hero-badge" style={{ animation: 'float 3s ease-in-out infinite' }}>
+                  <span>🚀</span> {lang === 'AZ' ? 'Yeni Nəsil Hesablama Platforması' : 'Next-Gen Calculation Platform'}
+                </div>
+                <h1 className="hero-title text-gradient" style={{ fontSize: '4rem', letterSpacing: '-0.02em', lineHeight: '1.1' }}>
+                  {lang === 'AZ' ? 'Aktuar Təhlilində' : 'The Future of'} <br />
+                  <span className="text-gradient-primary">{lang === 'AZ' ? 'Gələcəyin Standartı' : 'Actuarial Analysis'}</span>
+                </h1>
+                <p className="hero-description" style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', maxWidth: '700px', margin: '1.5rem auto' }}>
+                  {lang === 'AZ' 
+                    ? 'ARPP (Actuary Calculator & Reporting Platform) vasitəsilə ən mürəkkəb riyazi modelləri saniyələr içində icra edin. Tarifləşdirmə, ehtiyatların qiymətləndirilməsi və beynəlxalq standartlara uyğun avtomatlaşdırılmış hesabatlar.'
+                    : 'Execute the most complex mathematical models in seconds with ARPP. Pricing, reserve valuation, and automated reporting in compliance with international standards.'}
+                </p>
+
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '3rem' }}>
+                  <button className="btn-primary" onClick={() => setActiveTab('create-report')} style={{ padding: '1rem 2.5rem', fontSize: '1.1rem', borderRadius: '50px' }}>
+                    {t.btnStartPlatform} <span style={{ marginLeft: '8px' }}>→</span>
+                  </button>
+                  <button className="btn-secondary" onClick={() => setActiveTab('actuaries')} style={{ padding: '1rem 2.5rem', fontSize: '1.1rem', borderRadius: '50px' }}>
+                    {t.btnMeetActuaries}
+                  </button>
+                </div>
+              </section>
+
+              {/* Stats & Features */}
+              <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', width: '100%', maxWidth: '1100px' }}>
+                <div className="glass-card" style={{ textAlign: 'center', padding: '2.5rem 1.5rem' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚡</div>
+                  <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>{lang === 'AZ' ? 'Yüksək Sürət' : 'High Speed'}</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                    {lang === 'AZ' ? 'Milyonlarla sətri əhatə edən böyük verilənləri (Big Data) asanlıqla emal edən güclü arxitektura.' : 'Powerful architecture that easily processes Big Data spanning millions of rows.'}
+                  </p>
+                </div>
+                <div className="glass-card" style={{ textAlign: 'center', padding: '2.5rem 1.5rem' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🛡️</div>
+                  <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>{lang === 'AZ' ? 'Dəqiqlik və Güvən' : 'Accuracy & Trust'}</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                    {lang === 'AZ' ? 'Stoxastik və deterministik modellərlə maksimum dəqiqliyi təmin edən hesablama alqoritmləri.' : 'Calculation algorithms ensuring maximum accuracy with stochastic and deterministic models.'}
+                  </p>
+                </div>
+                <div className="glass-card" style={{ textAlign: 'center', padding: '2.5rem 1.5rem' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📈</div>
+                  <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>{lang === 'AZ' ? 'Avtomatik Hesabatlıq' : 'Automated Reporting'}</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                    {lang === 'AZ' ? 'IFRS 17 və digər yerli standartlara uyğun tək kliklə rəsmi sənəd generasiyası.' : 'One-click official document generation compliant with IFRS 17 and other local standards.'}
+                  </p>
+                </div>
+              </section>
+
+              {/* CTA Section */}
+              <div className="glass-card" style={{ width: '100%', maxWidth: '1100px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', padding: '3rem', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                <div style={{ maxWidth: '600px' }}>
+                  <h2 style={{ fontSize: '2rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>
+                    {lang === 'AZ' ? 'Hazırsınız?' : 'Are you ready?'}
+                  </h2>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', marginBottom: '1.5rem' }}>
+                    {lang === 'AZ' ? 'Sığorta ehtiyatlarınızı və portfelinizi müasir platformamızda idarə edərək fərqi hiss edin.' : 'Feel the difference by managing your insurance reserves and portfolio on our modern platform.'}
+                  </p>
+                </div>
+                <button className="btn-primary" onClick={() => setActiveTab('create-report')} style={{ padding: '1rem 2rem', fontSize: '1.1rem' }}>
+                  {t.createReport} <span style={{ marginLeft: '8px' }}>→</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ACTUARIES DIRECTORY */}
+          {activeTab === 'actuaries' && (
+            <div className="cards-container">
+              <div className="section-header">
+                <h2 className="section-title text-gradient">{t.ourActuariesTitle}</h2>
+                <p className="section-subtitle">{t.ourActuariesSub}</p>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.actuaryClickPrompt}</span>
+              </div>
+              
+              <div className="actuary-profile-grid">
+                {/* Bahman Orujov CV Card */}
+                <div className="glass-card profile-card" onClick={() => setSelectedCv(cvData)}>
+                  <div className="profile-header">
+                    <div className="profile-avatar" style={{background: 'linear-gradient(135deg, var(--color-secondary) 0%, var(--color-primary) 100%)'}}>BO</div>
+                    <div className="profile-info">
+                      <h3>{cvData.name}</h3>
+                      <p>{cvData.title[lang]}</p>
+                    </div>
+                  </div>
+                  <p className="profile-body">
+                    {lang === 'AZ' 
+                      ? "Mega Life-da Həyat sığortası ehtiyat hesablamalarının avtomatlaşdırılması, Flask analitik dashboard panelinin qurulması üzrə ixtisaslaşmışdır."
+                      : "Specialized in automating life reserving and building Flask analytical dashboards at Mega Life."}
+                  </p>
+                  <div className="profile-skills">
+                    <span className="skill-tag">Python & SQL</span>
+                    <span className="skill-tag">Actuarial Reserving</span>
+                    <span className="skill-tag">VBA</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* CV DETAIL MODAL */}
+          {selectedCv && (
+            <div className="modal-overlay" onClick={() => setSelectedCv(null)}>
+              <div className="modal-content" onClick={e => e.stopPropagation()}>
+                <button className="modal-close" onClick={() => setSelectedCv(null)}>✕</button>
+                
+                <div style={{display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem'}}>
+                  <div className="profile-avatar" style={{width: '5rem', height: '5rem', fontSize: '2rem'}}>BO</div>
+                  <div>
+                    <h2 style={{fontSize: '1.75rem', fontWeight: 800}} className="text-gradient-primary">{selectedCv.name}</h2>
+                    <p style={{color: 'var(--color-tertiary)', fontWeight: 600}}>{selectedCv.title[lang]}</p>
+                    <p style={{fontSize: '0.85rem', color: 'var(--text-muted)'}}>{selectedCv.location}</p>
+                  </div>
+                </div>
+
+                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.85rem'}}>
+                  <div>📧 <strong>Email:</strong> {selectedCv.email}</div>
+                  <div>📞 <strong>Phone:</strong> {selectedCv.phone}</div>
+                  <div>🔗 <strong>LinkedIn:</strong> <a href={`https://${selectedCv.linkedin}`} target="_blank" style={{color: 'var(--color-primary)'}}>{selectedCv.linkedin}</a></div>
+                  <div>🌐 <strong>{t.cvLang}:</strong> {selectedCv.languages[lang]}</div>
+                </div>
+
+                {/* Experience */}
+                <h3 className="cv-section-title">💼 {t.cvExp}</h3>
+                {selectedCv.experience.map((exp, idx) => (
+                  <div key={idx} className="cv-item">
+                    <div className="cv-item-title">
+                      <span>{exp.role[lang]}</span>
+                      <span style={{fontSize: '0.85rem', color: 'var(--text-muted)'}}>{exp.period}</span>
+                    </div>
+                    <div className="cv-item-company">{exp.company}</div>
+                    <ul className="cv-item-desc">
+                      {exp.bullets[lang].map((bullet, bidx) => (
+                        <li key={bidx}>{bullet}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+
+                {/* Education */}
+                <h3 className="cv-section-title">🎓 {t.cvEdu}</h3>
+                {selectedCv.education.map((edu, idx) => (
+                  <div key={idx} className="cv-item" style={{marginBottom: '0.75rem'}}>
+                    <div className="cv-item-title">
+                      <span>{edu.degree[lang]}</span>
+                      <span style={{fontSize: '0.85rem', color: 'var(--text-muted)'}}>{edu.period}</span>
+                    </div>
+                    <div style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}>{edu.inst}</div>
+                  </div>
+                ))}
+
+                {/* Technical Skills */}
+                <h3 className="cv-section-title">🛠️ {t.cvSkills}</h3>
+                <ul className="cv-item-desc" style={{paddingLeft: '1.25rem'}}>
+                  {selectedCv.skills[lang].map((sk, idx) => (
+                    <li key={idx} style={{marginBottom: '0.4rem'}}>{sk}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* BLOG */}
+          {activeTab === 'blog' && (
+            <div className="cards-container">
+              <div className="section-header">
+                <h2 className="section-title text-gradient">{t.blogTitle}</h2>
+                <p className="section-subtitle">{t.blogSub}</p>
+              </div>
+              <div className="blog-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+                {blogArticles.map((article, idx) => (
+                  <div key={idx} className="glass-card blog-card" style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div className="blog-img-placeholder" style={{ fontSize: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {article.icon}
+                    </div>
+                    <div className="blog-meta">
+                      <span>{article.date[lang]}</span>
+                      <span>•</span>
+                      <span>{t.readTime}: {article.readTime} dəq</span>
+                    </div>
+                    <h3 className="blog-title" style={{ flexGrow: 1 }}>{article.title[lang]}</h3>
+                    <p className="blog-excerpt">{article.excerpt[lang]}</p>
+                    <span className="read-more-link" onClick={() => openArticle(article, idx)} style={{ cursor: 'pointer', display: 'inline-block' }}>
+                      {t.blogReadMore} <span>→</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ARTICLE DETAIL MODAL */}
+          {selectedArticle && (
+            <div className="modal-overlay" onClick={() => setSelectedArticle(null)}>
+              <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '700px' }}>
+                <button className="modal-close" onClick={() => setSelectedArticle(null)}>✕</button>
+                
+                <div style={{display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem'}}>
+                  <div style={{fontSize: '3rem'}}>{selectedArticle.icon}</div>
+                  <div>
+                    <h2 style={{fontSize: '1.5rem', fontWeight: 800}} className="text-gradient-primary">{selectedArticle.title[lang]}</h2>
+                    <p style={{fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem'}}>
+                      {selectedArticle.date[lang]} • {t.readTime}: {selectedArticle.readTime} dəq
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '0.5rem', fontSize: '0.95rem', lineHeight: '1.6', color: 'var(--text-secondary)' }}>
+                  {loadingArticle ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '3rem' }}>
+                      <div className="spinner"></div>
+                    </div>
+                  ) : (
+                    <React.Fragment>
+                      {articleText.split('\n').map((para, pIdx) => (
+                        <p key={pIdx} style={{ marginBottom: '1rem' }}>{para}</p>
+                      ))}
+                      {selectedArticle.sourceUrl && (
+                        <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', display: 'flex', justifyContent: 'flex-end' }}>
+                          <a href={selectedArticle.sourceUrl} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                            🌐 {lang === 'AZ' ? "Mənbəyə keç" : "Go to Source"}
+                          </a>
+                        </div>
+                      )}
+                    </React.Fragment>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ACTUARIAL APPLICATION */}
+          {activeTab === 'create-report' && (
+            <div className="software-container">
+              {/* SIDEBAR */}
+              <aside className={`software-sidebar ${sidebarOpen ? '' : 'collapsed'}`}>
+                <button className="sidebar-toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                  {sidebarOpen ? <IconX /> : <IconMenu />}
+                </button>
+                <div className="sidebar-heading">{sidebarOpen ? t.sidebarPanels : '...'}</div>
+                <button className={`sidebar-btn ${softwareTab === 'dashboard' ? 'active' : ''}`} onClick={() => setSoftwareTab('dashboard')}>
+                  <IconDashboard /> <span className="sidebar-btn-text">{t.dashboard}</span>
+                </button>
+                <button className={`sidebar-btn ${softwareTab === 'import-data' ? 'active' : ''}`} onClick={() => setSoftwareTab('import-data')}>
+                  <IconUpload /> <span className="sidebar-btn-text">{t.importData}</span>
+                </button>
+                <div className="sidebar-heading">{sidebarOpen ? t.sidebarEngines : '...'}</div>
+                <button className={`sidebar-btn ${softwareTab === 'pricing' ? 'active' : ''}`} onClick={() => setSoftwareTab('pricing')}>
+                  <IconDollar /> <span className="sidebar-btn-text">{t.pricingEngine}</span>
+                </button>
+                <button className={`sidebar-btn ${softwareTab === 'reserve' ? 'active' : ''}`} onClick={() => setSoftwareTab('reserve')}>
+                  <IconTrendingUp /> <span className="sidebar-btn-text">{t.reserveEngine}</span>
+                </button>
+                <button className={`sidebar-btn ${softwareTab === 'portfolio' ? 'active' : ''}`} onClick={() => setSoftwareTab('portfolio')}>
+                  <IconFolder /> <span className="sidebar-btn-text">{t.portfolioDashboard}</span>
+                </button>
+                <div className="sidebar-heading">{sidebarOpen ? t.sidebarAnalytics : '...'}</div>
+                <button className={`sidebar-btn ${softwareTab === 'policy-explorer' ? 'active' : ''}`} onClick={() => setSoftwareTab('policy-explorer')}>
+                  <IconSearch /> <span className="sidebar-btn-text">{t.policyExplorer}</span>
+                </button>
+                <button className={`sidebar-btn ${softwareTab === 'formula-explorer' ? 'active' : ''}`} onClick={() => setSoftwareTab('formula-explorer')}>
+                  <IconCalculator /> <span className="sidebar-btn-text">{t.formulaExplorer}</span>
+                </button>
+                <button className={`sidebar-btn ${softwareTab === 'reports' ? 'active' : ''}`} onClick={() => setSoftwareTab('reports')}>
+                  <IconFileText /> <span className="sidebar-btn-text">{t.reports}</span>
+                </button>
+              </aside>
+
+              {/* MAIN SOFTWARE WORKSPACE */}
+              <main className="software-content">
+                {/* SUB-TAB: DASHBOARD */}
+                {softwareTab === 'dashboard' && (
+                  <div>
+                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.dashboard}</h2>
+                    <div className="kpi-grid">
+                      <div className="glass-card kpi-card">
+                        <div className="kpi-header">
+                          <span>{t.kpiPolicies}</span>
+                          <span>📈</span>
+                        </div>
+                        <div className="kpi-value">{importedState.status === 'success' ? '250' : '0'}</div>
+                        <div className="kpi-footer">{lang === 'AZ' ? 'İdxal edilmiş ümumi say' : 'Total imported count'}</div>
+                      </div>
+                      <div className="glass-card kpi-card">
+                        <div className="kpi-header">
+                          <span>{t.kpiAge}</span>
+                          <span>👤</span>
+                        </div>
+                        <div className="kpi-value">{importedState.status === 'success' ? '36.8' : '0.0'}</div>
+                        <div className="kpi-footer">Policy Portfolio</div>
+                      </div>
+                      <div className="glass-card kpi-card">
+                        <div className="kpi-header">
+                          <span>{t.kpiPremium}</span>
+                          <span>💰</span>
+                        </div>
+                        <div className="kpi-value">
+                          {importedState.status === 'success' ? '1,120,450 AZN' : '0 AZN'}
+                        </div>
+                        <div className="kpi-footer">{lang === 'AZ' ? 'Yazılmış ümumi premium' : 'Total written premium'}</div>
+                      </div>
+                      <div className="glass-card kpi-card">
+                        <div className="kpi-header">
+                          <span>{t.kpiReserve}</span>
+                          <span>🛡️</span>
+                        </div>
+                        <div className="kpi-value">
+                          {importedState.status === 'success' ? '452,180 AZN' : '0 AZN'}
+                        </div>
+                        <div className="kpi-footer">{lang === 'AZ' ? 'Hesablanmış ehtiyatlar' : 'Calculated reserves'}</div>
+                      </div>
+                    </div>
+
+                    <div className="glass-card" style={{ marginBottom: '2rem', padding: '1.5rem', borderLeft: '4px solid var(--primary-color)' }}>
+                      <h3 style={{ marginBottom: '1rem', fontSize: '1.2rem' }}>{lang === 'AZ' ? 'Modullar Haqqında Məlumat' : 'About Software Modules'}</h3>
+                      <ul style={{ listStyleType: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--text-secondary)' }}>
+                        <li><strong style={{ color: 'var(--text-primary)' }}>Pricing Engine (Qiymətləndirmə):</strong> {lang === 'AZ' ? 'Həyat və Qeyri-həyat sığorta məhsulları üçün müasir aktuari modelləri ilə tariflərin və mükafatların hesablanması.' : 'Calculation of tariffs and premiums using modern actuarial models for Life and Non-Life insurance products.'}</li>
+                        <li><strong style={{ color: 'var(--text-primary)' }}>Reserve Engine (Ehtiyatlar):</strong> {lang === 'AZ' ? 'Qazanılmamış mükafat ehtiyatı (QME), baş vermiş ancaq bildirilməmiş zərərlər (BABBZ) və digər texniki ehtiyatların hesablanması.' : 'Calculation of Unearned Premium Reserves (UPR), Incurred But Not Reported (IBNR) and other technical reserves.'}</li>
+                        <li><strong style={{ color: 'var(--text-primary)' }}>Formula Explorer (Düsturlar):</strong> {lang === 'AZ' ? 'Mərkəzi Bank və sənaye standartlarına uyğun tətbiq edilən bütün aktuar düsturların interaktiv məlumat bazası.' : 'Interactive database of all applied actuarial formulas according to Central Bank and industry standards.'}</li>
+                        <li><strong style={{ color: 'var(--text-primary)' }}>Portfolio Dashboard:</strong> {lang === 'AZ' ? 'Sığorta portfelinin demoqrafik, risk və gəlirlilik göstəricilərinin vizual analizi.' : 'Visual analysis of demographic, risk, and profitability metrics of the insurance portfolio.'}</li>
+                      </ul>
+                    </div>
+
+                    <div className="glass-card" style={{ marginBottom: '2rem' }}>
+                      <h3 style={{ marginBottom: '1rem', fontSize: '1.2rem' }}>{t.systemStatus}</h3>
+                      {importedState.status === 'idle' ? (
+                        <div style={{ padding: '1.5rem', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', color: 'var(--text-secondary)' }}>
+                          {t.noDataWarning}
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>{t.activePortfolio}:</span>
+                            <strong className="text-gradient-primary">{importedState.fileName}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>{t.validationErrors}:</span>
+                            <span className="badge badge-success">{importedState.errors} {lang==='AZ'?'Xəta':'Error'}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>{t.warnings}:</span>
+                            <span className="badge badge-warning">{importedState.warnings} {lang==='AZ'?'Xəbərdarlıq':'Warning'}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB-TAB: IMPORT DATA */}
+                {softwareTab === 'import-data' && (
+                  <div>
+                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.importData}</h2>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>{t.importDesc}</p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+                      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <h3 style={{ fontSize: '1.1rem' }}>1. Policy Portfolio.xlsx</h3>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          {lang === 'AZ' ? 'Müqavilə ID, müştəri adı, məhsul, başlama tarixi, sığorta məbləği, premium və s.' : 'Policy ID, customer name, product, start date, sum assured, premium etc.'}
+                        </p>
+                        <button className="btn-secondary" style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center' }} onClick={handleFileUpload}>
+                          {t.fileSelectMock}
+                        </button>
+                      </div>
+                      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <h3 style={{ fontSize: '1.1rem' }}>2. Monthlydeathtable.csv</h3>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          {lang === 'AZ' ? 'Aylıq ölüm cədvəli (X, l(x), d(x) sütunları, aylıq addımlarla).' : 'Monthly death table (X, l(x), d(x) columns, with monthly steps).'}
+                        </p>
+                        <button className="btn-secondary" style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center' }} onClick={handleFileUpload}>
+                          {t.fileSelectMock}
+                        </button>
+                      </div>
+                      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <h3 style={{ fontSize: '1.1rem' }}>3. Interest Rate.xlsx</h3>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          {lang === 'AZ' ? 'Daxili diskont və ssenari dərəcələri (Scenario, Annual Interest).' : 'Internal discount and scenario rates (Scenario, Annual Interest).'}
+                        </p>
+                        <button className="btn-secondary" style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center' }} onClick={handleFileUpload}>
+                          {t.fileSelectMock}
+                        </button>
+                      </div>
+                    </div>
+
+                    {importedState.status === 'success' && (
+                      <div className="glass-card" style={{ background: 'rgba(16, 185, 129, 0.03)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
+                        <h3 style={{ color: 'var(--color-success)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {t.validationSuccess}
+                        </h3>
+                        <div className="table-container">
+                          <table className="custom-table">
+                            <thead>
+                              <tr>
+                                <th>{t.metricName}</th>
+                                <th>{t.metricRule}</th>
+                                <th>{t.metricStatus}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td>{t.labelAge}</td>
+                                <td>0 - 120</td>
+                                <td><span className="badge badge-success">{t.statusSuccess}</span></td>
+                              </tr>
+                              <tr>
+                                <td>{t.labelSum}</td>
+                                <td>&gt; 0</td>
+                                <td><span className="badge badge-success">{t.statusSuccess}</span></td>
+                              </tr>
+                              <tr>
+                                <td>Premium</td>
+                                <td>&gt; 0</td>
+                                <td><span className="badge badge-success">{t.statusSuccess}</span></td>
+                              </tr>
+                              <tr>
+                                <td>{lang === 'AZ' ? 'Faiz (Interest)' : 'Interest'}</td>
+                                <td>&ge; 0</td>
+                                <td><span className="badge badge-success">{t.statusSuccess}</span></td>
+                              </tr>
+                              <tr>
+                                <td>{lang === 'AZ' ? 'Təkrarlanan Müqavilə' : 'Duplicate Policy'}</td>
+                                <td>{lang === 'AZ' ? 'Təkrarsız' : 'No Duplicates'}</td>
+                                <td><span className="badge badge-success">{lang === 'AZ' ? 'Mövcud deyil' : 'None'}</span></td>
+                              </tr>
+                              <tr>
+                                <td>{lang === 'AZ' ? 'Boş Xanalar' : 'Empty Cells'}</td>
+                                <td>{lang === 'AZ' ? 'Boş Xana Yoxdur' : 'No Empty Cells'}</td>
+                                <td><span className="badge badge-warning">{t.statusWarning}</span></td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* SUB-TAB: PRICING ENGINE */}
+                {softwareTab === 'pricing' && (
+                  <div>
+                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.pricingTitle}</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                      {/* Inputs */}
+                      <div className="glass-card">
+                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.pricingSubTitle}</h3>
+                        <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
+                          <div className="form-group">
+                            <label className="form-label">{t.labelAge}</label>
+                            <input type="number" className="input-field" value={pricingParams.age} onChange={e => setPricingParams({ ...pricingParams, age: parseInt(e.target.value) || 0 })} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">{t.labelGender}</label>
+                            <select className="select-field" value={pricingParams.gender} onChange={e => setPricingParams({ ...pricingParams, gender: e.target.value })}>
+                              <option value="Male">{lang==='AZ'?'Kişi':'Male'}</option>
+                              <option value="Female">{lang==='AZ'?'Qadın':'Female'}</option>
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">{t.labelProduct}</label>
+                            <select className="select-field" value={pricingParams.product} onChange={e => setPricingParams({ ...pricingParams, product: e.target.value })}>
+                              <option value="Term Life">{lang==='AZ'?'Müddətli Həyat Sığortası':'Term Life'}</option>
+                              <option value="Endowment">{lang==='AZ'?'Qarışıq Həyat Sığortası':'Endowment'}</option>
+                              <option value="Annuity">{lang==='AZ'?'Anuitet':'Annuity'}</option>
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">{t.labelTerm}</label>
+                            <input type="number" className="input-field" value={pricingParams.term} onChange={e => setPricingParams({ ...pricingParams, term: parseInt(e.target.value) || 0 })} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">{t.labelSum}</label>
+                            <input type="number" className="input-field" value={pricingParams.sumAssured} onChange={e => setPricingParams({ ...pricingParams, sumAssured: parseInt(e.target.value) || 0 })} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">{t.labelInterest}</label>
+                            <input type="number" step="0.1" className="input-field" value={pricingParams.interest} onChange={e => setPricingParams({ ...pricingParams, interest: parseFloat(e.target.value) || 0 })} />
+                          </div>
+                        </div>
+                        <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={calculatePricing}>
+                          {t.btnCalculate}
+                        </button>
+                      </div>
+
+                      {/* Outputs */}
+                      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.pricingOutputTitle}</h3>
+                          {pricingResult ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>{t.netPremiumLabel}</span>
+                                <strong style={{ fontSize: '1.25rem', color: 'var(--color-primary)' }}>{pricingResult.netPremium} AZN</strong>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>{t.grossPremiumLabel}</span>
+                                <strong style={{ fontSize: '1.25rem', color: 'var(--color-secondary)' }}>{pricingResult.grossPremium} AZN</strong>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>{t.monthlyPremiumLabel}</span>
+                                <strong style={{ fontSize: '1.25rem', color: 'var(--color-tertiary)' }}>{pricingResult.monthlyPremium} AZN</strong>
+                              </div>
+
+                              <div style={{ marginTop: '1rem' }}>
+                                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{t.commutationLabel}</h4>
+                                <div className="commutation-grid">
+                                  <div className="commutation-box">
+                                    <div className="comm-label">Dx</div>
+                                    <div className="comm-value">{pricingResult.commutations.Dx}</div>
+                                  </div>
+                                  <div className="commutation-box">
+                                    <div className="comm-label">Nx</div>
+                                    <div className="comm-value">{pricingResult.commutations.Nx}</div>
+                                  </div>
+                                  <div className="commutation-box">
+                                    <div className="comm-label">Cx</div>
+                                    <div className="comm-value">{pricingResult.commutations.Cx}</div>
+                                  </div>
+                                  <div className="commutation-box">
+                                    <div className="comm-label">Mx</div>
+                                    <div className="comm-value">{pricingResult.commutations.Mx}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-muted)' }}>
+                              {t.pricingPrompt}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB-TAB: RESERVE ENGINE */}
+                {softwareTab === 'reserve' && (
+                  <div>
+                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.reserveTitle}</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '2rem' }}>
+                      <div className="glass-card" style={{ height: 'fit-content' }}>
+                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.reserveScenario}</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                          <div className="form-group">
+                            <label className="form-label">{t.labelPolicyId}</label>
+                            <input type="text" className="input-field" value={reserveParams.policyId} onChange={e => setReserveParams({ ...reserveParams, policyId: e.target.value })} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">{t.labelPolicyYear}</label>
+                            <input type="number" className="input-field" value={reserveParams.currentYear} onChange={e => setReserveParams({ ...reserveParams, currentYear: e.target.value })} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">{t.labelInterest}</label>
+                            <input type="number" step="0.1" className="input-field" value={reserveParams.interest} onChange={e => setReserveParams({ ...reserveParams, interest: parseFloat(e.target.value) || 0 })} />
+                          </div>
+                          <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={calculateReserve}>
+                            {t.btnCalculateReserve}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="glass-card">
+                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.reserveOutputTitle}</h3>
+                        {reserveResult ? (
+                          <div>
+                            <div className="table-container" style={{ marginBottom: '2rem' }}>
+                              <table className="custom-table">
+                                <thead>
+                                  <tr>
+                                    <th>{t.tableColYear}</th>
+                                    <th>{t.tableColNet}</th>
+                                    <th>{t.tableColGross}</th>
+                                    <th>{t.tableColProspective}</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {reserveResult.tableData.map((row, index) => (
+                                    <tr key={index} style={parseInt(reserveResult.currentYear) === row.year ? { background: 'rgba(99, 102, 241, 0.08)' } : {}}>
+                                      <td>{lang==='AZ'?'İl':'Year'} {row.year} {parseInt(reserveResult.currentYear) === row.year && (lang==='AZ'?' (Cari)':' (Current)')}</td>
+                                      <td>{row.reserve}</td>
+                                      <td>{row.reserve}</td>
+                                      <td style={{ color: 'var(--color-tertiary)', fontWeight: 'bold' }}>{row.reserve}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Chart Mockup */}
+                            <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>{t.reserveChartTitle}</h4>
+                            <div className="mock-chart-container">
+                              {reserveResult.tableData.map((row, idx) => (
+                                <div key={idx} className="chart-bar-wrapper">
+                                  <div className="chart-value">{row.reserve}</div>
+                                  <div className="chart-bar" style={{ height: `10%`, width: '32px' }}></div>
+                                  <div className="chart-label">{lang==='AZ'?'İl':'Year'} {row.year}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)' }}>
+                            {t.reservePrompt}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB-TAB: PORTFOLIO */}
+                {softwareTab === 'portfolio' && (
+                  <div>
+                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.portfolioDashboard}</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+                      <div className="glass-card">
+                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>{t.productDist}</h3>
+                        <div className="mock-chart-container" style={{ justifyContent: 'space-around', alignItems: 'flex-end', height: '240px' }}>
+                          <div className="chart-bar-wrapper">
+                            <div className="chart-value">0</div>
+                            <div className="chart-bar" style={{ height: '10%', background: 'var(--color-primary)' }}></div>
+                            <div className="chart-label">Term Life</div>
+                          </div>
+                          <div className="chart-bar-wrapper">
+                            <div className="chart-value">0</div>
+                            <div className="chart-bar" style={{ height: '10%', background: 'var(--color-secondary)' }}></div>
+                            <div className="chart-label">Endowment</div>
+                          </div>
+                          <div className="chart-bar-wrapper">
+                            <div className="chart-value">0</div>
+                            <div className="chart-bar" style={{ height: '10%', background: 'var(--color-tertiary)' }}></div>
+                            <div className="chart-label">Annuity</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="glass-card">
+                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>{t.ageDist}</h3>
+                        <div className="mock-chart-container" style={{ height: '240px' }}>
+                          <div className="chart-bar-wrapper">
+                            <div className="chart-value">0</div>
+                            <div className="chart-bar" style={{ height: '10%' }}></div>
+                            <div className="chart-label">18-25</div>
+                          </div>
+                          <div className="chart-bar-wrapper">
+                            <div className="chart-value">0</div>
+                            <div className="chart-bar" style={{ height: '10%' }}></div>
+                            <div className="chart-label">26-35</div>
+                          </div>
+                          <div className="chart-bar-wrapper">
+                            <div className="chart-value">0</div>
+                            <div className="chart-bar" style={{ height: '10%' }}></div>
+                            <div className="chart-label">36-45</div>
+                          </div>
+                          <div className="chart-bar-wrapper">
+                            <div className="chart-value">0</div>
+                            <div className="chart-bar" style={{ height: '10%' }}></div>
+                            <div className="chart-label">46-55</div>
+                          </div>
+                          <div className="chart-bar-wrapper">
+                            <div className="chart-value">0</div>
+                            <div className="chart-bar" style={{ height: '10%' }}></div>
+                            <div className="chart-label">56+</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB-TAB: POLICY EXPLORER */}
+                {softwareTab === 'policy-explorer' && (
+                  <div>
+                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.policyExplorer}</h2>
+                    <div className="glass-card" style={{ marginBottom: '2rem' }}>
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <input type="text" className="input-field" placeholder={t.searchPlaceholder} value={searchPolicyId} onChange={e => setSearchPolicyId(e.target.value)} />
+                        <button className="btn-primary" onClick={searchPolicy}>{t.searchBtn}</button>
+                      </div>
+                    </div>
+
+                    {searchedPolicy ? (
+                      <div className="glass-card">
+                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.25rem' }}>{t.policyDetailsTitle}</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', fontSize: '0.95rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <div><span style={{ color: 'var(--text-secondary)' }}>{t.customerName}</span> <strong>{searchedPolicy.name}</strong></div>
+                            <div><span style={{ color: 'var(--text-secondary)' }}>{t.policyIdCert}</span> <strong>{searchedPolicy.id} / {searchedPolicy.cert}</strong></div>
+                            <div><span style={{ color: 'var(--text-secondary)' }}>{lang==='AZ'?'Məhsul:':'Product:'}</span> <strong>{searchedPolicy.product}</strong></div>
+                            <div><span style={{ color: 'var(--text-secondary)' }}>{t.genderAge}</span> <strong>{searchedPolicy.gender} / {searchedPolicy.age} {lang==='AZ'?'yaş':'years'}</strong></div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <div><span style={{ color: 'var(--text-secondary)' }}>{t.annualPremium}</span> <strong style={{ color: 'var(--color-primary)' }}>{searchedPolicy.premium} AZN</strong></div>
+                            <div><span style={{ color: 'var(--text-secondary)' }}>{t.reserveVal}</span> <strong style={{ color: 'var(--color-secondary)' }}>{searchedPolicy.reserve} AZN</strong></div>
+                            <div><span style={{ color: 'var(--text-secondary)' }}>{t.policyStatus}</span> <span className="badge badge-success">{searchedPolicy.status}</span></div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+                          <button className="btn-secondary" onClick={() => {
+                            setPricingParams({ ...pricingParams, age: searchedPolicy.age, gender: searchedPolicy.gender, product: searchedPolicy.product });
+                            setSoftwareTab('pricing');
+                            alert(lang==='AZ'?"Müqavilə parametrləri yükləndi.":"Policy parameters loaded.");
+                          }}>
+                            {t.loadParamsPricing}
+                          </button>
+                          <button className="btn-secondary" onClick={() => {
+                            setReserveParams({ ...reserveParams, policyId: searchedPolicy.id });
+                            setSoftwareTab('reserve');
+                            alert(lang==='AZ'?"Müqavilə parametrləri yükləndi.":"Policy parameters loaded.");
+                          }}>
+                            {t.loadParamsReserve}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)' }}>
+                        {t.policyNotFound}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                 {/* SUB-TAB: FORMULA EXPLORER */}
+                 {softwareTab === 'formula-explorer' && (
+                   <div>
+                     <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.formulaExplorer}</h2>
+                     
+                     {/* Category tabs */}
+                     <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', flexWrap: 'wrap' }}>
+                       <button className={`btn-secondary ${formulaCategory === 'non-life' ? 'active' : ''}`} style={formulaCategory === 'non-life' ? { background: 'rgba(99, 102, 241, 0.15)', borderColor: 'var(--color-primary)' } : {}} onClick={() => setFormulaCategory('non-life')}>
+                         {lang === 'AZ' ? "Qeyri-Həyat Sığortası" : "Non-Life Insurance"}
+                       </button>
+                       <button className={`btn-secondary ${formulaCategory === 'life' ? 'active' : ''}`} style={formulaCategory === 'life' ? { background: 'rgba(99, 102, 241, 0.15)', borderColor: 'var(--color-primary)' } : {}} onClick={() => setFormulaCategory('life')}>
+                         {lang === 'AZ' ? "Həyat Sığortası" : "Life Insurance"}
+                       </button>
+                       <button className={`btn-secondary ${formulaCategory === 'reserves' ? 'active' : ''}`} style={formulaCategory === 'reserves' ? { background: 'rgba(99, 102, 241, 0.15)', borderColor: 'var(--color-primary)' } : {}} onClick={() => setFormulaCategory('reserves')}>
+                         {lang === 'AZ' ? "Sığorta Ehtiyatları" : "Insurance Reserves"}
+                       </button>
+                       <button className={`btn-secondary ${formulaCategory === 'docs' ? 'active' : ''}`} style={formulaCategory === 'docs' ? { background: 'rgba(99, 102, 241, 0.15)', borderColor: 'var(--color-primary)' } : {}} onClick={() => setFormulaCategory('docs')}>
+                         {lang === 'AZ' ? "Rəsmi Sənədlər (PDF)" : "Official Documents (PDF)"}
+                       </button>
+                     </div>
+
+                     <div className="glass-card" style={{ padding: '2rem' }}>
+                       {/* CATEGORY: NON-LIFE */}
+                       {formulaCategory === 'non-life' && (
+                         <div>
+                           <div className="formula-item" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
+                             <h4 className="formula-title text-gradient-primary">
+                               {lang === 'AZ' ? "1. Qeyri-Həyat Sığortası üzrə Sığorta Tarifi (B)" : "1. Non-Life Insurance Tariff (B)"}
+                             </h4>
+                             <p className="formula-desc">
+                               {lang === 'AZ' 
+                                 ? "Qeyri-həyat sığortası sinfi üzrə ümumi sığorta tarifi (baza sığorta tarifi) xalis tarif və yüklənmənin cəmindən ibarətdir."
+                                 : "The total insurance tariff (base tariff) for non-life insurance consists of the net tariff and loading."}
+                             </p>
+                             <div className="formula-latex" style={{ overflowX: 'auto' }}>{"B = N / (1 - f)"}</div>
+                             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                               {lang === 'AZ' 
+                                 ? "Burada: B - sığorta tarifi; N - xalis sığorta tarifi; f - yüklənmə (faizlə)." 
+                                 : "Where: B - insurance tariff; N - net tariff; f - loading factor (%)."}
+                             </div>
+                           </div>
+
+                           <div className="formula-item" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+                             <h4 className="formula-title text-gradient-primary">
+                               {lang === 'AZ' ? "2. Xalis Sığorta Tarifi (N) - Statistika Mövcud Olduqda" : "2. Net Insurance Tariff (N) - With Available Statistics"}
+                             </h4>
+                             <p className="formula-desc">
+                               {lang === 'AZ' 
+                                 ? "Müvafiq sığorta sinfi üzrə zərər statistikası mövcud olduqda xalis sığorta tarifinin riyazi düsturu."
+                                 : "The mathematical formula for calculating the net insurance tariff when loss statistics are available."}
+                             </p>
+                             <div className="formula-latex" style={{ overflowX: 'auto' }}>{"N = ( (M[X] + √D[X] * Φ⁻¹(γ)) / n ) * (1 / S)"}</div>
+                             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem', lineHeight: '1.5' }}>
+                               {lang === 'AZ' ? (
+                                 <div>
+                                   n – sığortalanması nəzərdə tutulan predmetlərin sayı;<br/>
+                                   S – bircins sığorta portfelində hər bir predmet üzrə sığorta məbləği;<br/>
+                                   X – bircins sığorta portfeli üzrə ümumi zərəri ifadə edən təsadüfi kəmiyyət;<br/>
+                                   M[X] – X təsadüfi kəmiyyətinin riyazi gözləməsi;<br/>
+                                   D[X] – X-in dispersiyası;<br/>
+                                   γ – təminat ehtimalı (xalis sığorta haqlarının zərərləri ödəməyə kifayət etməsi ehtimalı);<br/>
+                                   Φ⁻¹(γ) – təminat ehtimalına uyğun əmsal.
+                                 </div>
+                               ) : (
+                                 <div>
+                                   n – number of insured objects;<br/>
+                                   S – sum insured for each object in the homogeneous portfolio;<br/>
+                                   X – random variable representing the total loss of the portfolio;<br/>
+                                   M[X] – mathematical expectation of X;<br/>
+                                   D[X] – variance of X;<br/>
+                                   γ – security probability (probability that net premiums cover the claims);<br/>
+                                   Φ⁻¹(γ) – coefficient corresponding to security probability.
+                                 </div>
+                               )}
+                             </div>
+
+                             <div style={{ marginTop: '1.5rem' }}>
+                               <h5 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                 {lang === 'AZ' ? "Təminat Ehtimalı Əmsalları Cədvəli (Mənbə: Maliyyə Nazirliyi Təlimatı Əlavə 2):" : "Security Probability Coefficients Table (Source: FinMin Instruction Annex 2):"}
+                               </h5>
+                               <div style={{ overflowX: 'auto' }}>
+                                 <table className="custom-table" style={{ maxWidth: '450px', fontSize: '0.85rem' }}>
+                                   <thead>
+                                     <tr>
+                                       <th>γ</th>
+                                       <th>0.84</th>
+                                       <th>0.90</th>
+                                       <th>0.95</th>
+                                       <th>0.98</th>
+                                       <th>0.9986</th>
+                                     </tr>
+                                   </thead>
+                                   <tbody>
+                                     <tr>
+                                       <td><strong>Φ⁻¹(γ)</strong></td>
+                                       <td>1.0</td>
+                                       <td>1.3</td>
+                                       <td>1.645</td>
+                                       <td>2.0</td>
+                                       <td>3.0</td>
+                                     </tr>
+                                   </tbody>
+                                 </table>
+                               </div>
+                             </div>
+                           </div>
+                         </div>
+                       )}
+
+                       {/* CATEGORY: LIFE */}
+                       {formulaCategory === 'life' && (
+                         <div>
+                           <div className="formula-item" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
+                             <h4 className="formula-title text-gradient-primary">
+                               {lang === 'AZ' ? "1. Yaşam Riskindən Sığorta Ödənişinin Gözlənilən Cari Dəyəri (nEx)" : "1. Expected Present Value of Pure Endowment (nEx)"}
+                             </h4>
+                             <p className="formula-desc">
+                               {lang === 'AZ'
+                                 ? "x yaşlı şəxsin n il müddətində yaşaması şərtilə ödəniləcək sığorta məbləğinin gözlənilən cari dəyəri."
+                                 : "Expected present value of a benefit paid in n years if an x-year-old survives."}
+                             </p>
+                             <div className="formula-latex" style={{ overflowX: 'auto' }}>{"nEx = npx * (1 + i)⁻ⁿ = vⁿ * npx = D_x+n / D_x"}</div>
+                             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                               {lang === 'AZ'
+                                 ? "Burada: npx - x yaşlı şəxsin n il yaşama ehtimalı; i - illik faiz dərəcəsi; v - diskontlaşdırma vuruğu (v = (1+i)⁻¹); D_x - kommutasiya kəmiyyəti."
+                                 : "Where: npx - survival probability; i - annual interest; v - discount factor (v = (1+i)⁻¹); D_x - commutation auxiliary value."}
+                             </div>
+                           </div>
+
+                           <div className="formula-item" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
+                             <h4 className="formula-title text-gradient-primary">
+                               {lang === 'AZ' ? "2. Ölüm Riskindən Sığortanın Gözlənilən Cari Dəyəri (A¹_x:n)" : "2. Expected Present Value of Term Life Insurance (A¹_x:n)"}
+                             </h4>
+                             <p className="formula-desc">
+                               {lang === 'AZ'
+                                 ? "Diskret halda, x yaşlı şəxsin n il müddətində ölüm riskindən sığorta ödənişinin gözlənilən cari dəyəri."
+                                 : "Expected present value of a term life benefit paid at the end of the year of death."}
+                             </p>
+                             <div className="formula-latex" style={{ overflowX: 'auto' }}>{"A¹_x:n| = ∑ (t=0 to n-1) tpx * q_x+t * v^(t+1) = (M_x - M_x+n) / D_x"}</div>
+                             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                               {lang === 'AZ'
+                                 ? "Burada: q_x+t - x+t yaşlı şəxsin 1 il ərzində ölmə ehtimalı; M_x - ölümə əsaslanan kommutasiya kəmiyyəti."
+                                 : "Where: q_x+t - mortality probability; M_x - mortality-based commutation auxiliary value."}
+                             </div>
+                           </div>
+
+                           <div className="formula-item" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
+                             <h4 className="formula-title text-gradient-primary">
+                               {lang === 'AZ' ? "3. Kəsintisiz Ölüm Riski Sığortası (Ā¹_x:n)" : "3. Continuous Term Life Insurance (Ā¹_x:n)"}
+                             </h4>
+                             <p className="formula-desc">
+                               {lang === 'AZ'
+                                 ? "Ölümün yalnız diskret zamanın (ilin) sonunda yox, il ərzində hər hansı bir anda baş verməsini nəzərə alan gözlənilən cari dəyər."
+                                 : "Expected present value assuming death benefits are paid immediately at the moment of death."}
+                             </p>
+                             <div className="formula-latex" style={{ overflowX: 'auto' }}>{"Ā¹_x:n| = (i / δ) * A¹_x:n|"}</div>
+                             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                               {lang === 'AZ'
+                                 ? "Burada: δ = ln(1 + i) - faiz dərəcəsinin intensivliyidir (force of interest)."
+                                 : "Where: δ = ln(1 + i) is the force of interest."}
+                             </div>
+                           </div>
+
+                           <div className="formula-item" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
+                             <h4 className="formula-title text-gradient-primary">
+                               {lang === 'AZ' ? "4. Vahid Həyat Anuitetinin Gözlənilən Cari Dəyəri (ä_x:n)" : "4. Expected Present Value of Temporary Life Annuity Due (ä_x:n)"}
+                             </h4>
+                             <p className="formula-desc">
+                               {lang === 'AZ'
+                                 ? "x yaşlı şəxsə n il müddətində hər sığorta ilinin əvvəlində ödənilən vahid məbləğlərin gözlənilən cari dəyəri."
+                                 : "Expected present value of a temporary life annuity paid at the beginning of each year."}
+                             </p>
+                             <div className="formula-latex" style={{ overflowX: 'auto' }}>{"ä_x:n| = 1 + ∑ (t=1 to n-1) vᵗ * tpx = (N_x - N_x+n) / D_x"}</div>
+                             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                               {lang === 'AZ'
+                                 ? "Burada: N_x - anuitet hesablamaları üçün yığılmış kommutasiya kəmiyyəti."
+                                 : "Where: N_x - accumulated commutation auxiliary value for annuities."}
+                             </div>
+                           </div>
+
+                           <div className="formula-item" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+                             <h4 className="formula-title text-gradient-primary">
+                               {lang === 'AZ' ? "5. İldə m-dəfə ödənilən Temporary Anuitet (ä⁽ᵐ⁾_x:n)" : "5. Temporary Annuity Paid m Times a Year (ä⁽ᵐ⁾_x:n)"}
+                             </h4>
+                             <p className="formula-desc">
+                               {lang === 'AZ'
+                                 ? "Müddəti n il olan temporary anuitet üzrə ödənişlərin il ərzində m dəfə (ilin 1/m hissələrinin əvvəlində 1/m məbləğində) aparılması halı."
+                                 : "Expected present value of a temporary life annuity paid m times a year."}
+                             </p>
+                             <div className="formula-latex" style={{ overflowX: 'auto' }}>{"ä⁽ᵐ⁾_x:n| = ä_x:n| - ( (m - 1) / 2m ) * (1 - nEx)"}</div>
+                           </div>
+                         </div>
+                       )}
+
+                       {/* CATEGORY: RESERVES */}
+                       {formulaCategory === 'reserves' && (
+                         <div>
+                           <div className="formula-item" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
+                             <h4 className="formula-title text-gradient-primary">
+                               {lang === 'AZ' ? "1. Qazanılmamış Sığorta Haqqı Ehtiyatı (QSH)" : "1. Unearned Premium Reserve (QSH)"}
+                             </h4>
+                             <p className="formula-desc">
+                               {lang === 'AZ'
+                                 ? "Müqavilə üzrə hesablanmış sığorta haqqının hesabat tarixindən sonrakı dövrə aid olan hissəsidir (pro-rata temporis metodu)."
+                                 : "The portion of the written premium corresponding to the unexpired period of the policy."}
+                             </p>
+                             <div className="formula-latex" style={{ overflowX: 'auto' }}>{"QSH = BSH * ( (T1 - T2) / T1 )"}</div>
+                             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                               {lang === 'AZ'
+                                 ? "Burada: BSH - baza sığorta haqqı; T1 - sığorta təminatı müddəti (günlərlə); T2 - müqavilənin başlandığı andan hesabat tarixinədək keçən günlərin sayı."
+                                 : "Where: BSH - base premium; T1 - policy term (days); T2 - elapsed days from policy start to valuation date."}
+                             </div>
+                           </div>
+
+                           <div className="formula-item" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
+                             <h4 className="formula-title text-gradient-primary">
+                               {lang === 'AZ' ? "2. Riyazi Ehtiyatların Baza Hissəsi (REB / Riyazi Ehtiyat)" : "2. Base Mathematical Reserves (REB / Mathematical Reserve)"}
+                             </h4>
+                             <p className="formula-desc">
+                               {lang === 'AZ'
+                                 ? "Həyat sığortası üzrə gələcək öhdəliklərin (ölüm, yaşam və ya anuitet ödənişləri) diskontlaşdırılmış cari dəyəri."
+                                 : "The present value of future benefits and expenses minus the present value of future premiums."}
+                             </p>
+                             <div className="formula-latex" style={{ overflowX: 'auto' }}>{"REB = SÖ_g.g.d + ZTX_g.g.d + İAX_g.g.d - SH_g.g.d"}</div>
+                             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem', lineHeight: '1.5' }}>
+                               {lang === 'AZ' ? (
+                                 <div>
+                                   SÖ_g.g.d – sığorta (təkrarsığorta) müqaviləsinin şərtlərində nəzərdə tutulan sığorta ödənişlərinin gətirilmiş gözlənilən dəyəridir;<br/>
+                                   ZTX_g.g.d – sığorta hadisələrinin tənzimlənməsi xərclərinin gətirilmiş gözlənilən dəyəridir;<br/>
+                                   İAX_g.g.d – işlərin aparılması xərclərinin gətirilmiş gözlənilən dəyəridir;<br/>
+                                   SH_g.g.d – sığortaçının hesabat tarixindən sonra almalı olduğu sığorta haqlarının gətirilmiş gözlənilən dəyəridir.
+                                 </div>
+                               ) : (
+                                 <div>
+                                   SÖ_g.g.d – expected present value of future benefits defined in the policy;<br/>
+                                   ZTX_g.g.d – expected present value of claim settlement expenses;<br/>
+                                   İAX_g.g.d – expected present value of future policy administration costs;<br/>
+                                   SH_g.g.d – expected present value of future premium payments to be received.
+                                 </div>
+                               )}
+                             </div>
+                           </div>
+
+                           <div className="formula-item" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+                             <h4 className="formula-title text-gradient-primary">
+                               {lang === 'AZ' ? "3. BVBZE (Baş Vermiş Lakin Bildirilməmiş Zərərlər Ehtiyatı)" : "3. IBNR (Incurred But Not Reported Claims Reserve)"}
+                             </h4>
+                             <p className="formula-desc">
+                               {lang === 'AZ'
+                                 ? "Mərkəzi Bankın təlimatına uyğun olaraq hesabat tarixinə formalaşdırılan BVBZE aşağıdakı kəmiyyətlərin ən böyüyünə bərabər olmalıdır:"
+                                 : "In accordance with regulatory rules, the IBNR reserve is calculated as the maximum of three values:"}
+                             </p>
+                             <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.01)', borderRadius: '8px', borderLeft: '3px solid var(--color-tertiary)', fontSize: '0.85rem', lineHeight: '1.6', color: 'var(--text-secondary)' }}>
+                               {lang === 'AZ' ? (
+                                 <div>
+                                   1. Üçbucaq metodu (Chain Ladder / y(j) inkişaf rübləri) ilə hesablanmış məbləğ (Forma 8-8/9-11);<br/>
+                                   2. Hesabat tarixinə bildirilmiş, lakin tənzimlənməmiş zərərlər ehtiyatının (BTZE) 25%-i (Forma 8-3/9-5);<br/>
+                                   3. Hesabat dövrü (son 12 ay) ərzində qazanılmış məcmu sığorta haqlarının 2,5%-i.
+                                 </div>
+                               ) : (
+                                 <div>
+                                   1. Value calculated using the triangle method (Chain Ladder / development quarters y(j)) (Form 8-8/9-11);<br/>
+                                   2. 25% of the outstanding claims reserve (BTZE) (Form 8-3/9-5);<br/>
+                                   3. 2.5% of the earned premiums in the reporting period (last 12 months).
+                                 </div>
+                               )}
+                             </div>
+                           </div>
+                         </div>
+                       )}
+
+                       {/* CATEGORY: OFFICIAL DOCUMENTS (PDF) */}
+                       {formulaCategory === 'docs' && (
+                         <div>
+                           <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                             <button className="btn-secondary" style={activePdf === 'telimat' ? { background: 'var(--color-primary)', color: 'white', borderColor: 'var(--color-primary)' } : {}} onClick={() => setActivePdf('telimat')}>
+                               📄 {lang === 'AZ' ? "Aktuar Hesablamalar Təlimatı" : "Actuarial Calculations Instruction"}
+                             </button>
+                             <button className="btn-secondary" style={activePdf === 'qaydalar' ? { background: 'var(--color-primary)', color: 'white', borderColor: 'var(--color-primary)' } : {}} onClick={() => setActivePdf('qaydalar')}>
+                               📄 {lang === 'AZ' ? "Ehtiyatların Formalaşdırılması Qaydaları" : "Reserving Rules Guidelines"}
+                             </button>
+                           </div>
+                           <div style={{ background: 'rgba(255,255,255,0.01)', borderRadius: '12px', padding: '0.75rem', border: '1px solid var(--border-color)' }}>
+                             {activePdf === 'telimat' ? (
+                               <iframe src="./docs/Aktuar_Hesablamalar_Telimat.pdf" width="100%" height="800px" style={{ border: 'none', borderRadius: '8px' }}></iframe>
+                             ) : (
+                               <iframe src="./docs/Sigorta_Ehtiyatlari_Qaydalar.pdf" width="100%" height="800px" style={{ border: 'none', borderRadius: '8px' }}></iframe>
+                             )}
+                           </div>
+                         </div>
+                       )}
+                     </div>
+                   </div>
+                 )}
+
+                {/* SUB-TAB: REPORTS GENERATOR */}
+                {softwareTab === 'reports' && (
+                  <div>
+                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.reportGeneratorTitle}</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem' }}>
+                      <div className="glass-card">
+                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.reportTypesTitle}</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
+                            <div>
+                              <strong style={{ display: 'block' }}>{t.reportType1}</strong>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.reportType1Desc}</span>
+                            </div>
+                            <button className="btn-primary" onClick={() => generateReportAction('Pricing Report')} disabled={generatingReport !== null}>
+                              {generatingReport === 'Pricing Report' ? t.generating : t.btnGeneratePdf}
+                            </button>
+                          </div>
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
+                            <div>
+                              <strong style={{ display: 'block' }}>{t.reportType2}</strong>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.reportType2Desc}</span>
+                            </div>
+                            <button className="btn-primary" onClick={() => generateReportAction('Reserve Report')} disabled={generatingReport !== null}>
+                              {generatingReport === 'Reserve Report' ? t.generating : t.btnGeneratePdf}
+                            </button>
+                          </div>
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <strong style={{ display: 'block' }}>{t.reportType3}</strong>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.reportType3Desc}</span>
+                            </div>
+                            <button className="btn-primary" onClick={() => generateReportAction('Portfolio Report')} disabled={generatingReport !== null}>
+                              {generatingReport === 'Portfolio Report' ? t.generating : t.btnGenerateExcel}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="glass-card">
+                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.recentReports}</h3>
+                        {reportsList.length > 0 ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {reportsList.map((rep, idx) => (
+                              <div key={idx} className="glass-card" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.01)' }}>
+                                <div>
+                                  <strong style={{ fontSize: '0.95rem' }}>{rep.type}</strong>
+                                  <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{rep.id} • {rep.date} • {rep.size}</span>
+                                </div>
+                                <button className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => alert(`${rep.type} downloaded.`)}>{t.btnDownload}</button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)' }}>
+                            {t.noRecentReports}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </main>
+            </div>
+          )}
+        </React.Fragment>
+      );
+    }
+
+
+
+
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);

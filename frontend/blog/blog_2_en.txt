@@ -1,0 +1,11 @@
+EUROPEAN UNION'S SOLVENCY II REFORMS DELIVER CAPITAL RELIEF AND TIGHTEN ESG RULES
+Date: July 3, 2026
+
+The long-awaited Solvency II insurance regulatory reforms have officially entered into force across the European Union today. The package is set to unlock billions of euros in capital for European insurers and reinsurers.
+
+Key Elements of the Reform:
+1. Risk Margin Reduction: The risk margin cost parameter has been reduced by approximately 30-35% for long-term liabilities. This allows insurers to redeploy freed capital into green energy and infrastructure projects.
+2. ESG Disclosure Rules: Reporting mandates regarding climate risks in investment portfolios have been significantly tightened. Insurers must apply higher risk weights to carbon-intensive assets.
+3. Global Competitiveness: The updated framework aims to boost the competitiveness of European insurers against US and Asian counterparts.
+
+For actuaries, this reform necessitates an immediate recalibration of internal capital models and Solvency Capital Requirement (SCR) calculations. Companies have already begun pilot testing their updated reporting systems.

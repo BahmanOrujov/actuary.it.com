@@ -1,0 +1,11 @@
+PENSİYA FONDLARI ÜÇÜN HƏLL: DİNAMİK RİSKDƏN QORUNMA METODLARI İNFLYASİYA TƏSİRİNİ AZALDIR
+Tarix: 03 İyul 2026
+
+İnvestisiya analitikləri və aktuar mütəxəssislər yüksək inflyasiya şəraitində pensiya fondlarının maliyyə dayanıqlığını təmin etmək məqsədilə yeni dynamic hedging (dinamik riskdən qorunma) strategiyalarını təqdim ediblər.
+
+Strategiyanın Mahiyyəti:
+- İnflyasiyaya Həssas Öhdəliklər: Pensiya fondlarının gələcək öhdəlikləri birbaşa inflyasiya ilə indeksləşdirilir. İnflyasiya artdıqca fondun ödəməli olduğu məbləğ kəskin yüksəlir.
+- Yeni ALM Modelləri: Təklif olunan modellər real vaxt rejimində aktivlərin paylanmasını tənzimləyir. İnvestisiya portfeli avtomatik olaraq indeksləşdirilmiş istiqrazlar, real daşınmaz əmlak və digər inflyasiyaya qarşı dayanıqlı aktivlər arasında balanslaşdırılır.
+- Maliyyə Təsirləri: İlkin simulyasiyalar göstərir ki, bu strategiya fondların aktiv adekvatlığını qoruyaraq inflyasiya zərərlərini 25% azaldır.
+
+Aktuarlar bu yeni alətlərin tənzimləyici orqanlar tərəfindən təsdiqlənməsini və yaxın vaxtlarda investisiya qaydalarına daxil edilməsini təklif edirlər.
