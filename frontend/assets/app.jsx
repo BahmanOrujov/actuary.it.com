@@ -97,7 +97,7 @@ const { useState, useEffect } = React;
                   dxStr = parts[2];
                 }
                 return { 
-                  month: idx + 1,
+                  month: idx,
                   x: parseInt(x), 
                   lx: parseFloat(lxStr), 
                   dx: parseFloat(dxStr) 
