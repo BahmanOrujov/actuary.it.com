@@ -1249,3 +1249,48 @@ html, body {
   .mobile-logo { display: inline-flex; align-items: center; justify-content: center; }
   .desktop-logo { display: none; }
 }
+
+/* CV Modal Responsive Fixes */
+.cv-header-container {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.cv-header-container .profile-avatar {
+  flex-shrink: 0;
+  width: 5rem;
+  height: 5rem;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cv-contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  background: rgba(255,255,255,0.02);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+}
+.cv-contact-grid div {
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
+@media (max-width: 480px) {
+  .cv-contact-grid {
+    grid-template-columns: 1fr;
+  }
+  .cv-header-container {
+    flex-direction: column;
+    text-align: center;
+  }
+  .cv-item-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}

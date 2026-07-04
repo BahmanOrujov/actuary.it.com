@@ -364,8 +364,8 @@ const { useState, useEffect } = React;
               <div className="modal-content" onClick={e => e.stopPropagation()}>
                 <button className="modal-close" onClick={() => setSelectedCv(null)}>✕</button>
                 
-                <div style={{display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem'}}>
-                  <div className="profile-avatar" style={{width: '5rem', height: '5rem', fontSize: '2rem'}}>BO</div>
+                <div className="cv-header-container">
+                  <div className="profile-avatar">BO</div>
                   <div>
                     <h2 style={{fontSize: '1.75rem', fontWeight: 800}} className="text-gradient-primary">{selectedCv.name}</h2>
                     <p style={{color: 'var(--color-tertiary)', fontWeight: 600}}>{selectedCv.title[lang]}</p>
@@ -373,7 +373,7 @@ const { useState, useEffect } = React;
                   </div>
                 </div>
 
-                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.85rem'}}>
+                <div className="cv-contact-grid">
                   <div>📧 <strong>Email:</strong> {selectedCv.email}</div>
                   <div>📞 <strong>Phone:</strong> {selectedCv.phone}</div>
                   <div>🔗 <strong>LinkedIn:</strong> <a href={`https://${selectedCv.linkedin}`} target="_blank" style={{color: 'var(--color-primary)'}}>{selectedCv.linkedin}</a></div>
