@@ -656,8 +656,8 @@ const { useState, useEffect } = React;
                             <label className="form-label">{lang === 'AZ' ? 'Sığorta Sinifi' : 'Insurance Class'}</label>
                             <select className="select-field" value={pricingParams.insuranceClass} onChange={e => setPricingParams({ ...pricingParams, insuranceClass: e.target.value })}>
                               <option value="life_endowment">{lang === 'AZ' ? 'Həyatın yığım sığortası' : 'Endowment Life Insurance'}</option>
-                              <option value="credit">{lang === 'AZ' ? 'Kredit həyat sığortası' : 'Credit Life Insurance'}</option>
-                              <option value="mortgage">{lang === 'AZ' ? 'İpoteka sığortası' : 'Mortgage Life Insurance'}</option>
+                              <option value="credit">{lang === 'AZ' ? 'Kredit sığortası - Həyatın ölüm halında' : 'Credit Life Insurance - Death Only'}</option>
+                              <option value="mortgage">{lang === 'AZ' ? 'İpoteka sığortası - Həyatın ölüm halında' : 'Mortgage Life Insurance - Death Only'}</option>
                               <option value="compulsory">{lang === 'AZ' ? 'İstehsalatda bədbəxt hadisələrdən icbari sığorta' : 'Compulsory Workers\' Compensation'}</option>
                             </select>
                           </div>
