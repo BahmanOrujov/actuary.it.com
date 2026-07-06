@@ -89,7 +89,7 @@ const { useState, useEffect } = React;
       const [reserveResult, setReserveResult] = useState(null);
 
       const [mortalityTable, setMortalityTable] = useState([]);
-      const [mortalityInterest, setMortalityInterest] = useState("5.0");
+      const [globalInterestRate, setGlobalInterestRate] = useState("5.0");
 
       useEffect(() => {
         if ((softwareTab === 'pricing' || softwareTab === 'formula-explorer')) {
@@ -116,7 +116,7 @@ const { useState, useEffect } = React;
                   dx: parseFloat(dxStr) 
                 };
               });
-              const v = 1.0 / (1.0 + (((parseFloat(mortalityInterest) || 0) / 100) / 12)); // using monthly interest rate
+              const v = 1.0 / (1.0 + (((parseFloat(globalInterestRate) || 0) / 100) / 12)); // using monthly interest rate
               // Recompute lx sequentially starting from month 2
               for (let i = 1; i < data.length; i++) {
                 data[i].lx = data[i-1].lx - data[i-1].dx;
@@ -143,7 +143,7 @@ const { useState, useEffect } = React;
             })
             .catch(err => console.error(err));
         }
-      }, [softwareTab, mortalityInterest]);      const [searchPolicyId, setSearchPolicyId] = useState('');
+      }, [softwareTab, globalInterestRate]);      const [searchPolicyId, setSearchPolicyId] = useState('');
       const [searchedPolicy, setSearchedPolicy] = useState(null);
 
       const [reportsList, setReportsList] = useState([]);
@@ -164,7 +164,7 @@ const { useState, useEffect } = React;
           const payload = {
             params: {
               valuation_date: reserveParams.valuationDate,
-              interest_rate_annual: parseFloat(reserveParams.interest) / 100 || 0.05,
+              interest_rate_annual: parseFloat(globalInterestRate) / 100 || 0,
               expense_maintenance: parseFloat(reserveParams.expenseMaintenance) || 0.0025,
               margin_mortality: parseFloat(reserveParams.marginMortality) || 0.03,
               margin_investment: parseFloat(reserveParams.marginInvestment) || 0.0,
@@ -779,7 +779,7 @@ const { useState, useEffect } = React;
                           </div>
                           <div className="form-group">
                             <label className="form-label">{lang === 'AZ' ? 'Uçot dərəcəsi (%)' : 'Discount Rate (%)'}</label>
-                            <input type="number" step="0.1" className="input-field" value={pricingParams.discountRate} onChange={e => setPricingParams({ ...pricingParams, discountRate: parseFloat(e.target.value) || 0 })} />
+                            <input type="number" step="0.01" className="input-field" value={globalInterestRate} onChange={e => setGlobalInterestRate(e.target.value)} />
                           </div>
                           
                           {pricingParams.insuranceClass === 'life_endowment' && (
@@ -924,7 +924,7 @@ const { useState, useEffect } = React;
 
                           <div className="form-group">
                             <label className="form-label">{t.labelInterest}</label>
-                            <input type="number" step="0.1" className="input-field" value={reserveParams.interest} onChange={e => setReserveParams({ ...reserveParams, interest: parseFloat(e.target.value) || 0 })} />
+                            <input type="number" step="0.01" className="input-field" value={globalInterestRate} onChange={e => setGlobalInterestRate(e.target.value)} />
                           </div>
 
                           <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border-color)', marginTop: '0.5rem' }}>
@@ -1158,7 +1158,7 @@ const { useState, useEffect } = React;
                            </h3>
                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
                              <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{lang === 'AZ' ? 'Texniki Faiz Dərəcəsi (%):' : 'Technical Interest Rate (%):'}</label>
-                             <input type="number" step="0.01" value={mortalityInterest} onChange={e => setMortalityInterest(e.target.value)} className="form-input" style={{ width: '100px', padding: '0.4rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px' }} />
+                             <input type="number" step="0.01" value={globalInterestRate} onChange={e => setGlobalInterestRate(e.target.value)} className="form-input" style={{ width: '100px', padding: '0.4rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px' }} />
                            </div>
                            <div style={{ overflowY: 'auto', flexGrow: 1, paddingRight: '0.5rem', background: 'rgba(0,0,0,0.1)', borderRadius: '8px' }}>
                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'right' }}>
