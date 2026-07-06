@@ -89,7 +89,7 @@ const { useState, useEffect } = React;
       const [reserveResult, setReserveResult] = useState(null);
 
       const [mortalityTable, setMortalityTable] = useState([]);
-      const [mortalityInterest, setMortalityInterest] = useState(5.0);
+      const [mortalityInterest, setMortalityInterest] = useState("5.0");
 
       useEffect(() => {
         if ((softwareTab === 'pricing' || softwareTab === 'formula-explorer')) {
@@ -117,7 +117,7 @@ const { useState, useEffect } = React;
                 };
               });
               
-              const v = 1.0 / (1.0 + (mortalityInterest / 100)); // using dynamic interest rate
+              const v = 1.0 / (1.0 + ((parseFloat(mortalityInterest) || 0) / 100)); // using dynamic interest rate
               // Recompute lx sequentially starting from month 2
               for (let i = 1; i < data.length; i++) {
                 data[i].lx = data[i-1].lx - data[i-1].dx;
@@ -295,9 +295,7 @@ const { useState, useEffect } = React;
                 <button className={`nav-link ${activeTab === 'create-report' ? 'active' : ''}`} onClick={() => { setActiveTab('create-report'); setMobileMenuOpen(false); }}>
                   <IconCpu /> {t.createReport}
                 </button>
-                <button className={`nav-link ${activeTab === 'software' ? 'active' : ''}`} onClick={() => { setActiveTab('software'); setMobileMenuOpen(false); }}>
-                  <IconChevronRight /> Software
-                </button>
+
               </nav>
 
               {/* Language Switcher */}
@@ -1161,7 +1159,7 @@ const { useState, useEffect } = React;
                            </h3>
                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
                              <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{lang === 'AZ' ? 'Texniki Faiz Dərəcəsi (%):' : 'Technical Interest Rate (%):'}</label>
-                             <input type="number" step="0.1" value={mortalityInterest} onChange={e => setMortalityInterest(parseFloat(e.target.value) || 0)} className="form-input" style={{ width: '100px', padding: '0.4rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px' }} />
+                             <input type="number" step="0.01" value={mortalityInterest} onChange={e => setMortalityInterest(e.target.value)} className="form-input" style={{ width: '100px', padding: '0.4rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px' }} />
                            </div>
                            <div style={{ overflowY: 'auto', flexGrow: 1, paddingRight: '0.5rem', background: 'rgba(0,0,0,0.1)', borderRadius: '8px' }}>
                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'right' }}>
