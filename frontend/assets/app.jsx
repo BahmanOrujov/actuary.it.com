@@ -116,8 +116,7 @@ const { useState, useEffect } = React;
                   dx: parseFloat(dxStr) 
                 };
               });
-              
-              const v = 1.0 / (1.0 + ((parseFloat(mortalityInterest) || 0) / 100)); // using dynamic interest rate
+              const v = 1.0 / (1.0 + (((parseFloat(mortalityInterest) || 0) / 100) / 12)); // using monthly interest rate
               // Recompute lx sequentially starting from month 2
               for (let i = 1; i < data.length; i++) {
                 data[i].lx = data[i-1].lx - data[i-1].dx;
