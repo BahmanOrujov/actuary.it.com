@@ -37,6 +37,7 @@ const { useState, useEffect } = React;
       const [selectedCv, setSelectedCv] = useState(null);
       const [selectedArticle, setSelectedArticle] = useState(null);
       const [softwareTab, setSoftwareTab] = useState('pricing');
+      const [officialDoc, setOfficialDoc] = useState('telimat');
       const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
       const [articleText, setArticleText] = useState('');
       const [loadingArticle, setLoadingArticle] = useState(false);
@@ -1191,9 +1192,27 @@ const { useState, useEffect } = React;
                 {softwareTab === 'official-docs' && (
                   <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.officialDocs}</h2>
+                    
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                      <button 
+                        className={`tab-btn ${officialDoc === 'telimat' ? 'active' : ''}`}
+                        style={{ padding: '0.5rem 1rem', background: 'transparent', border: 'none', color: officialDoc === 'telimat' ? 'var(--color-primary)' : 'var(--text-secondary)', cursor: 'pointer', borderBottom: officialDoc === 'telimat' ? '2px solid var(--color-primary)' : 'none', fontWeight: officialDoc === 'telimat' ? 'bold' : 'normal' }}
+                        onClick={() => setOfficialDoc('telimat')}
+                      >
+                        Aktuar Hesablamalar Təlimatı
+                      </button>
+                      <button 
+                        className={`tab-btn ${officialDoc === 'qaydalar' ? 'active' : ''}`}
+                        style={{ padding: '0.5rem 1rem', background: 'transparent', border: 'none', color: officialDoc === 'qaydalar' ? 'var(--color-primary)' : 'var(--text-secondary)', cursor: 'pointer', borderBottom: officialDoc === 'qaydalar' ? '2px solid var(--color-primary)' : 'none', fontWeight: officialDoc === 'qaydalar' ? 'bold' : 'normal' }}
+                        onClick={() => setOfficialDoc('qaydalar')}
+                      >
+                        Sığorta Ehtiyatları Qaydası
+                      </button>
+                    </div>
+
                     <div className="glass-card" style={{ flexGrow: 1, padding: 0, overflow: 'hidden', height: '80vh' }}>
                       <iframe 
-                        src="/assets/aktuar_telimat.pdf" 
+                        src={officialDoc === 'telimat' ? "/assets/aktuar_telimat.pdf" : "/assets/ehtiyat_qaydalari.pdf"} 
                         title="Rəsmi sənəd" 
                         width="100%" 
                         height="100%" 
