@@ -559,6 +559,9 @@ const { useState, useEffect } = React;
                 <button className={`sidebar-btn ${softwareTab === 'formula-explorer' ? 'active' : ''}`} onClick={() => setSoftwareTab('formula-explorer')}>
                   <IconCalculator /> <span className="sidebar-btn-text">{t.formulaExplorer}</span>
                 </button>
+                <button className={`sidebar-btn ${softwareTab === 'official-docs' ? 'active' : ''}`} onClick={() => setSoftwareTab('official-docs')}>
+                  <IconBook /> <span className="sidebar-btn-text">{t.officialDocs}</span>
+                </button>
               </aside>
 
               {/* MAIN SOFTWARE WORKSPACE */}
@@ -1184,66 +1187,18 @@ const { useState, useEffect } = React;
                    </div>
                  )}
 
-                {/* SUB-TAB: REPORTS GENERATOR */}
-                {softwareTab === 'reports' && (
-                  <div>
-                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.reportGeneratorTitle}</h2>
-                    <div className="responsive-grid-1-2-1">
-                      <div className="glass-card">
-                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.reportTypesTitle}</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
-                            <div>
-                              <strong style={{ display: 'block' }}>{t.reportType1}</strong>
-                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.reportType1Desc}</span>
-                            </div>
-                            <button className="btn-primary" onClick={() => generateReportAction('Pricing Report')} disabled={generatingReport !== null}>
-                              {generatingReport === 'Pricing Report' ? t.generating : t.btnGeneratePdf}
-                            </button>
-                          </div>
-
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
-                            <div>
-                              <strong style={{ display: 'block' }}>{t.reportType2}</strong>
-                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.reportType2Desc}</span>
-                            </div>
-                            <button className="btn-primary" onClick={() => generateReportAction('Reserve Report')} disabled={generatingReport !== null}>
-                              {generatingReport === 'Reserve Report' ? t.generating : t.btnGeneratePdf}
-                            </button>
-                          </div>
-
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                              <strong style={{ display: 'block' }}>{t.reportType3}</strong>
-                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.reportType3Desc}</span>
-                            </div>
-                            <button className="btn-primary" onClick={() => generateReportAction('Portfolio Report')} disabled={generatingReport !== null}>
-                              {generatingReport === 'Portfolio Report' ? t.generating : t.btnGenerateExcel}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="glass-card">
-                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.recentReports}</h3>
-                        {reportsList.length > 0 ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {reportsList.map((rep, idx) => (
-                              <div key={idx} className="glass-card" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.01)' }}>
-                                <div>
-                                  <strong style={{ fontSize: '0.95rem' }}>{rep.type}</strong>
-                                  <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{rep.id} • {rep.date} • {rep.size}</span>
-                                </div>
-                                <button className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => alert(`${rep.type} downloaded.`)}>{t.btnDownload}</button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)' }}>
-                            {t.noRecentReports}
-                          </div>
-                        )}
-                      </div>
+                {/* SUB-TAB: OFFICIAL DOCS */}
+                {softwareTab === 'official-docs' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.officialDocs}</h2>
+                    <div className="glass-card" style={{ flexGrow: 1, padding: 0, overflow: 'hidden', height: '80vh' }}>
+                      <iframe 
+                        src="/assets/aktuar_telimat.pdf" 
+                        title="Rəsmi sənəd" 
+                        width="100%" 
+                        height="100%" 
+                        style={{ border: 'none' }}
+                      />
                     </div>
                   </div>
                 )}
