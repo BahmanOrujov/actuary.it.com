@@ -548,13 +548,6 @@ const { useState, useEffect } = React;
                 <button className="sidebar-toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
                   {sidebarOpen ? <IconX /> : <IconMenu />}
                 </button>
-                <div className="sidebar-heading">{sidebarOpen ? t.sidebarPanels : '...'}</div>
-                <button className={`sidebar-btn ${softwareTab === 'dashboard' ? 'active' : ''}`} onClick={() => setSoftwareTab('dashboard')}>
-                  <IconDashboard /> <span className="sidebar-btn-text">{t.dashboard}</span>
-                </button>
-                <button className={`sidebar-btn ${softwareTab === 'import-data' ? 'active' : ''}`} onClick={() => setSoftwareTab('import-data')}>
-                  <IconUpload /> <span className="sidebar-btn-text">{t.importData}</span>
-                </button>
                 <div className="sidebar-heading">{sidebarOpen ? t.sidebarEngines : '...'}</div>
                 <button className={`sidebar-btn ${softwareTab === 'pricing' ? 'active' : ''}`} onClick={() => setSoftwareTab('pricing')}>
                   <IconDollar /> <span className="sidebar-btn-text">{t.pricingEngine}</span>
@@ -562,18 +555,9 @@ const { useState, useEffect } = React;
                 <button className={`sidebar-btn ${softwareTab === 'reserve' ? 'active' : ''}`} onClick={() => setSoftwareTab('reserve')}>
                   <IconTrendingUp /> <span className="sidebar-btn-text">{t.reserveEngine}</span>
                 </button>
-                <button className={`sidebar-btn ${softwareTab === 'portfolio' ? 'active' : ''}`} onClick={() => setSoftwareTab('portfolio')}>
-                  <IconFolder /> <span className="sidebar-btn-text">{t.portfolioDashboard}</span>
-                </button>
                 <div className="sidebar-heading">{sidebarOpen ? t.sidebarAnalytics : '...'}</div>
-                <button className={`sidebar-btn ${softwareTab === 'policy-explorer' ? 'active' : ''}`} onClick={() => setSoftwareTab('policy-explorer')}>
-                  <IconSearch /> <span className="sidebar-btn-text">{t.policyExplorer}</span>
-                </button>
                 <button className={`sidebar-btn ${softwareTab === 'formula-explorer' ? 'active' : ''}`} onClick={() => setSoftwareTab('formula-explorer')}>
                   <IconCalculator /> <span className="sidebar-btn-text">{t.formulaExplorer}</span>
-                </button>
-                <button className={`sidebar-btn ${softwareTab === 'reports' ? 'active' : ''}`} onClick={() => setSoftwareTab('reports')}>
-                  <IconFileText /> <span className="sidebar-btn-text">{t.reports}</span>
                 </button>
               </aside>
 
