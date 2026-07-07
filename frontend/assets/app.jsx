@@ -334,30 +334,7 @@ const { useState, useEffect } = React;
                 </div>
               </section>
 
-              {/* Stats & Features */}
-              <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', width: '100%', maxWidth: '1100px' }}>
-                <div className="glass-card" style={{ textAlign: 'center', padding: '2.5rem 1.5rem' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚡</div>
-                  <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>{lang === 'AZ' ? 'Yüksək Sürət' : 'High Speed'}</h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                    {lang === 'AZ' ? 'Milyonlarla sətri əhatə edən böyük verilənləri (Big Data) asanlıqla emal edən güclü arxitektura.' : 'Powerful architecture that easily processes Big Data spanning millions of rows.'}
-                  </p>
-                </div>
-                <div className="glass-card" style={{ textAlign: 'center', padding: '2.5rem 1.5rem' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🛡️</div>
-                  <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>{lang === 'AZ' ? 'Dəqiqlik və Güvən' : 'Accuracy & Trust'}</h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                    {lang === 'AZ' ? 'Stoxastik və deterministik modellərlə maksimum dəqiqliyi təmin edən hesablama alqoritmləri.' : 'Calculation algorithms ensuring maximum accuracy with stochastic and deterministic models.'}
-                  </p>
-                </div>
-                <div className="glass-card" style={{ textAlign: 'center', padding: '2.5rem 1.5rem' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📈</div>
-                  <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>{lang === 'AZ' ? 'Avtomatik Hesabatlıq' : 'Automated Reporting'}</h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                    {lang === 'AZ' ? 'IFRS 17 və digər yerli standartlara uyğun tək kliklə rəsmi sənəd generasiyası.' : 'One-click official document generation compliant with IFRS 17 and other local standards.'}
-                  </p>
-                </div>
-              </section>
+
 
               {/* CTA Section */}
               <div className="glass-card" style={{ width: '100%', maxWidth: '1100px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', padding: '3rem', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
