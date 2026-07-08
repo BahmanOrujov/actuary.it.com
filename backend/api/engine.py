@@ -112,6 +112,17 @@ class ActuarialValuationEngine:
         self.mortality = mortality_svc
 
     def _apply_statutory_floors(self, policy_type: str, calculated_reserve: float, capital_03_pct: float, capital_qx: float) -> float:
+        p_type = policy_type.lower()
+        if p_type in ["kredit", "credit"]:
+            return calculated_reserve
+
+        valid_values = lambda *args: [float(x) for x in args if pd.notna(x)]
+        get_max = lambda *args: max(valid_values(*args)) if valid_values(*args) else np.nan
+
+        if pd.notna(calculated_reserve) and calculated_reserve > 0:
+            return get_max(calculated_reserve, capital_03_pct)
+        if pd.notna(calculated_reserve) and calculated_reserve <= 0:
+            return get_max(capital_03_pct, capital_qx)
         return calculated_reserve
 
     def _generate_cashflow_projection(self, policy: PolicyRecord, projection_date: pd.Timestamp, forward_shift: int = 0) -> Tuple[Dict[str, float], int]:
