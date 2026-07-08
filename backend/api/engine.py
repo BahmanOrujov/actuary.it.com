@@ -263,7 +263,7 @@ class ActuarialValuationEngine:
         axn = (Nx[s] - Nx[e]) / Dx_s
         Exn = Dx[e] / Dx_s
 
-        if p_type in ["life_endowment", "yigim", "yığım", "endowment"]:
+        if p_type in ["life_endowment", "yigim", "yığım", "endowment"] or "yığım" in p_type or "yigim" in p_type or "endowment" in p_type:
 
             # 3. Calculate components
             res_so = policy.sum_insured_initial * (Axn + Exn)
