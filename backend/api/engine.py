@@ -266,9 +266,15 @@ class ActuarialValuationEngine:
         if p_type in ["life_endowment", "yigim", "yığım", "endowment"] or "yığım" in p_type or "yigim" in p_type or "endowment" in p_type:
 
             # 3. Calculate components
-            res_so = policy.sum_insured_initial * (Axn + Exn)
-            res_ztx = policy.sum_insured_initial * (self.cfg.margin_mortality * Axn + self.cfg.margin_investment * Exn)
-            res_iax = (self.cfg.expense_maintenance / 12.0) * policy.sum_insured_initial * axn
+            S = policy.sum_insured_initial
+            ro1 = self.cfg.margin_mortality
+            # Yalnız Yığım növündə ro2 nəzərə alınır (Ölüm halında sıfır olacaq)
+            ro2 = self.cfg.margin_investment if p_type in ["life_endowment", "yigim", "yığım", "endowment"] or "yığım" in p_type or "yigim" in p_type else 0.0
+
+            res_so = S * (Axn + Exn)
+            # ZTX = ro1 * Ax:n * S + ro2 * S * nEx
+            res_ztx = (ro1 * Axn * S) + (ro2 * S * Exn)
+            res_iax = (self.cfg.expense_maintenance / 12.0) * S * axn
             res_sh = (1.0 - self.cfg.cost_acquisition) * axn * policy.net_premium
 
             net_mathematical_reserve = res_so + res_ztx + res_iax - res_sh
