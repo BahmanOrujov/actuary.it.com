@@ -173,7 +173,7 @@ const { useState, useEffect } = React;
               interest_rate_annual: parseFloat(globalInterestRate) / 100 || 0,
               expense_maintenance: (parseFloat(reserveParams.expenseMaintenance) || 0) / 100,
               margin_mortality: (parseFloat(reserveParams.marginMortality) || 0) / 100,
-              margin_investment: (parseFloat(reserveParams.marginInvestment) || 0) / 100,
+              margin_investment: reserveParams.policyType === 'life_endowment' ? ((parseFloat(reserveParams.marginInvestment) || 0) / 100) : 0,
               cost_acquisition_initial: (parseFloat(reserveParams.costAcquisitionInitial) || 0) / 100,
               cost_acquisition: (parseFloat(reserveParams.costAcquisition) || 0) / 100,
               payment_frequency: reserveParams.policyType === 'credit' ? 1 : (parseInt(reserveParams.paymentFrequency) || 12)
@@ -980,11 +980,11 @@ const { useState, useEffect } = React;
                                 </div>
                                 <div className="commutation-box" title="Zərərlərin tənzimləmə xərcləri">
                                   <div className="comm-label">ZTX (Zərərlərin tənzimləmə x. )</div>
-                                  <div className="comm-value">{reserveResult.engineData.liability_risk_margin}</div>
-                                </div>
-                                <div className="commutation-box" title="İnzibati və Administrativ xərclər">
-                                  <div className="comm-label">İAX (İnzibati və Adm. x. )</div>
                                   <div className="comm-value">{reserveResult.engineData.liability_expenses}</div>
+                                </div>
+                                <div className="commutation-box" title="İnzibati və Akvizisiya xərcləri">
+                                  <div className="comm-label">İAX (İnzibati və Akv. x. )</div>
+                                  <div className="comm-value">{reserveResult.engineData.liability_risk_margin}</div>
                                 </div>
                                 <div className="commutation-box" title="Sığorta haqları">
                                   <div className="comm-label">SH (Sığorta haqları)</div>
