@@ -150,6 +150,9 @@ const { useState, useEffect } = React;
       const [reportsList, setReportsList] = useState([]);
       const [generatingReport, setGeneratingReport] = useState(null);
 
+      const [serverWaking, setServerWaking] = useState(false);
+      const [isCalculating, setIsCalculating] = useState(false);
+
       // --- ALL MATHEMATICAL CALCULATIONS CLEANED TO ZERO AS REQUESTED ---
       const calculatePricing = () => {
         setPricingResult({
@@ -161,11 +164,33 @@ const { useState, useEffect } = React;
       };
 
       useEffect(() => {
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
+          ? 'http://localhost:8000'
+          : 'https://actuary-it-com.onrender.com';
+
+        // Setup a slow server detection timeout
+        const wakeupTimeout = setTimeout(() => {
+          setServerWaking(true);
+        }, 1200);
+
+        fetch(`${API_BASE_URL}/api/valuation/`)
+          .then(res => res.json())
+          .then(data => {
+            clearTimeout(wakeupTimeout);
+            setServerWaking(false);
+          })
+          .catch(err => {
+            // Even if it fails (e.g. CORS or network error), it helped warm up the server
+            clearTimeout(wakeupTimeout);
+            setServerWaking(false);
+          });
+
         // Auto-calculate on initial load so data is visible when page is refreshed
         calculateReserve();
       }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
       const calculateReserve = async () => {
+        setIsCalculating(true);
         try {
           const payload = {
             params: {
@@ -214,6 +239,8 @@ const { useState, useEffect } = React;
         } catch (error) {
           console.error(error);
           alert("Serverə qoşulmaq mümkün olmadı.");
+        } finally {
+          setIsCalculating(false);
         }
       };
 
@@ -550,6 +577,31 @@ const { useState, useEffect } = React;
 
               {/* MAIN SOFTWARE WORKSPACE */}
               <main className="software-content">
+                {serverWaking && (
+                  <div className="glass-card" style={{
+                    marginBottom: '1.5rem',
+                    padding: '1rem 1.5rem',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    borderLeft: '4px solid #ef4444',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    animation: 'pulse 2s infinite'
+                  }}>
+                    <span style={{ fontSize: '1.5rem' }}>⏳</span>
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.25rem' }}>
+                        {lang === 'AZ' ? 'Server oyanır...' : 'Server is waking up...'}
+                      </strong>
+                      <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                        {lang === 'AZ' 
+                          ? 'Render serveri yuxu rejimindədir və oyanır. İlk hesablama təxminən 30-50 saniyə çəkə bilər, zəhmət olmasa gözləyin...' 
+                          : 'Render server is currently asleep and is waking up. The first calculation may take 30-50 seconds, please wait...'}
+                      </span>
+                    </div>
+                    <div className="spinner" style={{ width: '20px', height: '20px' }}></div>
+                  </div>
+                )}
                 {/* SUB-TAB: DASHBOARD */}
                 {softwareTab === 'dashboard' && (
                   <div>
@@ -931,8 +983,8 @@ const { useState, useEffect } = React;
                               </div>
                             )}
                           </div>
-                          <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={calculateReserve}>
-                            {t.btnCalculateReserve}
+                          <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={calculateReserve} disabled={isCalculating}>
+                            {isCalculating ? (lang === 'AZ' ? 'Hesablanır...' : 'Calculating...') : t.btnCalculateReserve}
                           </button>
                         </div>
                       </div>

@@ -4,6 +4,9 @@ from rest_framework import status
 from .engine import evaluate_single_policy
 
 class ValuationAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        return Response({"status": "healthy"}, status=status.HTTP_200_OK)
+
     def post(self, request, *args, **kwargs):
         try:
             params_data = request.data.get('params', {})
