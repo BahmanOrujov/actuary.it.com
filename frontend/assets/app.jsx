@@ -173,7 +173,7 @@ const { useState, useEffect } = React;
               interest_rate_annual: parseFloat(globalInterestRate) / 100 || 0,
               expense_maintenance: (parseFloat(reserveParams.expenseMaintenance) || 0) / 100,
               margin_mortality: (parseFloat(reserveParams.marginMortality) || 0) / 100,
-              margin_investment: (parseFloat(reserveParams.marginInvestment) || 0) / 100,
+              margin_investment: reserveParams.policyType === 'life_endowment' ? ((parseFloat(reserveParams.marginInvestment) || 0) / 100) : 0,
               cost_acquisition_initial: (parseFloat(reserveParams.costAcquisitionInitial) || 0) / 100,
               cost_acquisition: (parseFloat(reserveParams.costAcquisition) || 0) / 100,
               payment_frequency: reserveParams.policyType === 'credit' ? 1 : (parseInt(reserveParams.paymentFrequency) || 12)
