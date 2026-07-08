@@ -160,6 +160,11 @@ const { useState, useEffect } = React;
         });
       };
 
+      useEffect(() => {
+        // Auto-calculate on initial load so data is visible when page is refreshed
+        calculateReserve();
+      }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
       const calculateReserve = async () => {
         try {
           const payload = {

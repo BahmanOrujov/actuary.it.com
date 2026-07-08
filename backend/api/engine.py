@@ -235,33 +235,35 @@ class ActuarialValuationEngine:
 
     def execute_valuation(self, policy: PolicyRecord) -> Dict[str, Any]:
         p_type = policy.policy_type.lower()
+        
+        # 1. Calculate age in months and remaining term at valuation date
+        REPORT_DATE = self.cfg.valuation_date
+        age_m = (REPORT_DATE.year - policy.dob.year) * 12 + (REPORT_DATE.month - policy.dob.month)
+        age_m = max(0, age_m)
+        rem_m = (policy.maturity_date.year - REPORT_DATE.year) * 12 + (policy.maturity_date.month - REPORT_DATE.month)
+        rem_m = max(0, rem_m)
+        end_age_m = age_m + rem_m
+
+        # 2. Prepare lookup (commutation functions)
+        v = 1.0 / (1.0 + self.cfg.interest_rate_annual / 12.0)
+        x_m = np.arange(len(self.mortality.lx))
+        Dx = self.mortality.lx * (v ** x_m)
+        Cx = self.mortality.dx * (v ** (x_m + 1))
+        Nx = Dx[::-1].cumsum()[::-1]
+        Mx = Cx[::-1].cumsum()[::-1]
+
+        s = int(age_m)
+        e = int(end_age_m)
+        max_idx = len(Dx) - 1
+        s = min(max(0, s), max_idx)
+        e = min(max(0, e), max_idx)
+
+        Dx_s = Dx[s] if Dx[s] != 0.0 else 1.0
+        Axn = (Mx[s] - Mx[e]) / Dx_s
+        axn = (Nx[s] - Nx[e]) / Dx_s
+        Exn = Dx[e] / Dx_s
+
         if p_type in ["life_endowment", "yigim", "yığım", "endowment"]:
-            # 1. Calculate age in months and remaining term at valuation date
-            REPORT_DATE = self.cfg.valuation_date
-            age_m = (REPORT_DATE.year - policy.dob.year) * 12 + (REPORT_DATE.month - policy.dob.month)
-            age_m = max(0, age_m)
-            rem_m = (policy.maturity_date.year - REPORT_DATE.year) * 12 + (policy.maturity_date.month - REPORT_DATE.month)
-            rem_m = max(0, rem_m)
-            end_age_m = age_m + rem_m
-
-            # 2. Prepare lookup (commutation functions)
-            v = 1.0 / (1.0 + self.cfg.interest_rate_annual / 12.0)
-            x_m = np.arange(len(self.mortality.lx))
-            Dx = self.mortality.lx * (v ** x_m)
-            Cx = self.mortality.dx * (v ** (x_m + 1))
-            Nx = Dx[::-1].cumsum()[::-1]
-            Mx = Cx[::-1].cumsum()[::-1]
-
-            s = int(age_m)
-            e = int(end_age_m)
-            max_idx = len(Dx) - 1
-            s = min(max(0, s), max_idx)
-            e = min(max(0, e), max_idx)
-
-            Dx_s = Dx[s] if Dx[s] != 0.0 else 1.0
-            Axn = (Mx[s] - Mx[e]) / Dx_s
-            axn = (Nx[s] - Nx[e]) / Dx_s
-            Exn = Dx[e] / Dx_s
 
             # 3. Calculate components
             res_so = policy.sum_insured_initial * (Axn + Exn)
@@ -360,7 +362,10 @@ class ActuarialValuationEngine:
                 'age_months': age_entry_months,
                 'age_years': age_current_years,
                 'qx_monthly': float(round(prob_monthly, 6)),
-                'qx_annual': float(round(prob_annual, 6))
+                'qx_annual': float(round(prob_annual, 6)),
+                'Axn': float(round(Axn, 6)),
+                'nEx': float(round(Exn, 6)),
+                'axn': float(round(axn, 6))
             }
 
 # Global singleton for mortality service
