@@ -229,7 +229,7 @@ class ActuarialValuationEngine:
             'liability_expenses': res_iax,
             'asset_premiums': res_sh,
             'net_mathematical_reserve': res_so + res_ztx + res_iax - res_sh,
-            'active_sum_insured': outstanding_balance[balance_index] if len(outstanding_balance) > 0 else 0.0
+            'active_sum_insured': policy.sum_insured_initial
         }
         return components, elapsed_m
 
@@ -271,11 +271,13 @@ class ActuarialValuationEngine:
             # Yalnız Yığım növündə ro2 nəzərə alınır (Ölüm halında sıfır olacaq)
             ro2 = self.cfg.margin_investment if p_type in ["life_endowment", "yigim", "yığım", "endowment"] or "yığım" in p_type or "yigim" in p_type else 0.0
 
-            res_so = S * (Axn + Exn)
-            # ZTX = ro1 * Ax:n * S + ro2 * S * nEx
-            res_ztx = (ro1 * Axn * S) + (ro2 * S * Exn)
-            res_iax = (self.cfg.expense_maintenance / 12.0) * S * axn
-            res_sh = (1.0 - self.cfg.cost_acquisition) * axn * policy.net_premium
+            res_so = S * Axn + S * Exn
+            # ZTX = ro1 * S * Ax:n + ro2 * S * nEx
+            res_ztx = (ro1 * S * Axn) + (ro2 * S * Exn)
+            # İAX = (gamma / payment_frequency) * S * ax:n
+            res_iax = (self.cfg.expense_maintenance / self.cfg.payment_frequency) * S * axn
+            # SH = (1 - betta) * Sığorta haqqı * ax:n
+            res_sh = (1.0 - self.cfg.cost_acquisition) * policy.net_premium * axn
 
             net_mathematical_reserve = res_so + res_ztx + res_iax - res_sh
             final_reserve = max(0.0, net_mathematical_reserve)
@@ -361,7 +363,7 @@ class ActuarialValuationEngine:
                 'liability_expenses': _fmt(interpolated_metrics['liability_expenses']),
                 'asset_premiums': _fmt(interpolated_metrics['asset_premiums']),
                 'net_mathematical_reserve': _fmt(interpolated_metrics['net_mathematical_reserve']),
-                'active_sum_insured': _fmt(current_sum_insured),
+                'active_sum_insured': _fmt(policy.sum_insured_initial),
                 'capital_floor_03': _fmt(capital_floor_03),
                 'capital_floor_qx': _fmt(capital_floor_qx),
                 'final_reserve': _fmt(final_reserve),
@@ -391,6 +393,7 @@ def evaluate_single_policy(params_data: dict, policy_data: dict) -> dict:
         interest_rate_annual=float(params_data.get('interest_rate_annual', 0.05)),
         expense_maintenance=float(params_data.get('expense_maintenance', 0.0025)),
         margin_mortality=float(params_data.get('margin_mortality', 0.03)),
+        margin_investment=float(params_data.get('margin_investment', 0.0)),
         cost_acquisition=float(params_data.get('cost_acquisition', 0.01)),
         payment_frequency=int(params_data.get('payment_frequency', 12)),
         default_policy_type=str(params_data.get('default_policy_type', 'Ipoteka'))
