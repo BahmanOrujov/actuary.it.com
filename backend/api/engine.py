@@ -306,9 +306,9 @@ class ActuarialValuationEngine:
                 'age_years': age_current_years,
                 'qx_monthly': float(round(prob_monthly, 6)),
                 'qx_annual': float(round(prob_annual, 6)),
-                'Axn': float(round(Axn, 6)),
-                'nEx': float(round(Exn, 6)),
-                'axn': float(round(axn, 6))
+                'Axn': float(round(Axn, 10)),
+                'nEx': float(round(Exn, 10)),
+                'axn': float(round(axn, 10))
             }
         else:
             anchor_date_prev = TimeMetrics.align_to_payment_cycle(self.cfg.valuation_date, policy.inception_date)
@@ -363,9 +363,9 @@ class ActuarialValuationEngine:
                 'age_years': age_current_years,
                 'qx_monthly': float(round(prob_monthly, 6)),
                 'qx_annual': float(round(prob_annual, 6)),
-                'Axn': float(round(Axn, 6)),
-                'nEx': float(round(Exn, 6)),
-                'axn': float(round(axn, 6))
+                'Axn': float(round(Axn, 10)),
+                'nEx': float(round(Exn, 10)),
+                'axn': float(round(axn, 10))
             }
 
 # Global singleton for mortality service
