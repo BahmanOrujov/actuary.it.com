@@ -185,8 +185,9 @@ const { useState, useEffect } = React;
             }
           };
 
-          // Render URL
-          const API_BASE_URL = 'https://actuary-it-com.onrender.com';
+          const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
+            ? 'http://localhost:8000'
+            : 'https://actuary-it-com.onrender.com';
           const response = await fetch(`${API_BASE_URL}/api/valuation/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -950,6 +951,24 @@ const { useState, useEffect } = React;
                                   <div className="comm-label">qx (il)</div>
                                   <div className="comm-value">{reserveResult.engineData.qx_annual}</div>
                                 </div>
+                                {reserveResult.engineData.Axn !== undefined && (
+                                  <div className="commutation-box" title="Ax:n">
+                                    <div className="comm-label">Ax:n</div>
+                                    <div className="comm-value">{reserveResult.engineData.Axn}</div>
+                                  </div>
+                                )}
+                                {reserveResult.engineData.nEx !== undefined && (
+                                  <div className="commutation-box" title="nEx">
+                                    <div className="comm-label">nEx</div>
+                                    <div className="comm-value">{reserveResult.engineData.nEx}</div>
+                                  </div>
+                                )}
+                                {reserveResult.engineData.axn !== undefined && (
+                                  <div className="commutation-box" title="ax:n">
+                                    <div className="comm-label">ax:n</div>
+                                    <div className="comm-value">{reserveResult.engineData.axn}</div>
+                                  </div>
+                                )}
                                 <div className="commutation-box" title="Sığorta ödənişləri">
                                   <div className="comm-label">SÖ (Sığorta ödənişləri)</div>
                                   <div className="comm-value">{reserveResult.engineData.liability_benefits}</div>

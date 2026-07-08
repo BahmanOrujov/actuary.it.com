@@ -234,59 +234,134 @@ class ActuarialValuationEngine:
         return components, elapsed_m
 
     def execute_valuation(self, policy: PolicyRecord) -> Dict[str, Any]:
-        anchor_date_prev = TimeMetrics.align_to_payment_cycle(self.cfg.valuation_date, policy.inception_date)
-        anchor_date_next = anchor_date_prev + relativedelta(months=1)
-        
-        proj_prev, _ = self._generate_cashflow_projection(policy, anchor_date_prev, forward_shift=0)
-        proj_next, _ = self._generate_cashflow_projection(policy, anchor_date_next, forward_shift=1)
-        
-        days_passed = (self.cfg.valuation_date - anchor_date_prev).days
-        total_days_in_cycle = (anchor_date_next - anchor_date_prev).days
-        time_fraction = (days_passed / total_days_in_cycle) if total_days_in_cycle != 0 else 0.0
-        
-        interpolated_metrics = {
-            key: (1 - time_fraction) * proj_prev[key] + time_fraction * proj_next[key]
-            for key in proj_prev.keys()
-        }
-        
-        current_sum_insured = interpolated_metrics['active_sum_insured']
-        capital_floor_03 = current_sum_insured * 0.003
-        
-        age_entry_months = TimeMetrics.elapsed_months(policy.dob, policy.inception_date)
-        age_current_years = TimeMetrics.completed_years(policy.dob, self.cfg.valuation_date)
-        
-        prob_monthly = self.mortality.get_monthly_probability(age_entry_months)
-        prob_annual = self.mortality.get_annual_probability(age_current_years)
-        
-        capital_floor_qx = current_sum_insured * prob_annual
-        
-        final_reserve = self._apply_statutory_floors(
-            policy.policy_type, 
-            interpolated_metrics['net_mathematical_reserve'], 
-            capital_floor_03, 
-            capital_floor_qx
-        )
-        
-        # Round the numerical metrics for display
-        def _fmt(val):
-            return float(round(val, 2)) if pd.notna(val) else 0.0
+        p_type = policy.policy_type.lower()
+        if p_type in ["life_endowment", "yigim", "yığım", "endowment"]:
+            # 1. Calculate age in months and remaining term at valuation date
+            REPORT_DATE = self.cfg.valuation_date
+            age_m = (REPORT_DATE.year - policy.dob.year) * 12 + (REPORT_DATE.month - policy.dob.month)
+            age_m = max(0, age_m)
+            rem_m = (policy.maturity_date.year - REPORT_DATE.year) * 12 + (policy.maturity_date.month - REPORT_DATE.month)
+            rem_m = max(0, rem_m)
+            end_age_m = age_m + rem_m
 
-        return {
-            'policy_id': policy.policy_id,
-            'liability_benefits': _fmt(interpolated_metrics['liability_benefits']),
-            'liability_risk_margin': _fmt(interpolated_metrics['liability_risk_margin']),
-            'liability_expenses': _fmt(interpolated_metrics['liability_expenses']),
-            'asset_premiums': _fmt(interpolated_metrics['asset_premiums']),
-            'net_mathematical_reserve': _fmt(interpolated_metrics['net_mathematical_reserve']),
-            'active_sum_insured': _fmt(current_sum_insured),
-            'capital_floor_03': _fmt(capital_floor_03),
-            'capital_floor_qx': _fmt(capital_floor_qx),
-            'final_reserve': _fmt(final_reserve),
-            'age_months': age_entry_months,
-            'age_years': age_current_years,
-            'qx_monthly': float(round(prob_monthly, 6)),
-            'qx_annual': float(round(prob_annual, 6))
-        }
+            # 2. Prepare lookup (commutation functions)
+            v = 1.0 / (1.0 + self.cfg.interest_rate_annual / 12.0)
+            x_m = np.arange(len(self.mortality.lx))
+            Dx = self.mortality.lx * (v ** x_m)
+            Cx = self.mortality.dx * (v ** (x_m + 1))
+            Nx = Dx[::-1].cumsum()[::-1]
+            Mx = Cx[::-1].cumsum()[::-1]
+
+            s = int(age_m)
+            e = int(end_age_m)
+            max_idx = len(Dx) - 1
+            s = min(max(0, s), max_idx)
+            e = min(max(0, e), max_idx)
+
+            Dx_s = Dx[s] if Dx[s] != 0.0 else 1.0
+            Axn = (Mx[s] - Mx[e]) / Dx_s
+            axn = (Nx[s] - Nx[e]) / Dx_s
+            Exn = Dx[e] / Dx_s
+
+            # 3. Calculate components
+            res_so = policy.sum_insured_initial * (Axn + Exn)
+            res_ztx = policy.sum_insured_initial * (self.cfg.margin_mortality * Axn + self.cfg.margin_investment * Exn)
+            res_iax = (self.cfg.expense_maintenance / 12.0) * policy.sum_insured_initial * axn
+            res_sh = (1.0 - self.cfg.cost_acquisition) * axn * policy.net_premium
+
+            net_mathematical_reserve = res_so + res_ztx + res_iax - res_sh
+            final_reserve = max(0.0, net_mathematical_reserve)
+
+            # Age and mortality probability for output
+            age_entry_months = s
+            age_current_years = (REPORT_DATE.year - policy.dob.year)
+            if (REPORT_DATE.month, REPORT_DATE.day) < (policy.dob.month, policy.dob.day):
+                age_current_years -= 1
+            age_current_years = max(0, age_current_years)
+
+            prob_monthly = self.mortality.get_monthly_probability(age_entry_months)
+            prob_annual = self.mortality.get_annual_probability(age_current_years)
+
+            # Floors for reporting
+            capital_floor_03 = policy.sum_insured_initial * 0.003
+            capital_floor_qx = policy.sum_insured_initial * prob_annual
+
+            def _fmt(val):
+                return float(round(val, 2)) if pd.notna(val) else 0.0
+
+            return {
+                'policy_id': policy.policy_id,
+                'liability_benefits': _fmt(res_so),
+                'liability_risk_margin': _fmt(res_ztx),
+                'liability_expenses': _fmt(res_iax),
+                'asset_premiums': _fmt(res_sh),
+                'net_mathematical_reserve': _fmt(net_mathematical_reserve),
+                'active_sum_insured': _fmt(policy.sum_insured_initial),
+                'capital_floor_03': _fmt(capital_floor_03),
+                'capital_floor_qx': _fmt(capital_floor_qx),
+                'final_reserve': _fmt(final_reserve),
+                'age_months': age_entry_months,
+                'age_years': age_current_years,
+                'qx_monthly': float(round(prob_monthly, 6)),
+                'qx_annual': float(round(prob_annual, 6)),
+                'Axn': float(round(Axn, 6)),
+                'nEx': float(round(Exn, 6)),
+                'axn': float(round(axn, 6))
+            }
+        else:
+            anchor_date_prev = TimeMetrics.align_to_payment_cycle(self.cfg.valuation_date, policy.inception_date)
+            anchor_date_next = anchor_date_prev + relativedelta(months=1)
+            
+            proj_prev, _ = self._generate_cashflow_projection(policy, anchor_date_prev, forward_shift=0)
+            proj_next, _ = self._generate_cashflow_projection(policy, anchor_date_next, forward_shift=1)
+            
+            days_passed = (self.cfg.valuation_date - anchor_date_prev).days
+            total_days_in_cycle = (anchor_date_next - anchor_date_prev).days
+            time_fraction = (days_passed / total_days_in_cycle) if total_days_in_cycle != 0 else 0.0
+            
+            interpolated_metrics = {
+                key: (1 - time_fraction) * proj_prev[key] + time_fraction * proj_next[key]
+                for key in proj_prev.keys()
+            }
+            
+            current_sum_insured = interpolated_metrics['active_sum_insured']
+            capital_floor_03 = current_sum_insured * 0.003
+            
+            age_entry_months = TimeMetrics.elapsed_months(policy.dob, policy.inception_date)
+            age_current_years = TimeMetrics.completed_years(policy.dob, self.cfg.valuation_date)
+            
+            prob_monthly = self.mortality.get_monthly_probability(age_entry_months)
+            prob_annual = self.mortality.get_annual_probability(age_current_years)
+            
+            capital_floor_qx = current_sum_insured * prob_annual
+            
+            final_reserve = self._apply_statutory_floors(
+                policy.policy_type, 
+                interpolated_metrics['net_mathematical_reserve'], 
+                capital_floor_03, 
+                capital_floor_qx
+            )
+            
+            # Round the numerical metrics for display
+            def _fmt(val):
+                return float(round(val, 2)) if pd.notna(val) else 0.0
+
+            return {
+                'policy_id': policy.policy_id,
+                'liability_benefits': _fmt(interpolated_metrics['liability_benefits']),
+                'liability_risk_margin': _fmt(interpolated_metrics['liability_risk_margin']),
+                'liability_expenses': _fmt(interpolated_metrics['liability_expenses']),
+                'asset_premiums': _fmt(interpolated_metrics['asset_premiums']),
+                'net_mathematical_reserve': _fmt(interpolated_metrics['net_mathematical_reserve']),
+                'active_sum_insured': _fmt(current_sum_insured),
+                'capital_floor_03': _fmt(capital_floor_03),
+                'capital_floor_qx': _fmt(capital_floor_qx),
+                'final_reserve': _fmt(final_reserve),
+                'age_months': age_entry_months,
+                'age_years': age_current_years,
+                'qx_monthly': float(round(prob_monthly, 6)),
+                'qx_annual': float(round(prob_annual, 6))
+            }
 
 # Global singleton for mortality service
 _mortality_service = None
