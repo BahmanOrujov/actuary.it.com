@@ -112,16 +112,6 @@ class ActuarialValuationEngine:
         self.mortality = mortality_svc
 
     def _apply_statutory_floors(self, policy_type: str, calculated_reserve: float, capital_03_pct: float, capital_qx: float) -> float:
-        p_type = policy_type.lower()
-        valid_values = lambda *args: [float(x) for x in args if pd.notna(x)]
-        get_max = lambda *args: max(valid_values(*args)) if valid_values(*args) else np.nan
-
-        if pd.notna(calculated_reserve) and calculated_reserve > 0:
-            return get_max(calculated_reserve, capital_03_pct)
-        if p_type in ["kredit", "credit"]:
-            return get_max(calculated_reserve, capital_03_pct)
-        if pd.notna(calculated_reserve) and calculated_reserve <= 0:
-            return get_max(capital_03_pct, capital_qx)
         return calculated_reserve
 
     def _generate_cashflow_projection(self, policy: PolicyRecord, projection_date: pd.Timestamp, forward_shift: int = 0) -> Tuple[Dict[str, float], int]:
@@ -229,7 +219,7 @@ class ActuarialValuationEngine:
             'liability_expenses': res_iax,
             'asset_premiums': res_sh,
             'net_mathematical_reserve': res_so + res_ztx + res_iax - res_sh,
-            'active_sum_insured': policy.sum_insured_initial
+            'active_sum_insured': outstanding_balance[balance_index] if len(outstanding_balance) > 0 else 0.0
         }
         return components, elapsed_m
 
@@ -363,7 +353,7 @@ class ActuarialValuationEngine:
                 'liability_expenses': _fmt(interpolated_metrics['liability_expenses']),
                 'asset_premiums': _fmt(interpolated_metrics['asset_premiums']),
                 'net_mathematical_reserve': _fmt(interpolated_metrics['net_mathematical_reserve']),
-                'active_sum_insured': _fmt(policy.sum_insured_initial),
+                'active_sum_insured': _fmt(current_sum_insured),
                 'capital_floor_03': _fmt(capital_floor_03),
                 'capital_floor_qx': _fmt(capital_floor_qx),
                 'final_reserve': _fmt(final_reserve),
