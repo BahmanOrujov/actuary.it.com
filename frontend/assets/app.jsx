@@ -1047,6 +1047,12 @@ const { useState, useEffect } = React;
                                   <div className="comm-label">SH (Sığorta haqları)</div>
                                   <div className="comm-value">{reserveResult.engineData.asset_premiums}</div>
                                 </div>
+                                {reserveResult.engineData.active_sum_insured !== undefined && (
+                                  <div className="commutation-box" title="Sığorta məbləği">
+                                    <div className="comm-label">{lang === 'AZ' ? 'S (Sığorta məbləği)' : 'S (Sum Assured)'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.active_sum_insured}</div>
+                                  </div>
+                                )}
                                 <div className="commutation-box" style={{ gridColumn: 'span 2', background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.3)' }} title="Yekun Reserve">
                                   <div className="comm-label">Reserve</div>
                                   <div className="comm-value" style={{ color: 'var(--color-primary)' }}>{reserveResult.engineData.final_reserve || reserveResult.engineData.net_mathematical_reserve}</div>
