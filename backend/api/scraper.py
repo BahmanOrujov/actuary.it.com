@@ -17,7 +17,7 @@ INITIAL_POSTS_METADATA = [
         "title_az": "Beynəlxalq Aktuar Assosiasiyası Qlobal Süni İntellekt Standartlarını Açıqladı",
         "excerpt_en": "First global standards released on GenAI adoption in actuarial reserving and pricing.",
         "excerpt_az": "Resurslar və hesabatlılıqda Generativ AI istifadəsinə dair ilk qlobal qaydalar dərc edildi.",
-        "source_url": "https://www.actuaries.org/iaa/IAA/News/News_Items/2023/IAA_Publishes_Paper_on_Artificial_Intelligence.aspx"
+        "source_url": "https://www.actuaries.org/"
     },
     {
         "id": 2, "icon": "🇪🇺", "date_en": "03 July 2026", "date_az": "03 İyul 2026", "read_time": 7,
@@ -33,7 +33,7 @@ INITIAL_POSTS_METADATA = [
         "title_az": "Mərkəzi Bank Yeni Aktuar Tənzimləmə Qaydalarını Dərc Etdi",
         "excerpt_en": "Stricter IFRS 17 compliance and new exam certification guidelines approved for domestic actuaries.",
         "excerpt_az": "Milli sığorta bazarında IFRS 17 uyğunluğu və aktuarlar üçün yeni sertifikat tələbləri təsdiqləndi.",
-        "source_url": "https://www.cbar.az/page-11/insurance-market"
+        "source_url": "https://www.cbar.az/"
     },
     {
         "id": 4, "icon": "⛈️", "date_en": "03 July 2026", "date_az": "03 İyul 2026", "read_time": 6,
@@ -41,7 +41,7 @@ INITIAL_POSTS_METADATA = [
         "title_az": "Qlobal Təkrarsığorta Bazarında Qiymətlər Rekord Həddə Çatdı",
         "excerpt_en": "Major reinsurers raise catastrophe cover rates by 15-20% following heavy climate losses.",
         "excerpt_az": "Təbii fəlakət itkilərindən sonra Swiss Re, Munich Re catastrophe cover haqlarını 15-20% artırıb.",
-        "source_url": "https://www.swissre.com/institute/research/sigma-research/sigma-2024-01.html"
+        "source_url": "https://www.swissre.com/"
     },
     {
         "id": 5, "icon": "🎓", "date_en": "03 July 2026", "date_az": "03 İyul 2026", "read_time": 5,
@@ -49,7 +49,7 @@ INITIAL_POSTS_METADATA = [
         "title_az": "SOA və CAS İmtahan Proqramlarında Python Modelləşdirməsini Məcburi Etdi",
         "excerpt_en": "Syllabus updates require actuarial candidates to build models in Python alongside traditional Excel.",
         "excerpt_az": "Yeni aktuar təhsili standartlarına əsasən namizədlərdən Python və maşın öyrənməsi bilikləri tələb olunacaq.",
-        "source_url": "https://www.soa.org/education/exam-req/edu-asa-req/"
+        "source_url": "https://www.soa.org/"
     },
     {
         "id": 6, "icon": "🇬🇧", "date_en": "03 July 2026", "date_az": "03 İyul 2026", "read_time": 6,
@@ -57,7 +57,7 @@ INITIAL_POSTS_METADATA = [
         "title_az": "İngiltərə Aktuarlar İnstitutu Yeni CMI_2025 Ölüm Cədvəllərini Dərc Etdi",
         "excerpt_en": "New mortality model shows stable life expectancy recovery, shifting reserving expectations.",
         "excerpt_az": "Pandemiyadan sonrakı ölüm dinamikasına əsasən proqnozlar yeniləndi; pensiya ehtiyatlarına təsiri gözlənilir.",
-        "source_url": "https://www.actuaries.org.uk"
+        "source_url": "https://www.actuaries.org.uk/"
     },
     {
         "id": 7, "icon": "🛡️", "date_en": "03 July 2026", "date_az": "03 İyul 2026", "read_time": 6,
@@ -65,7 +65,7 @@ INITIAL_POSTS_METADATA = [
         "title_az": "Qlobal Kiber Sığorta Bazarı Rekord 20 Milyard Dollara Çatdı",
         "excerpt_en": "Munich Re report indicates a surge in demand for cyber policies driven by AI-backed ransomware.",
         "excerpt_az": "Munich Re-nin hesabatına görə kiber hücumların artması kiber təminatlara tələbi sürətlə çoxaldır.",
-        "source_url": "https://www.munichre.com"
+        "source_url": "https://www.munichre.com/"
     },
     {
         "id": 8, "icon": "🌾", "date_en": "03 July 2026", "date_az": "03 İyul 2026", "read_time": 5,
@@ -73,7 +73,7 @@ INITIAL_POSTS_METADATA = [
         "title_az": "BMT Aqrar Layihələrində Parametrik Sığorta 40% Artıb",
         "excerpt_en": "UN report highlights automated index-linked payouts safeguarding smallholder crops from drought.",
         "excerpt_az": "İqlim dəyişikliyinə qarşı sürətli tetikleyici indeksli ödənişlər fermerləri qoruyur.",
-        "source_url": "https://www.unepfi.org"
+        "source_url": "https://www.unepfi.org/"
     },
     {
         "id": 9, "icon": "🇦🇿", "date_en": "03 July 2026", "date_az": "03 İyul 2026", "read_time": 4,
@@ -81,7 +81,7 @@ INITIAL_POSTS_METADATA = [
         "title_az": "Bakı Şəhəri Aktuarların İllik Qlobal Forumuna Ev Sahibliyi Edəcək",
         "excerpt_en": "Baku announced as the location for the major international actuarial summit in October 2026.",
         "excerpt_az": "Oktyabr 2026-da Bakıda keçiriləcək sammitdə sığortada rəqəmsallaşma və ESG riskləri müzakirə olunacaq.",
-        "source_url": "https://www.actuaries.org"
+        "source_url": "https://www.actuaries.org/"
     },
     {
         "id": 10, "icon": "🪙", "date_en": "03 July 2026", "date_az": "03 İyul 2026", "read_time": 6,
@@ -89,7 +89,7 @@ INITIAL_POSTS_METADATA = [
         "title_az": "Aktiv-Öhdəlik İdarəetməsində Yeni Dinamik İnflyasiya Həlləri Təqdim Edildi",
         "excerpt_en": "Backtesting shows dynamic ALM adjustments mitigate pension deficit growth by 25%.",
         "excerpt_az": "Pensiya fondları üçün dinamik hedging metodları inflyasiyanın gətirdiyi kəsiri 25% azaldır.",
-        "source_url": "https://www.oecd.org"
+        "source_url": "https://www.oecd.org/"
     },
     {
         "id": 11, "icon": "🇪🇺", "date_en": "15 July 2026", "date_az": "15 İyul 2026", "read_time": 6,
@@ -97,7 +97,7 @@ INITIAL_POSTS_METADATA = [
         "title_az": "EIOPA Solvency II İslahatı üzrə Yekun Təlimatları Dərc Etdi",
         "excerpt_en": "The European Insurance and Occupational Pensions Authority (EIOPA) has finalized technical standards on liquidity risk and technical provisions.",
         "excerpt_az": "Avropa Sığorta və Peşəkar Pensiya Təminatı Qurumu (EIOPA) likvidlik riski və texniki ehtiyatların qiymətləndirilməsi üzrə yeni standartları təsdiqlədi.",
-        "source_url": "https://www.eiopa.europa.eu/news/eiopa-completes-first-phase-of-solvency-ii-review-guidelines-2026"
+        "source_url": "https://www.eiopa.europa.eu/"
     },
     {
         "id": 12, "icon": "📈", "date_en": "24 June 2026", "date_az": "24 İyun 2026", "read_time": 5,
@@ -105,7 +105,7 @@ INITIAL_POSTS_METADATA = [
         "title_az": "EIOPA Qlobal Makroiqtisadi Qeyri-müəyyənlik Fonunda Maliyyə Sabitliyi Hesabatını Açıqladı",
         "excerpt_en": "The June 2026 report assesses the resilience of European insurance and pension sectors against climate change and geopolitical headwinds.",
         "excerpt_az": "2026-cı ilin iyun hesabatı Avropa sığorta və pensiya sektorlarının iqlim dəyişikliyi və geopolitik risklər qarşısında dözümlülüyünü təhlil edir.",
-        "source_url": "https://www.eiopa.europa.eu/news/eiopa-publishes-june-2026-financial-stability-report"
+        "source_url": "https://www.eiopa.europa.eu/financial-stability-report_en"
     },
     {
         "id": 13, "icon": "⚖️", "date_en": "08 July 2026", "date_az": "08 İyul 2026", "read_time": 5,
@@ -113,7 +113,7 @@ INITIAL_POSTS_METADATA = [
         "title_az": "Sığortanın Sağlamlaşdırılması və Struktur Dəyişikliyi (IRRD) üzrə Yeni Məsləhətləşmələr Başladı",
         "excerpt_en": "EIOPA has initiated a public consultation on the technical standards for valuation under the new IRRD framework.",
         "excerpt_az": "EIOPA sığorta şirkətlərinin bərpası və maliyyə sağlamlaşdırılması standartlarının qiymətləndirilməsinə dair ictimai rəy sorğusuna start verdi.",
-        "source_url": "https://www.eiopa.europa.eu/news/eiopa-launches-consultation-irrd-valuation-standards"
+        "source_url": "https://www.eiopa.europa.eu/"
     }
 ]
 
