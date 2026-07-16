@@ -32,9 +32,10 @@ def async_send_mail(subject, message, from_email, recipient_list):
             recipient_list=recipient_list,
             fail_silently=False,
         )
+        print("Background email sent successfully!", flush=True)
     except Exception as e:
         # Log error to console, do not disrupt request flow
-        print(f"Background email delivery failed: {e}")
+        print(f"Background email delivery failed: {e}", flush=True)
 
 class FeedbackAPIView(APIView):
     def post(self, request, *args, **kwargs):
