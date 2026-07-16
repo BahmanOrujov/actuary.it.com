@@ -4,6 +4,7 @@ from rest_framework import status
 from django.core.mail import send_mail
 from django.conf import settings
 import re
+import threading
 from .engine import evaluate_single_policy
 
 class ValuationAPIView(APIView):
@@ -21,6 +22,19 @@ class ValuationAPIView(APIView):
             return Response({"status": "success", "data": result}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"status": "error", "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+def async_send_mail(subject, message, from_email, recipient_list):
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=from_email,
+            recipient_list=recipient_list,
+            fail_silently=False,
+        )
+    except Exception as e:
+        # Log error to console, do not disrupt request flow
+        print(f"Background email delivery failed: {e}")
 
 class FeedbackAPIView(APIView):
     def post(self, request, *args, **kwargs):
@@ -41,16 +55,18 @@ class FeedbackAPIView(APIView):
             
             subject = f"ARPP Platform Feedback from {email}"
             email_body = f"Feedback Sender: {email}\n\nFeedback Message:\n{message}"
+            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@actuary-it-com.com')
             
-            send_mail(
-                subject=subject,
-                message=email_body,
-                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@actuary-it-com.com'),
-                recipient_list=['bahmanoorujov@gmail.com'],
-                fail_silently=False,
+            # Run send_mail in a background thread to return response instantly
+            email_thread = threading.Thread(
+                target=async_send_mail,
+                args=(subject, email_body, from_email, ['bahmanoorujov@gmail.com'])
             )
+            email_thread.daemon = True
+            email_thread.start()
             
             return Response({"status": "success", "message": "Feedback submitted successfully."}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 

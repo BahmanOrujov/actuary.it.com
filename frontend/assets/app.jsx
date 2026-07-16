@@ -190,36 +190,25 @@ const { useState, useEffect } = React;
           return;
         }
         
-        setFeedbackStatus('loading');
+        // Optimistic UI: Set success immediately to make it go as fast as possible!
+        setFeedbackStatus('success');
+        setFeedbackEmail('');
+        setFeedbackText('');
         
-        try {
-          const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
-            ? 'http://localhost:8000'
-            : 'https://actuary-it-com.onrender.com';
-            
-          const response = await fetch(`${API_BASE_URL}/api/feedback/`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email, message: text }),
-          });
+        // Fire-and-forget fetch in the background
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
+          ? 'http://localhost:8000'
+          : 'https://actuary-it-com.onrender.com';
           
-          const data = await response.json();
-          
-          if (response.ok && data.status === 'success') {
-            setFeedbackStatus('success');
-            setFeedbackEmail('');
-            setFeedbackText('');
-          } else {
-            setFeedbackStatus('error');
-            setFeedbackStatusMsg(data.message || (lang === 'AZ' ? 'Rəy göndərilərkən xəta baş verdi.' : 'Error sending feedback.'));
-          }
-        } catch (error) {
-          console.error('Feedback error:', error);
-          setFeedbackStatus('error');
-          setFeedbackStatusMsg(lang === 'AZ' ? 'Serverlə əlaqə qurula bilmədi.' : 'Could not connect to the server.');
-        }
+        fetch(`${API_BASE_URL}/api/feedback/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, message: text }),
+        }).catch(error => {
+          console.error('Background feedback send failed:', error);
+        });
       };
 
       // --- ALL MATHEMATICAL CALCULATIONS CLEANED TO ZERO AS REQUESTED ---
@@ -388,9 +377,9 @@ const { useState, useEffect } = React;
             
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <nav className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-                <a className={`nav-link ${activeTab === 'feedback' ? 'active' : ''}`} href="?page=feedback" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                <button className={`nav-link ${activeTab === 'feedback' ? 'active' : ''}`} onClick={() => { setActiveTab('feedback'); setMobileMenuOpen(false); }}>
                   <IconMessage /> {lang === 'AZ' ? 'Rəy' : 'Feedback'}
-                </a>
+                </button>
                 <button className={`nav-link ${activeTab === 'actuaries' ? 'active' : ''}`} onClick={() => { setActiveTab('actuaries'); setMobileMenuOpen(false); }}>
                   <IconUsers /> {t.actuaries}
                 </button>
