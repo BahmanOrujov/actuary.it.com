@@ -31,7 +31,7 @@ const { useState, useEffect } = React;
     // --- TRANSLATIONS DICTIONARY (Bilingual support AZ / EN) ---
 
     function App() {
-      const [lang, setLang] = useState('AZ');
+      const [lang, setLang] = useState('EN');
       const [activeTab, setActiveTab] = useState('home');
       const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
       const [selectedCv, setSelectedCv] = useState(null);
@@ -42,6 +42,13 @@ const { useState, useEffect } = React;
       const [articleText, setArticleText] = useState('');
       const [loadingArticle, setLoadingArticle] = useState(false);
       const [formulaCategory, setFormulaCategory] = useState('mortality');
+
+      // Feedback form states
+      const [feedbackEmail, setFeedbackEmail] = useState('');
+      const [feedbackText, setFeedbackText] = useState('');
+      const [feedbackStatus, setFeedbackStatus] = useState(null); // 'success', 'error', 'loading', null
+      const [feedbackStatusMsg, setFeedbackStatusMsg] = useState('');
+      const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
       const t = translations[lang];
 
@@ -152,6 +159,65 @@ const { useState, useEffect } = React;
 
       const [serverWaking, setServerWaking] = useState(false);
       const [isCalculating, setIsCalculating] = useState(false);
+
+      const handleFeedbackSubmit = async (e) => {
+        e.preventDefault();
+        setFeedbackStatus(null);
+        setFeedbackStatusMsg('');
+        
+        const email = feedbackEmail.trim();
+        const text = feedbackText.trim();
+        
+        if (!email) {
+          setFeedbackStatus('error');
+          setFeedbackStatusMsg(lang === 'AZ' ? 'Mail ünvanı məcburidir.' : 'Email is required.');
+          return;
+        }
+        
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email)) {
+          setFeedbackStatus('error');
+          setFeedbackStatusMsg(lang === 'AZ' ? 'Düzgün bir e-mail ünvanı daxil edin.' : 'Please enter a valid email address.');
+          return;
+        }
+        
+        if (!text) {
+          setFeedbackStatus('error');
+          setFeedbackStatusMsg(lang === 'AZ' ? 'Rəy hissəsi boş ola bilməz.' : 'Feedback field cannot be empty.');
+          return;
+        }
+        
+        setFeedbackStatus('loading');
+        
+        try {
+          const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
+            ? 'http://localhost:8000'
+            : 'https://actuary-it-com.onrender.com';
+            
+          const response = await fetch(`${API_BASE_URL}/api/feedback/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, message: text }),
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.status === 'success') {
+            setFeedbackStatus('success');
+            setFeedbackEmail('');
+            setFeedbackText('');
+          } else {
+            setFeedbackStatus('error');
+            setFeedbackStatusMsg(data.message || (lang === 'AZ' ? 'Rəy göndərilərkən xəta baş verdi.' : 'Error sending feedback.'));
+          }
+        } catch (error) {
+          console.error('Feedback error:', error);
+          setFeedbackStatus('error');
+          setFeedbackStatusMsg(lang === 'AZ' ? 'Serverlə əlaqə qurula bilmədi.' : 'Could not connect to the server.');
+        }
+      };
 
       // --- ALL MATHEMATICAL CALCULATIONS CLEANED TO ZERO AS REQUESTED ---
       const calculatePricing = () => {
@@ -338,6 +404,83 @@ const { useState, useEffect } = React;
               </div>
             </div>
           </header>
+
+          {/* FEEDBACK SECTION */}
+          <div className="feedback-section-wrapper" style={{ padding: '1rem 5%', display: 'flex', justifyContent: 'center', width: '100%', background: 'rgba(10, 10, 18, 0.4)' }}>
+            <div className="glass-card" style={{ width: '100%', maxWidth: '1100px', padding: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setIsFeedbackOpen(!isFeedbackOpen)}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                  <span>💬</span>
+                  <span>{lang === 'AZ' ? 'Bizə rəy bildirin' : 'Give us feedback'}</span>
+                </div>
+                <button className="btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', borderRadius: '4px' }}>
+                  {isFeedbackOpen ? (lang === 'AZ' ? 'Gizlə' : 'Hide') : (lang === 'AZ' ? 'Göstər' : 'Show')}
+                </button>
+              </div>
+
+              {isFeedbackOpen && (
+                <form onSubmit={handleFeedbackSubmit} style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div className="responsive-grid-2" style={{ gap: '1rem' }}>
+                    <div className="form-group" style={{ marginBottom: '0' }}>
+                      <label className="form-label" htmlFor="feedback-email" style={{ marginBottom: '0.5rem', display: 'block' }}>
+                        {lang === 'AZ' ? 'E-mail ünvanı (real və məcburi)' : 'Email address (real and required)'}
+                      </label>
+                      <input 
+                        id="feedback-email"
+                        type="email" 
+                        className="input-field" 
+                        placeholder="example@mail.com" 
+                        value={feedbackEmail} 
+                        onChange={e => setFeedbackEmail(e.target.value)} 
+                        required 
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: '0' }}>
+                      <label className="form-label" htmlFor="feedback-text" style={{ marginBottom: '0.5rem', display: 'block' }}>
+                        {lang === 'AZ' ? 'Rəyiniz (məcburi)' : 'Your feedback (required)'}
+                      </label>
+                      <textarea 
+                        id="feedback-text"
+                        className="input-field" 
+                        rows="2" 
+                        placeholder={lang === 'AZ' ? 'Fikir və təkliflərinizi bura yazın...' : 'Enter your thoughts and suggestions here...'} 
+                        value={feedbackText} 
+                        onChange={e => setFeedbackText(e.target.value)} 
+                        style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                        required 
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                    {feedbackStatus === 'loading' && (
+                      <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                        {lang === 'AZ' ? 'Göndərilir...' : 'Sending...'}
+                      </span>
+                    )}
+                    {feedbackStatus === 'success' && (
+                      <span style={{ fontSize: '0.9rem', color: 'var(--color-success)', fontWeight: '500' }}>
+                        {lang === 'AZ' ? 'Rəyiniz uğurla göndərildi!' : 'Feedback sent successfully!'}
+                      </span>
+                    )}
+                    {feedbackStatus === 'error' && (
+                      <span style={{ fontSize: '0.9rem', color: 'var(--color-danger)', fontWeight: '500' }}>
+                        {feedbackStatusMsg || (lang === 'AZ' ? 'Xəta baş verdi!' : 'An error occurred!')}
+                      </span>
+                    )}
+                    <button 
+                      type="submit" 
+                      className="btn-primary" 
+                      disabled={feedbackStatus === 'loading'}
+                      style={{ padding: '0.6rem 1.5rem', fontSize: '0.95rem' }}
+                    >
+                      {lang === 'AZ' ? 'Göndər' : 'Submit'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
 
           {/* LANDING PAGE: HOME */}
           {activeTab === 'home' && (
@@ -997,20 +1140,20 @@ const { useState, useEffect } = React;
                               <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{lang === 'AZ' ? 'Aktuar Mühərrik Göstəriciləri' : 'Actuarial Engine Metrics'}</h4>
                               {reserveResult.engineData ? (
                               <div className="commutation-grid">
-                                <div className="commutation-box" title="Tam Yaş (İllik)">
-                                  <div className="comm-label">Tam Yaş</div>
+                                <div className="commutation-box" title={lang === 'AZ' ? 'Tam Yaş (İllik)' : 'Complete Age (Years)'}>
+                                  <div className="comm-label">{lang === 'AZ' ? 'Tam Yaş' : 'Age (years)'}</div>
                                   <div className="comm-value">{reserveResult.engineData.age_years}</div>
                                 </div>
-                                <div className="commutation-box" title="Yaş (Aylıq)">
-                                  <div className="comm-label">Yaş (ay)</div>
+                                <div className="commutation-box" title={lang === 'AZ' ? 'Yaş (Aylıq)' : 'Age (Monthly)'}>
+                                  <div className="comm-label">{lang === 'AZ' ? 'Yaş (ay)' : 'Age (months)'}</div>
                                   <div className="comm-value">{reserveResult.engineData.age_months}</div>
                                 </div>
-                                <div className="commutation-box" title="Aylıq Ölüm Ehtimalı">
-                                  <div className="comm-label">qx (ay)</div>
+                                <div className="commutation-box" title={lang === 'AZ' ? 'Aylıq Ölüm Ehtimalı' : 'Monthly Mortality Probability'}>
+                                  <div className="comm-label">{lang === 'AZ' ? 'qx (ay)' : 'qx (month)'}</div>
                                   <div className="comm-value">{reserveResult.engineData.qx_monthly}</div>
                                 </div>
-                                <div className="commutation-box" title="İllik Ölüm Ehtimalı">
-                                  <div className="comm-label">qx (il)</div>
+                                <div className="commutation-box" title={lang === 'AZ' ? 'İllik Ölüm Ehtimalı' : 'Annual Mortality Probability'}>
+                                  <div className="comm-label">{lang === 'AZ' ? 'qx (il)' : 'qx (year)'}</div>
                                   <div className="comm-value">{reserveResult.engineData.qx_annual}</div>
                                 </div>
                                 {reserveResult.engineData.Axn !== undefined && (
@@ -1031,35 +1174,35 @@ const { useState, useEffect } = React;
                                     <div className="comm-value">{reserveResult.engineData.axn}</div>
                                   </div>
                                 )}
-                                <div className="commutation-box" title="Sığorta ödənişləri">
-                                  <div className="comm-label">SÖ (Sığorta ödənişləri)</div>
+                                <div className="commutation-box" title={lang === 'AZ' ? 'Sığorta ödənişləri' : 'Liability Benefits'}>
+                                  <div className="comm-label">{lang === 'AZ' ? 'SÖ (Sığorta ödənişləri)' : 'LB (Liability Benefits)'}</div>
                                   <div className="comm-value">{reserveResult.engineData.liability_benefits}</div>
                                 </div>
-                                <div className="commutation-box" title="Zərərlərin tənzimləmə xərcləri">
-                                  <div className="comm-label">ZTX (Zərərlərin tənzimləmə x. )</div>
+                                <div className="commutation-box" title={lang === 'AZ' ? 'Zərərlərin tənzimləmə xərcləri' : 'Loss Adjustment Expenses'}>
+                                  <div className="comm-label">{lang === 'AZ' ? 'ZTX (Zərərlərin tənzimləmə x. )' : 'LAE (Loss Adjustment Expenses)'}</div>
                                   <div className="comm-value">{reserveResult.engineData.liability_risk_margin}</div>
                                 </div>
-                                <div className="commutation-box" title="İnzibati və Administrativ xərclər">
-                                  <div className="comm-label">İAX (İnzibati və Adm. x. )</div>
+                                <div className="commutation-box" title={lang === 'AZ' ? 'İnzibati və Administrativ xərclər' : 'Administrative Expenses'}>
+                                  <div className="comm-label">{lang === 'AZ' ? 'İAX (İnzibati və Adm. x. )' : 'AE (Administrative Expenses)'}</div>
                                   <div className="comm-value">{reserveResult.engineData.liability_expenses}</div>
                                 </div>
-                                <div className="commutation-box" title="Sığorta haqları">
-                                  <div className="comm-label">SH (Sığorta haqları)</div>
+                                <div className="commutation-box" title={lang === 'AZ' ? 'Sığorta haqları' : 'Asset Premiums'}>
+                                  <div className="comm-label">{lang === 'AZ' ? 'SH (Sığorta haqları)' : 'AP (Asset Premiums)'}</div>
                                   <div className="comm-value">{reserveResult.engineData.asset_premiums}</div>
                                 </div>
                                 {reserveResult.engineData.active_sum_insured !== undefined && (
-                                  <div className="commutation-box" title="Sığorta məbləği">
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'Sığorta məbləği' : 'Sum Assured'}>
                                     <div className="comm-label">{lang === 'AZ' ? 'S (Sığorta məbləği)' : 'S (Sum Assured)'}</div>
                                     <div className="comm-value">{reserveResult.engineData.active_sum_insured}</div>
                                   </div>
                                 )}
-                                <div className="commutation-box" style={{ gridColumn: 'span 2', background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.3)' }} title="Yekun Reserve">
-                                  <div className="comm-label">Reserve</div>
+                                <div className="commutation-box" style={{ gridColumn: 'span 2', background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.3)' }} title={lang === 'AZ' ? 'Yekun Ehtiyat' : 'Final Reserve'}>
+                                  <div className="comm-label">{lang === 'AZ' ? 'Ehtiyat (Reserve)' : 'Reserve'}</div>
                                   <div className="comm-value" style={{ color: 'var(--color-primary)' }}>{reserveResult.engineData.final_reserve || reserveResult.engineData.net_mathematical_reserve}</div>
                                 </div>
                               </div>
                               ) : (
-                                <div style={{ color: 'var(--text-muted)' }}>Məlumat yoxdur</div>
+                                <div style={{ color: 'var(--text-muted)' }}>{lang === 'AZ' ? 'Məlumat yoxdur' : 'No data available'}</div>
                               )}
                             </div>
 
