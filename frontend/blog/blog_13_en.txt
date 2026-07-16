@@ -1,0 +1,5 @@
+On July 8, 2026, EIOPA launched a major public consultation on the draft technical standards regarding valuation under the new Insurance Recovery and Resolution Directive (IRRD). The IRRD provides authorities with a harmonized framework to intervene early when insurers face severe distress.
+
+The consultation specifically focuses on the methodology for independent valuations of assets and liabilities before any resolution action is taken. This is critical for determining whether an insurer is failing or likely to fail, and for deciding the allocation of losses.
+
+Actuaries and industry stakeholders are invited to submit their feedback by October 2026. The new framework will define how mathematical reserves and policyholder liabilities are valued during a crisis, ensuring minimum disruption to the market and maximum protection of policyholders' funds.

@@ -1,0 +1,5 @@
+On June 24, 2026, EIOPA released its semi-annual Financial Stability Report. The report notes that while the European insurance and pensions sectors remain robust, they face elevated risks from geopolitical fragmentation, global inflation shifts, and systemic climate-related exposures.
+
+The report highlights that the transition to green energy and rising climate losses are placing pressure on underwriting margins. Actuaries are urged to incorporate non-linear climate risks and AI-driven underwriting modeling into their long-term pricing structures.
+
+Additionally, occupational pension funds are navigating liquidity constraints driven by market volatility. EIOPA recommends that national supervisory authorities enhance their stress-testing scenarios to include extreme climate events and cyber warfare scenarios.

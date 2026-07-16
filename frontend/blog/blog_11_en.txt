@@ -1,0 +1,5 @@
+EIOPA has completed its mandate under the Solvency II Review by publishing final guidelines and technical standards on July 15, 2026. This release represents a significant milestone in modernizing the regulatory framework for European insurers and pension funds.
+
+The new package introduces crucial guidelines on liquidity risk management, valuation of technical provisions, and group solvency rules. A major addition is the "lambda factor" for calculating the risk margin, which aims to reduce capital volatility under stressed market conditions.
+
+According to EIOPA, these standards ensure a high level of consumer protection and financial stability while allowing insurers to invest in long-term economic recovery. These rules will generally become applicable on January 30, 2027. Insurers are advised to begin implementation and gap analysis immediately to align their reserving models with the new directives.

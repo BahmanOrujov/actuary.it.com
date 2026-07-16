@@ -426,6 +426,24 @@
       title: { AZ: "Aktiv-Öhdəlik İdarəetməsində Yeni Dinamik İnflyasiya Həlləri Təqdim Edildi", EN: "New Dynamic Inflation Strategies Introduced in Asset-Liability Management" },
       excerpt: { AZ: "Pensiya fondları üçün dinamik hedging metodları inflyasiyanın gətirdiyi kəsiri 25% azaldır.", EN: "Backtesting shows dynamic ALM adjustments mitigate pension deficit growth by 25%." },
       sourceUrl: "https://www.oecd.org"
+    },
+    {
+      icon: "🇪🇺", date: { AZ: "15 İyul 2026", EN: "15 July 2026" }, readTime: 6,
+      title: { AZ: "EIOPA Solvency II İslahatı üzrə Yekun Təlimatları Dərc Etdi", EN: "EIOPA Publishes Final Guidelines for Solvency II Review" },
+      excerpt: { AZ: "Avropa Sığorta və Peşəkar Pensiya Təminatı Qurumu (EIOPA) likvidlik riski və texniki ehtiyatların qiymətləndirilməsi üzrə yeni standartları təsdiqlədi.", EN: "The European Insurance and Occupational Pensions Authority (EIOPA) has finalized technical standards on liquidity risk and technical provisions." },
+      sourceUrl: "https://www.eiopa.europa.eu/news/eiopa-completes-first-phase-of-solvency-ii-review-guidelines-2026"
+    },
+    {
+      icon: "📈", date: { AZ: "24 İyun 2026", EN: "24 June 2026" }, readTime: 5,
+      title: { AZ: "EIOPA Qlobal Makroiqtisadi Qeyri-müəyyənlik Fonunda Maliyyə Sabitliyi Hesabatını Açıqladı", EN: "EIOPA Releases Financial Stability Report Amid Global Macroeconomic Uncertainty" },
+      excerpt: { AZ: "2026-cı ilin iyun hesabatı Avropa sığorta və pensiya sektorlarının iqlim dəyişikliyi və geopolitik risklər qarşısında dözümlülüyünü təhlil edir.", EN: "The June 2026 report assesses the resilience of European insurance and pension sectors against climate change and geopolitical headwinds." },
+      sourceUrl: "https://www.eiopa.europa.eu/news/eiopa-publishes-june-2026-financial-stability-report"
+    },
+    {
+      icon: "⚖️", date: { AZ: "08 İyul 2026", EN: "08 July 2026" }, readTime: 5,
+      title: { AZ: "Sığortanın Sağlamlaşdırılması və Struktur Dəyişikliyi (IRRD) üzrə Yeni Məsləhətləşmələr Başladı", EN: "New Consultation Launched on Insurance Recovery and Resolution Directive (IRRD)" },
+      excerpt: { AZ: "EIOPA sığorta şirkətlərinin bərpası və maliyyə sağlamlaşdırılması standartlarının qiymətləndirilməsinə dair ictimai rəy sorğusuna start verdi.", EN: "EIOPA has initiated a public consultation on the technical standards for valuation under the new IRRD framework." },
+      sourceUrl: "https://www.eiopa.europa.eu/news/eiopa-launches-consultation-irrd-valuation-standards"
     }
   ];
 

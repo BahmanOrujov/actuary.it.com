@@ -1,0 +1,5 @@
+Avropa Sığorta və Peşəkar Pensiya Təminatı Qurumu (EIOPA) 15 İyul 2026-cı il tarixində Solvency II İslahatı üzrə yekun təlimatları və texniki standartları dərc edərək öz mandatını tamamladı. Bu addım Avropa sığortaçıları və pensiya fondları üçün tənzimləmə çərçivəsinin müasirləşdirilməsində mühüm mərhələdir.
+
+Yeni paket likvidlik riskinin idarə edilməsi, texniki ehtiyatların qiymətləndirilməsi və qrup ödəmə qabiliyyəti qaydaları üzrə vacib təlimatları ehtiva edir. Ən böyük yeniliklərdən biri risk marjasının hesablanması üçün gətirilən "lambda faktoru"dur ki, bu da gərgin bazar şəraitində kapital dəyişkənliyini azaltmağa yönəlmişdir.
+
+EIOPA-ya görə, bu standartlar istehlakçıların müdafiəsini və maliyyə sabitliyini yüksək seviyyədə təmin edir. Qaydalar rəsmi olaraq 30 Yanvar 2027-ci il tarixindən qüvvəyə minəcəkdir. Sığorta şirkətlərinə ehtiyat modellərini yeni direktivlərlə uyğunlaşdırmaq üçün dərhal boşluq analizlərinə (gap analysis) başlamaq tövsiyə olunur.
