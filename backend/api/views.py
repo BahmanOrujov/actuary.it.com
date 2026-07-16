@@ -9,6 +9,7 @@ import json
 import os
 import requests
 from .engine import evaluate_single_policy
+from .models import BlogPost
 
 class ValuationAPIView(APIView):
     def get(self, request, *args, **kwargs):
@@ -89,6 +90,56 @@ class FeedbackAPIView(APIView):
             email_thread.start()
             
             return Response({"status": "success", "message": "Feedback submitted successfully."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class BlogListAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        try:
+            posts = BlogPost.objects.all()
+            data = []
+            for post in posts:
+                data.append({
+                    "id": post.id,
+                    "icon": post.icon,
+                    "readTime": post.read_time,
+                    "title": {
+                        "AZ": post.title_az,
+                        "EN": post.title_en
+                    },
+                    "excerpt": {
+                        "AZ": post.excerpt_az,
+                        "EN": post.excerpt_en
+                    },
+                    "date": {
+                        "AZ": post.date_az,
+                        "EN": post.date_en
+                    },
+                    "sourceUrl": post.source_url
+                })
+            return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class BlogDetailAPIView(APIView):
+    def get(self, request, pk, *args, **kwargs):
+        try:
+            post = BlogPost.objects.get(pk=pk)
+            data = {
+                "id": post.id,
+                "title": {
+                    "AZ": post.title_az,
+                    "EN": post.title_en
+                },
+                "content": {
+                    "AZ": post.content_az,
+                    "EN": post.content_en
+                },
+                "sourceUrl": post.source_url
+            }
+            return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
+        except BlogPost.DoesNotExist:
+            return Response({"status": "error", "message": "Blog post not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

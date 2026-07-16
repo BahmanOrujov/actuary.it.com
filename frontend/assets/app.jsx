@@ -44,6 +44,8 @@ const { useState, useEffect } = React;
       const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
       const [articleText, setArticleText] = useState('');
       const [loadingArticle, setLoadingArticle] = useState(false);
+      const [blogList, setBlogList] = useState(typeof blogArticles !== 'undefined' ? blogArticles : []);
+      const [loadingBlog, setLoadingBlog] = useState(false);
       const [formulaCategory, setFormulaCategory] = useState('mortality');
 
       // Feedback form states
@@ -339,22 +341,63 @@ const { useState, useEffect } = React;
         }, 1200);
       };
 
+      React.useEffect(() => {
+        if (activeTab === 'blog') {
+          setLoadingBlog(true);
+          const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
+            ? 'http://localhost:8000'
+            : 'https://actuary-it-com.onrender.com';
+            
+          fetch(`${API_BASE_URL}/api/blog/`)
+            .then(res => res.json())
+            .then(data => {
+              if (data.status === 'success' && data.data && data.data.length > 0) {
+                setBlogList(data.data);
+              }
+            })
+            .catch(err => console.error('Error fetching blog list:', err))
+            .finally(() => setLoadingBlog(false));
+        }
+      }, [activeTab]);
+
       const openArticle = async (article, index) => {
         setSelectedArticle(article);
         setLoadingArticle(true);
         setArticleText('');
-        try {
-          const response = await fetch(`./blog/blog_${index + 1}_${lang.toLowerCase()}.txt`);
-          if (response.ok) {
-            const text = await response.text();
-            setArticleText(text);
-          } else {
-            setArticleText(lang === 'AZ' ? "Məqalə tapılmadı." : "Article not found.");
+        
+        if (article.id) {
+          try {
+            const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
+              ? 'http://localhost:8000'
+              : 'https://actuary-it-com.onrender.com';
+              
+            const response = await fetch(`${API_BASE_URL}/api/blog/${article.id}/`);
+            const json = await response.json();
+            if (response.ok && json.status === 'success') {
+              setArticleText(json.data.content[lang] || '');
+            } else {
+              setArticleText(lang === 'AZ' ? "Məqalə tapılmadı." : "Article not found.");
+            }
+          } catch (err) {
+            console.error('Error fetching article details:', err);
+            setArticleText(lang === 'AZ' ? "Xəta baş verdi." : "An error occurred.");
+          } finally {
+            setLoadingArticle(false);
           }
-        } catch (err) {
-          setArticleText(lang === 'AZ' ? "Xəta baş verdi." : "An error occurred.");
-        } finally {
-          setLoadingArticle(false);
+        } else {
+          try {
+            const response = await fetch(`./blog/blog_${index + 1}_${lang.toLowerCase()}.txt`);
+            if (response.ok) {
+              const text = await response.text();
+              setArticleText(text);
+            } else {
+              setArticleText(lang === 'AZ' ? "Məqalə tapılmadı." : "Article not found.");
+            }
+          } catch (err) {
+            setArticleText(lang === 'AZ' ? "Xəta baş verdi." : "An error occurred.");
+          } finally {
+            setLoadingArticle(false);
+          }
         }
       };
 
@@ -551,7 +594,7 @@ const { useState, useEffect } = React;
                 <p className="section-subtitle">{t.blogSub}</p>
               </div>
               <div className="blog-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
-                {blogArticles.map((article, idx) => (
+                {blogList.map((article, idx) => (
                   <div key={idx} className="glass-card blog-card" style={{ display: 'flex', flexDirection: 'column' }}>
                     <div className="blog-img-placeholder" style={{ fontSize: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {article.icon}
