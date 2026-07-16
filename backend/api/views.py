@@ -5,6 +5,9 @@ from django.core.mail import send_mail
 from django.conf import settings
 import re
 import threading
+import json
+import os
+import urllib.request
 from .engine import evaluate_single_policy
 
 class ValuationAPIView(APIView):
@@ -24,6 +27,28 @@ class ValuationAPIView(APIView):
             return Response({"status": "error", "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 def async_send_mail(subject, message, from_email, recipient_list):
+    # Check if a custom Webhook URL is set to bypass Render's SMTP port block (e.g. Google Apps Script)
+    webhook_url = getattr(settings, 'FEEDBACK_WEBHOOK_URL', os.environ.get('FEEDBACK_WEBHOOK_URL'))
+    
+    if webhook_url:
+        try:
+            payload = {
+                "email": from_email,
+                "message": message,
+                "subject": subject
+            }
+            req = urllib.request.Request(
+                webhook_url,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                print(f"Background email via Webhook sent successfully! Response: {response.read().decode('utf-8')}", flush=True)
+            return
+        except Exception as webhook_err:
+            print(f"Background Webhook delivery failed: {webhook_err}", flush=True)
+            # Proceed to SMTP fallback if webhook fails
+            
     try:
         send_mail(
             subject=subject,
