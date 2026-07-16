@@ -365,39 +365,38 @@ const { useState, useEffect } = React;
         setLoadingArticle(true);
         setArticleText('');
         
-        if (article.id) {
-          try {
-            const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
-              ? 'http://localhost:8000'
-              : 'https://actuary-it-com.onrender.com';
-              
-            const response = await fetch(`${API_BASE_URL}/api/blog/${article.id}/`);
-            const json = await response.json();
-            if (response.ok && json.status === 'success') {
-              setArticleText(json.data.content[lang] || '');
-            } else {
-              setArticleText(lang === 'AZ' ? "Məqalə tapılmadı." : "Article not found.");
-            }
-          } catch (err) {
-            console.error('Error fetching article details:', err);
-            setArticleText(lang === 'AZ' ? "Xəta baş verdi." : "An error occurred.");
-          } finally {
+        const articleId = article.id || (index + 1);
+        
+        // Attempt to fetch from backend API first
+        try {
+          const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
+            ? 'http://localhost:8000'
+            : 'https://actuary-it-com.onrender.com';
+            
+          const response = await fetch(`${API_BASE_URL}/api/blog/${articleId}/`);
+          const json = await response.json();
+          if (response.ok && json.status === 'success') {
+            setArticleText(json.data.content[lang] || '');
             setLoadingArticle(false);
+            return;
           }
-        } else {
-          try {
-            const response = await fetch(`./blog/blog_${index + 1}_${lang.toLowerCase()}.txt`);
-            if (response.ok) {
-              const text = await response.text();
-              setArticleText(text);
-            } else {
-              setArticleText(lang === 'AZ' ? "Məqalə tapılmadı." : "Article not found.");
-            }
-          } catch (err) {
-            setArticleText(lang === 'AZ' ? "Xəta baş verdi." : "An error occurred.");
-          } finally {
-            setLoadingArticle(false);
+        } catch (err) {
+          console.warn('Backend blog fetch failed, falling back to local files:', err);
+        }
+        
+        // Fallback to local files
+        try {
+          const response = await fetch(`./blog/blog_${articleId}_${lang.toLowerCase()}.txt`);
+          if (response.ok) {
+            const text = await response.text();
+            setArticleText(text);
+          } else {
+            setArticleText(lang === 'AZ' ? "Məqalə tapılmadı." : "Article not found.");
           }
+        } catch (err) {
+          setArticleText(lang === 'AZ' ? "Xəta baş verdi." : "An error occurred.");
+        } finally {
+          setLoadingArticle(false);
         }
       };
 

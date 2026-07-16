@@ -186,6 +186,14 @@ def populate_initial_posts():
             except Exception as e:
                 print(f"Error reading {file_az}: {e}", flush=True)
                 
+        # Parse the logical publish date
+        from datetime import datetime
+        pub_date_val = None
+        try:
+            pub_date_val = datetime.strptime(metadata["date_en"], "%d %B %Y").date()
+        except Exception as date_err:
+            print(f"Error parsing metadata date {metadata['date_en']}: {date_err}", flush=True)
+            
         BlogPost.objects.create(
             title_en=metadata["title_en"],
             title_az=metadata["title_az"],
@@ -197,7 +205,8 @@ def populate_initial_posts():
             date_az=metadata["date_az"],
             read_time=metadata["read_time"],
             source_url=metadata["source_url"],
-            icon=metadata["icon"]
+            icon=metadata["icon"],
+            publish_date=pub_date_val
         )
     print("Initial blog posts populated successfully!", flush=True)
 
@@ -251,11 +260,14 @@ def scrape_actuarial_news():
                 # Format dates
                 dt_en = "Recent News"
                 dt_az = "Son Xəbərlər"
+                from datetime import datetime, date
+                pub_date_val = date.today()
                 if pub_date is not None and pub_date.text:
                     try:
                         # e.g., Wed, 15 Jul 2026 12:00:00 GMT
                         parsed_dt = datetime.strptime(pub_date.text.split(" +")[0].split(" -")[0].strip()[:25], "%a, %d %b %Y %H:%M:%S")
                         dt_en = parsed_dt.strftime("%d %B %Y")
+                        pub_date_val = parsed_dt.date()
                         # Translate month names to AZ
                         months_map = {
                             "January": "Yanvar", "February": "Fevral", "March": "Mart", "April": "Aprel",
@@ -286,7 +298,8 @@ def scrape_actuarial_news():
                     date_az=dt_az,
                     read_time=max(3, len(desc_clean.split()) // 150),
                     source_url=link_text,
-                    icon=feed["icon"]
+                    icon=feed["icon"],
+                    publish_date=pub_date_val
                 )
                 new_posts_count += 1
                 

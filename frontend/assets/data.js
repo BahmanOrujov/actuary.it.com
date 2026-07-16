@@ -368,82 +368,95 @@
 
   const blogArticles = [
     {
-      icon: "📢", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 5,
-      title: { AZ: "Beynəlxalq Aktuar Assosiasiyası Qlobal Süni İntellekt Standartlarını Açıqladı", EN: "International Actuarial Association Releases Global AI Standards" },
-      excerpt: { AZ: "Resurslar və hesabatlılıqda Generativ AI istifadəsinə dair ilk qlobal qaydalar dərc edildi.", EN: "First global standards released on GenAI adoption in actuarial reserving and pricing." },
-      sourceUrl: "https://www.actuaries.org/"
-    },
-    {
-      icon: "🇪🇺", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 7,
-      title: { AZ: "Solvency II 2026-cı il İslahatları Qüvvəyə Mindi", EN: "Solvency II 2026 Reforms Enter Into Force" },
-      excerpt: { AZ: "Avropa sığortaçıları üçün kapital azadlığı və daha sərt ESG hesabatlıq qaydaları.", EN: "Capital relief and tighter ESG disclosure mandates for European insurers and reinsurers." },
-      sourceUrl: "https://www.eiopa.europa.eu/browse/regulation-and-policy/solvency-ii_en"
-    },
-    {
-      icon: "🏦", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 4,
-      title: { AZ: "Mərkəzi Bank Yeni Aktuar Tənzimləmə Qaydalarını Dərc Etdi", EN: "Central Bank Publishes New Actuarial Regulation Rules" },
-      excerpt: { AZ: "Milli sığorta bazarında IFRS 17 uyğunluğu və aktuarlar üçün yeni sertifikat tələbləri təsdiqləndi.", EN: "Stricter IFRS 17 compliance and new exam certification guidelines approved for domestic actuaries." },
-      sourceUrl: "https://www.cbar.az/"
-    },
-    {
-      icon: "⛈️", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 6,
-      title: { AZ: "Qlobal Təkrarsığorta Bazarında Qiymətlər Rekord Həddə Çatdı", EN: "Global Reinsurance Rates Peak in 2026" },
-      excerpt: { AZ: "Təbii fəlakət itkilərindən sonra Swiss Re, Munich Re catastrophe cover haqlarını 15-20% artırıb.", EN: "Major reinsurers raise catastrophe cover rates by 15-20% following heavy climate losses." },
-      sourceUrl: "https://www.swissre.com/"
-    },
-    {
-      icon: "🎓", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 5,
-      title: { AZ: "SOA və CAS İmtahan Proqramlarında Python Modelləşdirməsini Məcburi Etdi", EN: "SOA and CAS Make Python Modeling Mandatory in Exam Syllabus" },
-      excerpt: { AZ: "Yeni aktuar təhsili standartlarına əsasən namizədlərdən Python və maşın öyrənməsi bilikləri tələb olunacaq.", EN: "Syllabus updates require actuarial candidates to build models in Python alongside traditional Excel." },
-      sourceUrl: "https://www.soa.org/"
-    },
-    {
-      icon: "🇬🇧", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 6,
-      title: { AZ: "İngiltərə Aktuarlar İnstitutu Yeni CMI_2025 Ölüm Cədvəllərini Dərc Etdi", EN: "UK Actuarial Institute Publishes CMI_2025 Mortality Table" },
-      excerpt: { AZ: "Pandemiyadan sonrakı ölüm dinamikasına əsasən proqnozlar yeniləndi; pensiya ehtiyatlarına təsiri gözlənilir.", EN: "New mortality model shows stable life expectancy recovery, shifting reserving expectations." },
-      sourceUrl: "https://www.actuaries.org.uk/"
-    },
-    {
-      icon: "🛡️", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 6,
-      title: { AZ: "Qlobal Kiber Sığorta Bazarı Rekord 20 Milyard Dollara Çatdı", EN: "Global Cyber Insurance Market Reaches Record $20 Billion" },
-      excerpt: { AZ: "Munich Re-nin hesabatına görə kiber hücumların artması kiber təminatlara tələbi sürətlə çoxaldır.", EN: "Munich Re report indicates a surge in demand for cyber policies driven by AI-backed ransomware." },
-      sourceUrl: "https://www.munichre.com/"
-    },
-    {
-      icon: "🌾", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 5,
-      title: { AZ: "BMT Aqrar Layihələrində Parametrik Sığorta 40% Artıb", EN: "Parametric Insurance Surges 40% in UN Agricultural Projects" },
-      excerpt: { AZ: "İqlim dəyişikliyinə qarşı sürətli tetikleyici indeksli ödənişlər fermerləri qoruyur.", EN: "UN report highlights automated index-linked payouts safeguarding smallholder crops from drought." },
-      sourceUrl: "https://www.unepfi.org/"
-    },
-    {
-      icon: "🇦🇿", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 4,
-      title: { AZ: "Bakı Şəhəri Aktuarların İllik Qlobal Forumuna Ev Sahibliyi Edəcək", EN: "Baku to Host Annual Global Forum of Actuaries" },
-      excerpt: { AZ: "Oktyabr 2026-da Bakıda keçiriləcək sammitdə sığortada rəqəmsallaşma və ESG riskləri müzakirə olunacaq.", EN: "Baku announced as the location for the major international actuarial summit in October 2026." },
-      sourceUrl: "https://www.actuaries.org/"
-    },
-    {
-      icon: "🪙", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 6,
-      title: { AZ: "Aktiv-Öhdəlik İdarəetməsində Yeni Dinamik İnflyasiya Həlləri Təqdim Edildi", EN: "New Dynamic Inflation Strategies Introduced in Asset-Liability Management" },
-      excerpt: { AZ: "Pensiya fondları üçün dinamik hedging metodları inflyasiyanın gətirdiyi kəsiri 25% azaldır.", EN: "Backtesting shows dynamic ALM adjustments mitigate pension deficit growth by 25%." },
-      sourceUrl: "https://www.oecd.org/"
-    },
-    {
+      id: 11,
       icon: "🇪🇺", date: { AZ: "15 İyul 2026", EN: "15 July 2026" }, readTime: 6,
       title: { AZ: "EIOPA Solvency II İslahatı üzrə Yekun Təlimatları Dərc Etdi", EN: "EIOPA Publishes Final Guidelines for Solvency II Review" },
       excerpt: { AZ: "Avropa Sığorta və Peşəkar Pensiya Təminatı Qurumu (EIOPA) likvidlik riski və texniki ehtiyatların qiymətləndirilməsi üzrə yeni standartları təsdiqlədi.", EN: "The European Insurance and Occupational Pensions Authority (EIOPA) has finalized technical standards on liquidity risk and technical provisions." },
       sourceUrl: "https://www.eiopa.europa.eu/"
     },
     {
-      icon: "📈", date: { AZ: "24 İyun 2026", EN: "24 June 2026" }, readTime: 5,
-      title: { AZ: "EIOPA Qlobal Makroiqtisadi Qeyri-müəyyənlik Fonunda Maliyyə Sabitliyi Hesabatını Açıqladı", EN: "EIOPA Releases Financial Stability Report Amid Global Macroeconomic Uncertainty" },
-      excerpt: { AZ: "2026-cı ilin iyun hesabatı Avropa sığorta və pensiya sektorlarının iqlim dəyişikliyi və geopolitik risklər qarşısında dözümlülüyünü təhlil edir.", EN: "The June 2026 report assesses the resilience of European insurance and pension sectors against climate change and geopolitical headwinds." },
-      sourceUrl: "https://www.eiopa.europa.eu/financial-stability-report_en"
-    },
-    {
+      id: 13,
       icon: "⚖️", date: { AZ: "08 İyul 2026", EN: "08 July 2026" }, readTime: 5,
       title: { AZ: "Sığortanın Sağlamlaşdırılması və Struktur Dəyişikliyi (IRRD) üzrə Yeni Məsləhətləşmələr Başladı", EN: "New Consultation Launched on Insurance Recovery and Resolution Directive (IRRD)" },
       excerpt: { AZ: "EIOPA sığorta şirkətlərinin bərpası və maliyyə sağlamlaşdırılması standartlarının qiymətləndirilməsinə dair ictimai rəy sorğusuna start verdi.", EN: "EIOPA has initiated a public consultation on the technical standards for valuation under the new IRRD framework." },
       sourceUrl: "https://www.eiopa.europa.eu/"
+    },
+    {
+      id: 10,
+      icon: "🪙", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 6,
+      title: { AZ: "Aktiv-Öhdəlik İdarəetməsində Yeni Dinamik İnflyasiya Həlləri Təqdim Edildi", EN: "New Dynamic Inflation Strategies Introduced in Asset-Liability Management" },
+      excerpt: { AZ: "Pensiya fondları üçün dinamik hedging metodları inflyasiyanın gətirdiyi kəsiri 25% azaldır.", EN: "Backtesting shows dynamic ALM adjustments mitigate pension deficit growth by 25%." },
+      sourceUrl: "https://www.oecd.org/"
+    },
+    {
+      id: 9,
+      icon: "🇦🇿", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 4,
+      title: { AZ: "Bakı Şəhəri Aktuarların İllik Qlobal Forumuna Ev Sahibliyi Edəcək", EN: "Baku to Host Annual Global Forum of Actuaries" },
+      excerpt: { AZ: "Oktyabr 2026-da Bakıda keçiriləcək sammitdə sığortada rəqəmsallaşma və ESG riskləri müzakirə olunacaq.", EN: "Baku announced as the location for the major international actuarial summit in October 2026." },
+      sourceUrl: "https://www.actuaries.org/"
+    },
+    {
+      id: 8,
+      icon: "🌾", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 5,
+      title: { AZ: "BMT Aqrar Layihələrində Parametrik Sığorta 40% Artıb", EN: "Parametric Insurance Surges 40% in UN Agricultural Projects" },
+      excerpt: { AZ: "İqlim dəyişikliyinə qarşı sürətli tetikleyici indeksli ödənişlər fermerləri qoruyur.", EN: "UN report highlights automated index-linked payouts safeguarding smallholder crops from drought." },
+      sourceUrl: "https://www.unepfi.org/"
+    },
+    {
+      id: 7,
+      icon: "🛡️", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 6,
+      title: { AZ: "Qlobal Kiber Sığorta Bazarı Rekord 20 Milyard Dollara Çatdı", EN: "Global Cyber Insurance Market Reaches Record $20 Billion" },
+      excerpt: { AZ: "Munich Re-nin hesabatına görə kiber hücumların artması kiber təminatlara tələbi sürətlə çoxaldır.", EN: "Munich Re report indicates a surge in demand for cyber policies driven by AI-backed ransomware." },
+      sourceUrl: "https://www.munichre.com/"
+    },
+    {
+      id: 6,
+      icon: "🇬🇧", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 6,
+      title: { AZ: "İngiltərə Aktuarlar İnstitutu Yeni CMI_2025 Ölüm Cədvəllərini Dərc Etdi", EN: "UK Actuarial Institute Publishes CMI_2025 Mortality Table" },
+      excerpt: { AZ: "Pandemiyadan sonrakı ölüm dinamikasına əsasən proqnozlar yeniləndi; pensiya ehtiyatlarına təsiri gözlənilir.", EN: "New mortality model shows stable life expectancy recovery, shifting reserving expectations." },
+      sourceUrl: "https://www.actuaries.org.uk/"
+    },
+    {
+      id: 5,
+      icon: "🎓", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 5,
+      title: { AZ: "SOA və CAS İmtahan Proqramlarında Python Modelləşdirməsini Məcburi Etdi", EN: "SOA and CAS Make Python Modeling Mandatory in Exam Syllabus" },
+      excerpt: { AZ: "Yeni aktuar təhsili standartlarına əsasən namizədlərdən Python və maşın öyrənməsi bilikləri tələb olunacaq.", EN: "Syllabus updates require actuarial candidates to build models in Python alongside traditional Excel." },
+      sourceUrl: "https://www.soa.org/"
+    },
+    {
+      id: 4,
+      icon: "⛈️", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 6,
+      title: { AZ: "Qlobal Təkrarsığorta Bazarında Qiymətlər Rekord Həddə Çatdı", EN: "Global Reinsurance Rates Peak in 2026" },
+      excerpt: { AZ: "Təbii fəlakət itkilərindən sonra Swiss Re, Munich Re catastrophe cover haqlarını 15-20% artırıb.", EN: "Major reinsurers raise catastrophe cover rates by 15-20% following heavy climate losses." },
+      sourceUrl: "https://www.swissre.com/"
+    },
+    {
+      id: 3,
+      icon: "🏦", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 4,
+      title: { AZ: "Mərkəzi Bank Yeni Aktuar Tənzimləmə Qaydalarını Dərc Etdi", EN: "Central Bank Publishes New Actuarial Regulation Rules" },
+      excerpt: { AZ: "Milli sığorta bazarında IFRS 17 uyğunluğu və aktuarlar üçün yeni sertifikat tələbləri təsdiqləndi.", EN: "Stricter IFRS 17 compliance and new exam certification guidelines approved for domestic actuaries." },
+      sourceUrl: "https://www.cbar.az/"
+    },
+    {
+      id: 2,
+      icon: "🇪🇺", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 7,
+      title: { AZ: "Solvency II 2026-cı il İslahatları Qüvvəyə Mindi", EN: "Solvency II 2026 Reforms Enter Into Force" },
+      excerpt: { AZ: "Avropa sığortaçıları üçün kapital azadlığı və daha sərt ESG hesabatlıq qaydaları.", EN: "Capital relief and tighter ESG disclosure mandates for European insurers and reinsurers." },
+      sourceUrl: "https://www.eiopa.europa.eu/browse/regulation-and-policy/solvency-ii_en"
+    },
+    {
+      id: 1,
+      icon: "📢", date: { AZ: "03 İyul 2026", EN: "03 July 2026" }, readTime: 5,
+      title: { AZ: "Beynəlxalq Aktuar Assosiasiyası Qlobal Süni İntellekt Standartlarını Açıqladı", EN: "International Actuarial Association Releases Global AI Standards" },
+      excerpt: { AZ: "Resurslar və hesabatlılıqda Generativ AI istifadəsinə dair ilk qlobal qaydalar dərc edildi.", EN: "First global standards released on GenAI adoption in actuarial reserving and pricing." },
+      sourceUrl: "https://www.actuaries.org/"
+    },
+    {
+      id: 12,
+      icon: "📈", date: { AZ: "24 İyun 2026", EN: "24 June 2026" }, readTime: 5,
+      title: { AZ: "EIOPA Qlobal Makroiqtisadi Qeyri-müəyyənlik Fonunda Maliyyə Sabitliyi Hesabatını Açıqladı", EN: "EIOPA Releases Financial Stability Report Amid Global Macroeconomic Uncertainty" },
+      excerpt: { AZ: "2026-cı ilin iyun hesabatı Avropa sığorta və pensiya sektorlarının iqlim dəyişikliyi və geopolitik risklər qarşısında dözümlülüyünü təhlil edir.", EN: "The June 2026 report assesses the resilience of European insurance and pension sectors against climate change and geopolitical headwinds." },
+      sourceUrl: "https://www.eiopa.europa.eu/financial-stability-report_en"
     }
   ];
 

@@ -12,10 +12,11 @@ class BlogPost(models.Model):
     read_time = models.IntegerField(default=5)
     source_url = models.URLField(max_length=1000)
     icon = models.CharField(max_length=10, default="📰")
+    publish_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-publish_date', '-id']
 
     def __str__(self):
         return self.title_en
