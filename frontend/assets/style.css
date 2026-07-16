@@ -810,7 +810,7 @@
       .nav-links.mobile-open {
         display: flex;
       }
-      .nav-links button {
+      .nav-links button, .nav-links a {
         width: 100%;
         justify-content: flex-start;
       }

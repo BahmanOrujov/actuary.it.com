@@ -26,13 +26,16 @@ const { useState, useEffect } = React;
     const IconCalculator = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '6px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>;
     const IconMenu = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>;
     const IconX = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
+    const IconMessage = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '6px'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
     
 
     // --- TRANSLATIONS DICTIONARY (Bilingual support AZ / EN) ---
 
     function App() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isFeedbackPage = urlParams.get('page') === 'feedback';
       const [lang, setLang] = useState('EN');
-      const [activeTab, setActiveTab] = useState('home');
+      const [activeTab, setActiveTab] = useState(isFeedbackPage ? 'feedback' : 'home');
       const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
       const [selectedCv, setSelectedCv] = useState(null);
       const [selectedArticle, setSelectedArticle] = useState(null);
@@ -385,6 +388,9 @@ const { useState, useEffect } = React;
             
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <nav className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+                <a className={`nav-link ${activeTab === 'feedback' ? 'active' : ''}`} href="?page=feedback" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                  <IconMessage /> {lang === 'AZ' ? 'Rəy' : 'Feedback'}
+                </a>
                 <button className={`nav-link ${activeTab === 'actuaries' ? 'active' : ''}`} onClick={() => { setActiveTab('actuaries'); setMobileMenuOpen(false); }}>
                   <IconUsers /> {t.actuaries}
                 </button>
@@ -404,83 +410,6 @@ const { useState, useEffect } = React;
               </div>
             </div>
           </header>
-
-          {/* FEEDBACK SECTION */}
-          <div className="feedback-section-wrapper" style={{ padding: '1rem 5%', display: 'flex', justifyContent: 'center', width: '100%', background: 'rgba(10, 10, 18, 0.4)' }}>
-            <div className="glass-card" style={{ width: '100%', maxWidth: '1100px', padding: '1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setIsFeedbackOpen(!isFeedbackOpen)}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600', color: 'var(--text-primary)' }}>
-                  <span>💬</span>
-                  <span>{lang === 'AZ' ? 'Bizə rəy bildirin' : 'Give us feedback'}</span>
-                </div>
-                <button className="btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', borderRadius: '4px' }}>
-                  {isFeedbackOpen ? (lang === 'AZ' ? 'Gizlə' : 'Hide') : (lang === 'AZ' ? 'Göstər' : 'Show')}
-                </button>
-              </div>
-
-              {isFeedbackOpen && (
-                <form onSubmit={handleFeedbackSubmit} style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div className="responsive-grid-2" style={{ gap: '1rem' }}>
-                    <div className="form-group" style={{ marginBottom: '0' }}>
-                      <label className="form-label" htmlFor="feedback-email" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                        {lang === 'AZ' ? 'E-mail ünvanı (real və məcburi)' : 'Email address (real and required)'}
-                      </label>
-                      <input 
-                        id="feedback-email"
-                        type="email" 
-                        className="input-field" 
-                        placeholder="example@mail.com" 
-                        value={feedbackEmail} 
-                        onChange={e => setFeedbackEmail(e.target.value)} 
-                        required 
-                      />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: '0' }}>
-                      <label className="form-label" htmlFor="feedback-text" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                        {lang === 'AZ' ? 'Rəyiniz (məcburi)' : 'Your feedback (required)'}
-                      </label>
-                      <textarea 
-                        id="feedback-text"
-                        className="input-field" 
-                        rows="2" 
-                        placeholder={lang === 'AZ' ? 'Fikir və təkliflərinizi bura yazın...' : 'Enter your thoughts and suggestions here...'} 
-                        value={feedbackText} 
-                        onChange={e => setFeedbackText(e.target.value)} 
-                        style={{ resize: 'vertical', fontFamily: 'inherit' }}
-                        required 
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
-                    {feedbackStatus === 'loading' && (
-                      <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                        {lang === 'AZ' ? 'Göndərilir...' : 'Sending...'}
-                      </span>
-                    )}
-                    {feedbackStatus === 'success' && (
-                      <span style={{ fontSize: '0.9rem', color: 'var(--color-success)', fontWeight: '500' }}>
-                        {lang === 'AZ' ? 'Rəyiniz uğurla göndərildi!' : 'Feedback sent successfully!'}
-                      </span>
-                    )}
-                    {feedbackStatus === 'error' && (
-                      <span style={{ fontSize: '0.9rem', color: 'var(--color-danger)', fontWeight: '500' }}>
-                        {feedbackStatusMsg || (lang === 'AZ' ? 'Xəta baş verdi!' : 'An error occurred!')}
-                      </span>
-                    )}
-                    <button 
-                      type="submit" 
-                      className="btn-primary" 
-                      disabled={feedbackStatus === 'loading'}
-                      style={{ padding: '0.6rem 1.5rem', fontSize: '0.95rem' }}
-                    >
-                      {lang === 'AZ' ? 'Göndər' : 'Submit'}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          </div>
 
           {/* LANDING PAGE: HOME */}
           {activeTab === 'home' && (
@@ -1429,6 +1358,82 @@ const { useState, useEffect } = React;
                   </div>
                 )}
               </main>
+            </div>
+          )}
+
+          {/* DEDICATED FEEDBACK PAGE */}
+          {activeTab === 'feedback' && (
+            <div style={{ padding: '4rem 5%', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', width: '100%' }}>
+              <div className="glass-card" style={{ width: '100%', maxWidth: '600px', padding: '2.5rem', background: 'rgba(18, 18, 37, 0.8)', border: '1px solid var(--border-color)', borderRadius: '16px', boxShadow: 'var(--shadow-premium)' }}>
+                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                  <span style={{ fontSize: '3rem' }}>💬</span>
+                  <h2 className="text-gradient" style={{ fontSize: '2rem', marginTop: '1rem', marginBottom: '0.5rem' }}>
+                    {lang === 'AZ' ? 'Bizə rəy bildirin' : 'Give us feedback'}
+                  </h2>
+                  <p style={{ color: 'var(--text-secondary)' }}>
+                    {lang === 'AZ' ? 'Platformamızı təkmilləşdirməyimizə kömək edin.' : 'Help us improve our platform by sharing your thoughts.'}
+                  </p>
+                </div>
+
+                <form onSubmit={handleFeedbackSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="feedback-email" style={{ marginBottom: '0.5rem', display: 'block', fontWeight: '500' }}>
+                      {lang === 'AZ' ? 'E-mail ünvanınız (real və məcburi)' : 'Your email address (real and required)'}
+                    </label>
+                    <input 
+                      id="feedback-email"
+                      type="email" 
+                      className="input-field" 
+                      placeholder="example@mail.com" 
+                      value={feedbackEmail} 
+                      onChange={e => setFeedbackEmail(e.target.value)} 
+                      required 
+                      style={{ padding: '0.8rem 1rem' }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="feedback-text" style={{ marginBottom: '0.5rem', display: 'block', fontWeight: '500' }}>
+                      {lang === 'AZ' ? 'Rəyiniz (məcburi)' : 'Your feedback (required)'}
+                    </label>
+                    <textarea 
+                      id="feedback-text"
+                      className="input-field" 
+                      rows="6" 
+                      placeholder={lang === 'AZ' ? 'Fikir və təkliflərinizi bura yazın...' : 'Enter your thoughts and suggestions here...'} 
+                      value={feedbackText} 
+                      onChange={e => setFeedbackText(e.target.value)} 
+                      style={{ resize: 'vertical', fontFamily: 'inherit', padding: '0.8rem 1rem' }}
+                      required 
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
+                    {feedbackStatus === 'loading' && (
+                      <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)' }}>
+                        {lang === 'AZ' ? 'Göndərilir...' : 'Sending...'}
+                      </span>
+                    )}
+                    {feedbackStatus === 'success' && (
+                      <span style={{ fontSize: '0.95rem', color: 'var(--color-success)', fontWeight: '500' }}>
+                        {lang === 'AZ' ? 'Rəyiniz uğurla göndərildi!' : 'Feedback sent successfully!'}
+                      </span>
+                    )}
+                    {feedbackStatus === 'error' && (
+                      <span style={{ fontSize: '0.95rem', color: 'var(--color-danger)', fontWeight: '500' }}>
+                        {feedbackStatusMsg || (lang === 'AZ' ? 'Xəta baş verdi!' : 'An error occurred!')}
+                      </span>
+                    )}
+                    <button 
+                      type="submit" 
+                      className="btn-primary" 
+                      disabled={feedbackStatus === 'loading'}
+                      style={{ padding: '0.8rem 2.5rem', fontSize: '1rem', borderRadius: '8px' }}
+                    >
+                      {lang === 'AZ' ? 'Göndər' : 'Submit'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
         </React.Fragment>
