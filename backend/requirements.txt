@@ -8,3 +8,5 @@ reportlab
 numpy
 gunicorn
 whitenoise
+requests
+

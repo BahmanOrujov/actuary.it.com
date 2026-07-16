@@ -7,7 +7,7 @@ import re
 import threading
 import json
 import os
-import urllib.request
+import requests
 from .engine import evaluate_single_policy
 
 class ValuationAPIView(APIView):
@@ -37,13 +37,10 @@ def async_send_mail(subject, message, from_email, recipient_list):
                 "message": message,
                 "subject": subject
             }
-            req = urllib.request.Request(
-                webhook_url,
-                data=json.dumps(payload).encode('utf-8'),
-                headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}
-            )
-            with urllib.request.urlopen(req, timeout=10) as response:
-                print(f"Background email via Webhook sent successfully! Response: {response.read().decode('utf-8')}", flush=True)
+            headers = {'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}
+            # requests handles 302 redirects automatically and correctly redirects the POST payload
+            response = requests.post(webhook_url, json=payload, headers=headers, timeout=10)
+            print(f"Background email via Webhook sent successfully! Status: {response.status_code}, Response: {response.text}", flush=True)
             return
         except Exception as webhook_err:
             print(f"Background Webhook delivery failed: {webhook_err}", flush=True)
