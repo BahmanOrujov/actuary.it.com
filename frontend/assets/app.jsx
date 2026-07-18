@@ -317,24 +317,25 @@ const { useState, useEffect } = React;
           const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
             ? 'http://localhost:8000'
             : 'https://actuary-it-com.onrender.com';
-          
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
-
-          const response = await fetch(`${API_BASE_URL}/api/valuation/`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Cache-Control': 'no-cache',
-              'Pragma': 'no-cache'
-            },
-            body: JSON.stringify(payload),
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
-
-          const res = await response.json();
+          let res;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              const response = await fetch(`${API_BASE_URL}/api/valuation/`, {
+                method: 'POST',
+                headers: { 
+                  'Content-Type': 'application/json',
+                  'Cache-Control': 'no-cache',
+                  'Pragma': 'no-cache'
+                },
+                body: JSON.stringify(payload)
+              });
+              res = await response.json();
+              if (res.status) break; // We got a valid JSON response
+            } catch (err) {
+              if (attempt === 2) throw err;
+              await new Promise(r => setTimeout(r, 2000));
+            }
+          }
           if (res.status === 'success') {
             const data = res.data;
             const Axn = data.Axn || 0.0;
@@ -430,7 +431,7 @@ const { useState, useEffect } = React;
           }
         } catch (error) {
           console.error(error);
-          alert(lang === 'AZ' ? 'Xəta baş verdi' : 'An error occurred');
+          // Removed alert to prevent annoying popups on cold starts
         } finally {
           setIsCalculating(false);
         }
@@ -492,24 +493,25 @@ const { useState, useEffect } = React;
           const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
             ? 'http://localhost:8000'
             : 'https://actuary-it-com.onrender.com';
-          
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
-
-          const response = await fetch(`${API_BASE_URL}/api/valuation/`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Cache-Control': 'no-cache',
-              'Pragma': 'no-cache'
-            },
-            body: JSON.stringify(payload),
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
-
-          const res = await response.json();
+          let res;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              const response = await fetch(`${API_BASE_URL}/api/valuation/`, {
+                method: 'POST',
+                headers: { 
+                  'Content-Type': 'application/json',
+                  'Cache-Control': 'no-cache',
+                  'Pragma': 'no-cache'
+                },
+                body: JSON.stringify(payload)
+              });
+              res = await response.json();
+              if (res.status) break; // We got a valid JSON response
+            } catch (err) {
+              if (attempt === 2) throw err;
+              await new Promise(r => setTimeout(r, 2000));
+            }
+          }
           if (res.status === 'success') {
             setReserveResult({
               policyId: reserveParams.policyId,
@@ -523,7 +525,7 @@ const { useState, useEffect } = React;
           }
         } catch (error) {
           console.error(error);
-          alert("Serverə qoşulmaq mümkün olmadı.");
+          // Removed alert to prevent annoying popups on cold starts
         } finally {
           setIsCalculating(false);
         }
