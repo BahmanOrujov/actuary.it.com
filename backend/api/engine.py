@@ -142,7 +142,7 @@ class ActuarialValuationEngine:
         outstanding_balance = np.zeros_like(time_horizon, dtype=float)
         active_mask = remaining_term > 0
         if np.any(active_mask):
-            if policy.policy_type.lower() in ["life_endowment", "life_survival_m_payments"]:
+            if policy.policy_type.lower() in ["life_endowment", "life_survival_m_payments", "life_survival_single_payment"]:
                 outstanding_balance[active_mask] = policy.sum_insured_initial
             else:
                 outstanding_balance[active_mask] = np.abs(
@@ -215,7 +215,7 @@ class ActuarialValuationEngine:
         balance_index = min(max(elapsed_m, 0), len(outstanding_balance) - 1) if len(outstanding_balance) > 0 else 0
         # SÖ (Sığorta ödənişləri)
         res_so = benefits_payable.sum()
-        if policy.policy_type.lower() in ["life_endowment", "life_survival_m_payments"]:
+        if policy.policy_type.lower() in ["life_endowment", "life_survival_m_payments", "life_survival_single_payment"]:
             res_so += policy.sum_insured_initial * pure_endowment * (1.0 + self.cfg.margin_investment)
         # ZTX (Zərərlərin tənzimləmə xərcləri)
         res_ztx = expenses_mortality.sum()
@@ -264,13 +264,13 @@ class ActuarialValuationEngine:
         axn = (Nx[s] - Nx[e]) / Dx_s
         Exn = Dx[e] / Dx_s
 
-        if p_type in ["life_endowment", "yigim", "yığım", "endowment", "life_survival_m_payments"] or "yığım" in p_type or "yigim" in p_type or "endowment" in p_type or "life_survival_m_payments" in p_type:
+        if p_type in ["life_endowment", "yigim", "yığım", "endowment", "life_survival_m_payments", "life_survival_single_payment"] or "yığım" in p_type or "yigim" in p_type or "endowment" in p_type or "life_survival_m_payments" in p_type or "life_survival_single_payment" in p_type:
 
             # 3. Calculate components
             S = policy.sum_insured_initial
             ro1 = self.cfg.margin_mortality
             # Yalnız Yığım növündə ro2 nəzərə alınır (Ölüm halında sıfır olacaq)
-            ro2 = self.cfg.margin_investment if p_type in ["life_endowment", "yigim", "yığım", "endowment", "life_survival_m_payments"] or "yığım" in p_type or "yigim" in p_type or "life_survival_m_payments" in p_type else 0.0
+            ro2 = self.cfg.margin_investment if p_type in ["life_endowment", "yigim", "yığım", "endowment", "life_survival_m_payments", "life_survival_single_payment"] or "yığım" in p_type or "yigim" in p_type or "life_survival_m_payments" in p_type or "life_survival_single_payment" in p_type else 0.0
 
             res_so = S * Axn + S * Exn
             # ZTX = ro1 * S * Ax:n + ro2 * S * nEx
@@ -278,7 +278,10 @@ class ActuarialValuationEngine:
             # İAX = (gamma / payment_frequency) * S * ax:n
             res_iax = (self.cfg.expense_maintenance / self.cfg.payment_frequency) * S * axn
             # SH = (1 - betta) * Sığorta haqqı * ax:n
-            res_sh = (1.0 - self.cfg.cost_acquisition) * policy.net_premium * axn
+            if p_type == "life_survival_single_payment":
+                res_sh = 0.0
+            else:
+                res_sh = (1.0 - self.cfg.cost_acquisition) * policy.net_premium * axn
 
             net_mathematical_reserve = res_so + res_ztx + res_iax - res_sh
             final_reserve = max(0.0, net_mathematical_reserve)
