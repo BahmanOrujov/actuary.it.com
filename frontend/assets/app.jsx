@@ -1586,6 +1586,7 @@ const { useState, useEffect } = React;
                             <div style={{ marginTop: '1rem', marginBottom: '2rem' }}>
                               <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{lang === 'AZ' ? 'Aktuar Mühərrik Göstəriciləri' : 'Actuarial Engine Metrics'}</h4>
                               {reserveResult.engineData ? (
+                              <>
                               <div className="commutation-grid">
                                 <div className="commutation-box" title={lang === 'AZ' ? 'Tam Yaş (İllik)' : 'Complete Age (Years)'}>
                                   <div className="comm-label">{lang === 'AZ' ? 'Tam Yaş' : 'Age (years)'}</div>
@@ -1679,6 +1680,7 @@ const { useState, useEffect } = React;
                                   </div>
                                 </div>
                               </div>
+                              </>
                               ) : (
                                 <div style={{ color: 'var(--text-muted)' }}>{lang === 'AZ' ? 'Məlumat yoxdur' : 'No data available'}</div>
                               )}
