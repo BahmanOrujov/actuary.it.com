@@ -293,7 +293,7 @@ const { useState, useEffect } = React;
           const m = (pricingParams.insuranceClass === 'life_death_single_payment' || pricingParams.insuranceClass === 'life_survival_single_payment') ? 1 : (parseInt(pricingParams.paymentFrequency) || 12);
           const payload = {
             params: {
-              valuation_date: pricingParams.startDate,
+              valuation_date: pricingParams.endDate,
               interest_rate_annual: parseFloat(globalInterestRate) / 100 || 0,
               expense_maintenance: (parseFloat(pricingParams.expenseMaintenance) || 0) / 100,
               margin_mortality: (parseFloat(pricingParams.marginMortality) || 0) / 100,
