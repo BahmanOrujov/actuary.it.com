@@ -293,7 +293,7 @@ const { useState, useEffect } = React;
           const m = (pricingParams.insuranceClass === 'life_death_single_payment' || pricingParams.insuranceClass === 'life_survival_single_payment') ? 1 : (parseInt(pricingParams.paymentFrequency) || 12);
           const payload = {
             params: {
-              valuation_date: pricingParams.valuationDate,
+              valuation_date: pricingParams.startDate,
               interest_rate_annual: parseFloat(globalInterestRate) / 100 || 0,
               expense_maintenance: (parseFloat(pricingParams.expenseMaintenance) || 0) / 100,
               margin_mortality: (parseFloat(pricingParams.marginMortality) || 0) / 100,
@@ -1291,10 +1291,6 @@ const { useState, useEffect } = React;
                           ) : (
                             <>
                               <div className="form-group">
-                                <label className="form-label">{lang === 'AZ' ? 'Hesabat tarixi' : 'Valuation Date'}</label>
-                                <input type="date" className="input-field" value={pricingParams.valuationDate} onChange={e => setPricingParams({ ...pricingParams, valuationDate: e.target.value })} />
-                              </div>
-                              <div className="form-group">
                                 <label className="form-label">{lang === 'AZ' ? 'Doğum tarixi' : 'Birth Date'}</label>
                                 <input type="date" className="input-field" value={pricingParams.birthDate} onChange={e => setPricingParams({ ...pricingParams, birthDate: e.target.value })} />
                               </div>
@@ -1326,12 +1322,7 @@ const { useState, useEffect } = React;
                                 </div>
                               )}
                               
-                              {(pricingParams.insuranceClass === 'life_death_single_payment' || pricingParams.insuranceClass === 'life_death_m_payments') && (
-                                <div className="form-group">
-                                  <label className="form-label">{lang === 'AZ' ? 'Kredit Faizi (%)' : 'Credit Interest (%)'}</label>
-                                  <input type="number" step="0.1" className="input-field" value={pricingParams.creditApr} onChange={e => setPricingParams({ ...pricingParams, creditApr: e.target.value })} />
-                                </div>
-                              )}
+
 
                               <div className="form-group">
                                 <label className="form-label">{t.labelInterest}</label>
