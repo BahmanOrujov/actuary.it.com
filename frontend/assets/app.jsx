@@ -1463,7 +1463,6 @@ const { useState, useEffect } = React;
                                   </div>
                                 </div>
                               </div>
-                              </div>
                             </div>
                           ) : (
                             <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-muted)' }}>
