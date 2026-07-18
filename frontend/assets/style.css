@@ -1314,3 +1314,59 @@ html, body {
     gap: 0.35rem;
   }
 }
+
+/* Sidebar Sub-Menu Styles */
+.sidebar-submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+  padding-left: 0.5rem;
+  transition: all var(--transition-fast) ease;
+}
+
+.software-sidebar.collapsed .sidebar-submenu {
+  display: none;
+}
+
+.sidebar-sub-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.5rem 0.75rem 0.5rem 2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: left;
+  width: 100%;
+}
+
+.sidebar-sub-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sidebar-sub-btn.active {
+  color: var(--color-primary);
+  font-weight: 600;
+  background: rgba(99, 102, 241, 0.08);
+  border-left: 2px solid var(--color-primary);
+}
+
+.sidebar-btn-chevron {
+  margin-left: auto;
+  transition: transform var(--transition-fast);
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-btn-chevron.expanded {
+  transform: rotate(90deg);
+}

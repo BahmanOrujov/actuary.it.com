@@ -43,6 +43,7 @@ const { useState, useEffect } = React;
       const [officialDoc, setOfficialDoc] = useState('telimat');
       const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
       const [articleText, setArticleText] = useState('');
+      const [reserveMenuExpanded, setReserveMenuExpanded] = useState(true);
       const [loadingArticle, setLoadingArticle] = useState(false);
       const [blogList, setBlogList] = useState(typeof blogArticles !== 'undefined' ? blogArticles : []);
       const [loadingBlog, setLoadingBlog] = useState(false);
@@ -666,9 +667,46 @@ const { useState, useEffect } = React;
                 <button className={`sidebar-btn ${softwareTab === 'pricing' ? 'active' : ''}`} onClick={() => setSoftwareTab('pricing')}>
                   <IconDollar /> <span className="sidebar-btn-text">{t.pricingEngine}</span>
                 </button>
-                <button className={`sidebar-btn ${softwareTab === 'reserve' ? 'active' : ''}`} onClick={() => setSoftwareTab('reserve')}>
-                  <IconTrendingUp /> <span className="sidebar-btn-text">{t.reserveEngine}</span>
+                <button 
+                  className={`sidebar-btn ${softwareTab === 'reserve' ? 'active' : ''}`} 
+                  onClick={() => {
+                    if (!sidebarOpen) {
+                      setSidebarOpen(true);
+                      setReserveMenuExpanded(true);
+                    } else {
+                      setReserveMenuExpanded(!reserveMenuExpanded);
+                    }
+                    setSoftwareTab('reserve');
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', width: '100%' }}
+                >
+                  <IconTrendingUp /> 
+                  <span className="sidebar-btn-text">{t.reserveEngine}</span>
+                  {sidebarOpen && (
+                    <span className={`sidebar-btn-chevron ${reserveMenuExpanded ? 'expanded' : ''}`} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+                      <IconChevronRight />
+                    </span>
+                  )}
                 </button>
+                {sidebarOpen && reserveMenuExpanded && (
+                  <div className="sidebar-submenu">
+                    <button 
+                      className={`sidebar-sub-btn ${softwareTab === 'reserve' ? 'active' : ''}`} 
+                      onClick={() => setSoftwareTab('reserve')}
+                      title={lang === 'AZ' ? 'Uzunmüddətli öhdəliklər ehtiyatı (Riyazi ehtiyat)' : 'Reserve for Long-Term Liabilities (Mathematical Reserve)'}
+                    >
+                      <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>●</span>
+                      <span style={{ 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        maxWidth: '180px' 
+                      }}>
+                        {lang === 'AZ' ? 'Uzunmüddətli öhdəliklər ehtiyatı (Riyazi ehtiyat)' : 'Reserve for Long-Term Liabilities'}
+                      </span>
+                    </button>
+                  </div>
+                )}
                 <div className="sidebar-heading">{sidebarOpen ? t.sidebarAnalytics : '...'}</div>
                 <button className={`sidebar-btn ${softwareTab === 'formula-explorer' ? 'active' : ''}`} onClick={() => setSoftwareTab('formula-explorer')}>
                   <IconCalculator /> <span className="sidebar-btn-text">{t.formulaExplorer}</span>
