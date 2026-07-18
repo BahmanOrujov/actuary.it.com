@@ -365,6 +365,10 @@ const { useState, useEffect } = React;
                   Nx: data.Nx || 0,
                   Cx: data.Cx || 0,
                   Mx: data.Mx || 0,
+                  Dx_e: data.Dx_e || 0,
+                  Nx_e: data.Nx_e || 0,
+                  Cx_e: data.Cx_e || 0,
+                  Mx_e: data.Mx_e || 0,
                   Axn: Axn,
                   axn: axn,
                   Exn: Exn,
@@ -393,6 +397,10 @@ const { useState, useEffect } = React;
                   Nx: data.Nx || 0,
                   Cx: data.Cx || 0,
                   Mx: data.Mx || 0,
+                  Dx_e: data.Dx_e || 0,
+                  Nx_e: data.Nx_e || 0,
+                  Cx_e: data.Cx_e || 0,
+                  Mx_e: data.Mx_e || 0,
                   Axn: Axn,
                   axn: axn,
                   Exn: Exn,
@@ -1422,6 +1430,22 @@ const { useState, useEffect } = React;
                                     <div className="comm-label">Mx</div>
                                     <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.Mx}</div>
                                   </div>
+                                  <div className="commutation-box" style={{ padding: '0.5rem', opacity: 0.75 }} title={lang === 'AZ' ? 'Bitiş yaşındakı Dx (e indeksi)' : 'Dx at maturity age (index e)'}>
+                                    <div className="comm-label">Dx<sub>(e)</sub></div>
+                                    <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.Dx_e}</div>
+                                  </div>
+                                  <div className="commutation-box" style={{ padding: '0.5rem', opacity: 0.75 }} title={lang === 'AZ' ? 'Bitiş yaşındakı Nx (e indeksi)' : 'Nx at maturity age (index e)'}>
+                                    <div className="comm-label">Nx<sub>(e)</sub></div>
+                                    <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.Nx_e}</div>
+                                  </div>
+                                  <div className="commutation-box" style={{ padding: '0.5rem', opacity: 0.75 }} title={lang === 'AZ' ? 'Bitiş yaşındakı Cx (e indeksi)' : 'Cx at maturity age (index e)'}>
+                                    <div className="comm-label">Cx<sub>(e)</sub></div>
+                                    <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.Cx_e}</div>
+                                  </div>
+                                  <div className="commutation-box" style={{ padding: '0.5rem', opacity: 0.75 }} title={lang === 'AZ' ? 'Bitiş yaşındakı Mx (e indeksi)' : 'Mx at maturity age (index e)'}>
+                                    <div className="comm-label">Mx<sub>(e)</sub></div>
+                                    <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.Mx_e}</div>
+                                  </div>
                                   {pricingResult.commutations.Axn !== undefined && (
                                     <>
                                       <div className="commutation-box" style={{ padding: '0.5rem' }} title="A^1_x:n">
@@ -1604,6 +1628,46 @@ const { useState, useEffect } = React;
                                   <div className="comm-label">{lang === 'AZ' ? 'qx (il)' : 'qx (year)'}</div>
                                   <div className="comm-value">{reserveResult.engineData.qx_annual}</div>
                                 </div>
+                                <div className="commutation-box" title="Dx[s] — başlama yaşında komutasiya">
+                                  <div className="comm-label">Dx</div>
+                                  <div className="comm-value">{reserveResult.engineData.Dx}</div>
+                                </div>
+                                <div className="commutation-box" title="Nx[s] — başlama yaşında komutasiya">
+                                  <div className="comm-label">Nx</div>
+                                  <div className="comm-value">{reserveResult.engineData.Nx}</div>
+                                </div>
+                                <div className="commutation-box" title="Cx[s] — başlama yaşında komutasiya">
+                                  <div className="comm-label">Cx</div>
+                                  <div className="comm-value">{reserveResult.engineData.Cx}</div>
+                                </div>
+                                <div className="commutation-box" title="Mx[s] — başlama yaşında komutasiya">
+                                  <div className="comm-label">Mx</div>
+                                  <div className="comm-value">{reserveResult.engineData.Mx}</div>
+                                </div>
+                                {reserveResult.engineData.Dx_e !== undefined && (
+                                  <div className="commutation-box" style={{ opacity: 0.75 }} title="Dx[e] — bitiş yaşında komutasiya (nEx = Dx[e]/Dx[s])">
+                                    <div className="comm-label">Dx<sub>(e)</sub></div>
+                                    <div className="comm-value">{reserveResult.engineData.Dx_e}</div>
+                                  </div>
+                                )}
+                                {reserveResult.engineData.Nx_e !== undefined && (
+                                  <div className="commutation-box" style={{ opacity: 0.75 }} title="Nx[e] — bitiş yaşında komutasiya (axn = (Nx[s]-Nx[e])/Dx[s])">
+                                    <div className="comm-label">Nx<sub>(e)</sub></div>
+                                    <div className="comm-value">{reserveResult.engineData.Nx_e}</div>
+                                  </div>
+                                )}
+                                {reserveResult.engineData.Cx_e !== undefined && (
+                                  <div className="commutation-box" style={{ opacity: 0.75 }} title="Cx[e] — bitiş yaşında komutasiya">
+                                    <div className="comm-label">Cx<sub>(e)</sub></div>
+                                    <div className="comm-value">{reserveResult.engineData.Cx_e}</div>
+                                  </div>
+                                )}
+                                {reserveResult.engineData.Mx_e !== undefined && (
+                                  <div className="commutation-box" style={{ opacity: 0.75 }} title="Mx[e] — bitiş yaşında komutasiya (Axn = (Mx[s]-Mx[e])/Dx[s])">
+                                    <div className="comm-label">Mx<sub>(e)</sub></div>
+                                    <div className="comm-value">{reserveResult.engineData.Mx_e}</div>
+                                  </div>
+                                )}
                                 {reserveResult.engineData.Axn !== undefined && (
                                   <div className="commutation-box" title="Ax:n">
                                     <div className="comm-label">Ax:n</div>
