@@ -1009,10 +1009,10 @@ const { useState, useEffect } = React;
                           <div className="form-group">
                             <label className="form-label">{lang === 'AZ' ? 'Sığorta Sinfi' : 'Insurance Class'}</label>
                             <select className="input-field" value={reserveParams.policyType} onChange={e => setReserveParams({ ...reserveParams, policyType: e.target.value })}>
-                              <option value="life_survival_m_payments">{lang === 'AZ' ? 'Həyatın yaşam halından sığortası (m dəfə ödənişli)' : 'Life Insurance in Case of Survival (m-times payment)'}</option>
-                              <option value="life_survival_single_payment">{lang === 'AZ' ? 'Həyatın yaşam sığortası (birdəfəlik)' : 'Life Insurance in Case of Survival (single payment)'}</option>
-                              <option value="life_death_single_payment">{lang === 'AZ' ? 'Həyatın ölüm halından sığorta (birdəfəlik)' : 'Life Insurance in Case of Death (single payment)'}</option>
-                              <option value="life_death_m_payments">{lang === 'AZ' ? 'Həyatın ölüm halından sığorta (m dəfə ödənişli)' : 'Life Insurance in Case of Death (m-times payment)'}</option>
+                              <option value="life_survival_m_payments">{lang === 'AZ' ? 'Həyatın yaşam halından sığortası (m dəfə ödənişli)' : 'Life Insurance in Case of Survival (m-times premium payment)'}</option>
+                              <option value="life_survival_single_payment">{lang === 'AZ' ? 'Həyatın yaşam sığortası (birdəfəlik)' : 'Life Insurance in Case of Survival (single premium)'}</option>
+                              <option value="life_death_single_payment">{lang === 'AZ' ? 'Həyatın ölüm halından sığorta (birdəfəlik)' : 'Life Insurance in Case of Death (single premium)'}</option>
+                              <option value="life_death_m_payments">{lang === 'AZ' ? 'Həyatın ölüm halından sığorta (m dəfə ödənişli)' : 'Life Insurance in Case of Death (m-times premium payment)'}</option>
                             </select>
                           </div>
 
