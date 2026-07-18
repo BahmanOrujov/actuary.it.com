@@ -43,7 +43,9 @@ const { useState, useEffect } = React;
       const [officialDoc, setOfficialDoc] = useState('telimat');
       const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
       const [articleText, setArticleText] = useState('');
-      const [reserveMenuExpanded, setReserveMenuExpanded] = useState(true);
+      const [reserveMenuExpanded, setReserveMenuExpanded] = useState(false);
+      const [formulaMenuExpanded, setFormulaMenuExpanded] = useState(false);
+      const [docsMenuExpanded, setDocsMenuExpanded] = useState(false);
       const [loadingArticle, setLoadingArticle] = useState(false);
       const [blogList, setBlogList] = useState(typeof blogArticles !== 'undefined' ? blogArticles : []);
       const [loadingBlog, setLoadingBlog] = useState(false);
@@ -708,15 +710,113 @@ const { useState, useEffect } = React;
                   </div>
                 )}
                 <div className="sidebar-heading">{sidebarOpen ? t.sidebarAnalytics : '...'}</div>
-                <button className={`sidebar-btn ${softwareTab === 'formula-explorer' ? 'active' : ''}`} onClick={() => setSoftwareTab('formula-explorer')}>
-                  <IconCalculator /> <span className="sidebar-btn-text">{t.formulaExplorer}</span>
+                <button 
+                  className={`sidebar-btn ${softwareTab === 'formula-explorer' ? 'active' : ''}`} 
+                  onClick={() => {
+                    if (!sidebarOpen) {
+                      setSidebarOpen(true);
+                      setFormulaMenuExpanded(true);
+                    } else {
+                      setFormulaMenuExpanded(!formulaMenuExpanded);
+                    }
+                    setSoftwareTab('formula-explorer');
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', width: '100%' }}
+                >
+                  <IconCalculator /> 
+                  <span className="sidebar-btn-text">{t.formulaExplorer}</span>
+                  {sidebarOpen && (
+                    <span className={`sidebar-btn-chevron ${formulaMenuExpanded ? 'expanded' : ''}`} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+                      <IconChevronRight />
+                    </span>
+                  )}
                 </button>
-                <button className={`sidebar-btn ${softwareTab === 'official-docs' ? 'active' : ''}`} onClick={() => setSoftwareTab('official-docs')}>
-                  <IconBook /> <span className="sidebar-btn-text">{t.officialDocs}</span>
+                {sidebarOpen && formulaMenuExpanded && (
+                  <div className="sidebar-submenu">
+                    <button 
+                      className={`sidebar-sub-btn ${softwareTab === 'formula-explorer' && formulaCategory === 'mortality' ? 'active' : ''}`} 
+                      onClick={() => {
+                        setSoftwareTab('formula-explorer');
+                        setFormulaCategory('mortality');
+                      }}
+                      title={lang === 'AZ' ? 'Aylıq Ölüm Cədvəli və Kommutasiya Ədədləri (1272 Ay)' : 'Monthly Mortality Table & Commutation (1272 Months)'}
+                    >
+                      <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>●</span>
+                      <span style={{ 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        maxWidth: '180px' 
+                      }}>
+                        {lang === 'AZ' ? 'Ölüm Cədvəli' : 'Mortality Table'}
+                      </span>
+                    </button>
+                  </div>
+                )}
+
+                <button 
+                  className={`sidebar-btn ${softwareTab === 'official-docs' ? 'active' : ''}`} 
+                  onClick={() => {
+                    if (!sidebarOpen) {
+                      setSidebarOpen(true);
+                      setDocsMenuExpanded(true);
+                    } else {
+                      setDocsMenuExpanded(!docsMenuExpanded);
+                    }
+                    setSoftwareTab('official-docs');
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', width: '100%' }}
+                >
+                  <IconBook /> 
+                  <span className="sidebar-btn-text">{t.officialDocs}</span>
+                  {sidebarOpen && (
+                    <span className={`sidebar-btn-chevron ${docsMenuExpanded ? 'expanded' : ''}`} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+                      <IconChevronRight />
+                    </span>
+                  )}
                 </button>
+                {sidebarOpen && docsMenuExpanded && (
+                  <div className="sidebar-submenu">
+                    <button 
+                      className={`sidebar-sub-btn ${softwareTab === 'official-docs' && officialDoc === 'telimat' ? 'active' : ''}`} 
+                      onClick={() => {
+                        setSoftwareTab('official-docs');
+                        setOfficialDoc('telimat');
+                      }}
+                      title={lang === 'AZ' ? 'Aktuar Hesablamalar Təlimatı' : 'Actuarial Calculations Instruction'}
+                    >
+                      <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>●</span>
+                      <span style={{ 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        maxWidth: '180px' 
+                      }}>
+                        {lang === 'AZ' ? 'Aktuar Hesablamalar Təlimatı' : 'Actuarial Calculations Instruction'}
+                      </span>
+                    </button>
+                    <button 
+                      className={`sidebar-sub-btn ${softwareTab === 'official-docs' && officialDoc === 'qaydalar' ? 'active' : ''}`} 
+                      onClick={() => {
+                        setSoftwareTab('official-docs');
+                        setOfficialDoc('qaydalar');
+                      }}
+                      title={lang === 'AZ' ? 'Sığorta Ehtiyatları Qaydası' : 'Insurance Reserves Regulation'}
+                    >
+                      <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>●</span>
+                      <span style={{ 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        maxWidth: '180px' 
+                      }}>
+                        {lang === 'AZ' ? 'Sığorta Ehtiyatları Qaydası' : 'Insurance Reserves Regulation'}
+                      </span>
+                    </button>
+                  </div>
+                )}
               </aside>
 
-              {/* MAIN SOFTWARE WORKSPACE */}
               <main className="software-content">
                 {serverWaking && (
                   <div className="glass-card" style={{
