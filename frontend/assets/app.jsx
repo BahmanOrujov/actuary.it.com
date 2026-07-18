@@ -89,7 +89,7 @@ const { useState, useEffect } = React;
         sumAssured: 100000,
         premium: 500,
         creditApr: 10,
-        policyType: 'life_endowment',
+        policyType: 'life_survival_m_payments',
         interest: 5.0,
         expenseMaintenance: 0.25,
         marginMortality: 3.0,
@@ -261,7 +261,7 @@ const { useState, useEffect } = React;
               margin_investment: (parseFloat(reserveParams.marginInvestment) || 0) / 100,
               cost_acquisition_initial: (parseFloat(reserveParams.costAcquisitionInitial) || 0) / 100,
               cost_acquisition: (parseFloat(reserveParams.costAcquisition) || 0) / 100,
-              payment_frequency: reserveParams.policyType === 'credit' ? 1 : (parseInt(reserveParams.paymentFrequency) || 12)
+              payment_frequency: reserveParams.policyType === 'life_death_single_payment' ? 1 : (parseInt(reserveParams.paymentFrequency) || 12)
             },
             policy: {
               policy_id: reserveParams.policyId,
@@ -1009,9 +1009,9 @@ const { useState, useEffect } = React;
                           <div className="form-group">
                             <label className="form-label">{lang === 'AZ' ? 'Sığorta Sinfi' : 'Insurance Class'}</label>
                             <select className="input-field" value={reserveParams.policyType} onChange={e => setReserveParams({ ...reserveParams, policyType: e.target.value })}>
-                              <option value="life_endowment">{lang === 'AZ' ? 'Həyat (Yığım)' : 'Life (Endowment)'}</option>
-                              <option value="credit">{lang === 'AZ' ? 'Kredit Həyat' : 'Credit Life'}</option>
-                              <option value="mortgage">{lang === 'AZ' ? 'İpoteka Həyat' : 'Mortgage Life'}</option>
+                              <option value="life_survival_m_payments">{lang === 'AZ' ? 'Həyatın yaşam halından sığortası (m dəfə ödənişli)' : 'Life Insurance in Case of Survival (m-times payment)'}</option>
+                              <option value="life_death_single_payment">{lang === 'AZ' ? 'Həyatın ölüm halından sığorta (birdəfəlik)' : 'Life Insurance in Case of Death (single payment)'}</option>
+                              <option value="life_death_m_payments">{lang === 'AZ' ? 'Həyatın ölüm halından sığorta (m dəfə ödənişli)' : 'Life Insurance in Case of Death (m-times payment)'}</option>
                             </select>
                           </div>
 
@@ -1039,14 +1039,14 @@ const { useState, useEffect } = React;
                           <div className="form-group">
                              <label className="form-label">
                                {lang === 'AZ' 
-                                 ? ((reserveParams.policyType === 'life_endowment' || reserveParams.policyType === 'mortgage') ? 'Sığorta haqqı (aylıq)' : 'Sığorta haqqı') 
-                                 : ((reserveParams.policyType === 'life_endowment' || reserveParams.policyType === 'mortgage') ? 'Premium (monthly)' : 'Premium')
+                                 ? ((reserveParams.policyType === 'life_survival_m_payments' || reserveParams.policyType === 'life_death_m_payments') ? 'Sığorta haqqı (aylıq)' : 'Sığorta haqqı') 
+                                 : ((reserveParams.policyType === 'life_survival_m_payments' || reserveParams.policyType === 'life_death_m_payments') ? 'Premium (monthly)' : 'Premium')
                                }
                              </label>
                              <input type="number" className="input-field" value={reserveParams.premium} onChange={e => setReserveParams({ ...reserveParams, premium: e.target.value })} />
                            </div>
                           
-                          { (reserveParams.policyType === 'credit' || reserveParams.policyType === 'mortgage') && (
+                          { (reserveParams.policyType === 'life_death_single_payment' || reserveParams.policyType === 'life_death_m_payments') && (
                           <div className="form-group">
                             <label className="form-label">{lang === 'AZ' ? 'Kredit Faizi (%)' : 'Credit Interest (%)'}</label>
                             <input type="number" step="0.1" className="input-field" value={reserveParams.creditApr} onChange={e => setReserveParams({ ...reserveParams, creditApr: e.target.value })} />
@@ -1073,13 +1073,13 @@ const { useState, useEffect } = React;
                               <input type="number" step="0.01" className="input-field" value={reserveParams.marginMortality} onChange={e => setReserveParams({ ...reserveParams, marginMortality: e.target.value })} />
                             </div>
                             
-                            {reserveParams.policyType === 'life_endowment' && (
+                            {reserveParams.policyType === 'life_survival_m_payments' && (
                               <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                                 <label className="form-label">{lang === 'AZ' ? 'İnvestisiya Marjası (ro2) (%)' : 'Investment Margin (ro2) (%)'}</label>
                                 <input type="number" step="0.01" className="input-field" value={reserveParams.marginInvestment} onChange={e => setReserveParams({ ...reserveParams, marginInvestment: e.target.value })} />
                               </div>
                             )}
-                            {reserveParams.policyType !== 'credit' && (
+                            {reserveParams.policyType !== 'life_death_single_payment' && (
                               <div className="form-group" style={{ marginBottom: '0' }}>
                                 <label className="form-label">{lang === 'AZ' ? 'Ödəniş Tezliyi (payment_frequency)' : 'Payment Frequency'}</label>
                                 <input type="number" className="input-field" value={reserveParams.paymentFrequency} onChange={e => setReserveParams({ ...reserveParams, paymentFrequency: e.target.value })} />
