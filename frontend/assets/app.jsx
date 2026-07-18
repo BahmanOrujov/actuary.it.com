@@ -1157,8 +1157,8 @@ const { useState, useEffect } = React;
                                     <div className="comm-value">{reserveResult.engineData.active_sum_insured}</div>
                                   </div>
                                 )}
-                                <div className="commutation-box" style={{ gridColumn: 'span 2', background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.3)' }} title={lang === 'AZ' ? 'Yekun Ehtiyat' : 'Final Reserve'}>
-                                  <div className="comm-label">{lang === 'AZ' ? 'Ehtiyat (Reserve)' : 'Reserve'}</div>
+                                <div className="commutation-box" style={{ gridColumn: 'span 2', background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.3)' }} title={lang === 'AZ' ? 'Uzunmüddətli öhdəliklər ehtiyatı (Riyazi ehtiyat)' : 'Reserve for Long-Term Liabilities (Mathematical Reserve)'}>
+                                  <div className="comm-label">{lang === 'AZ' ? 'Uzunmüddətli öhdəliklər ehtiyatı (Riyazi ehtiyat)' : 'Reserve for Long-Term Liabilities (Mathematical Reserve)'}</div>
                                   <div className="comm-value" style={{ color: 'var(--color-primary)' }}>{reserveResult.engineData.final_reserve || reserveResult.engineData.net_mathematical_reserve}</div>
                                 </div>
                               </div>
