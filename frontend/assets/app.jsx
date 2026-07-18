@@ -223,14 +223,123 @@ const { useState, useEffect } = React;
         });
       };
 
-      // --- ALL MATHEMATICAL CALCULATIONS CLEANED TO ZERO AS REQUESTED ---
-      const calculatePricing = () => {
-        setPricingResult({
-          commutations: { Dx: 0, Nx: 0, Cx: 0, Mx: 0 },
-          netPremium: 0,
-          grossPremium: 0,
-          monthlyPremium: 0
-        });
+      // --- ACTUARIAL CALCULATIONS FOR PRICING ENGINE ---
+      const calculatePricing = async () => {
+        setIsCalculating(true);
+        try {
+          const m = (pricingParams.insuranceClass === 'life_death_single_payment' || pricingParams.insuranceClass === 'life_survival_single_payment') ? 1 : (parseInt(pricingParams.paymentFrequency) || 12);
+          const payload = {
+            params: {
+              valuation_date: pricingParams.valuationDate,
+              interest_rate_annual: parseFloat(globalInterestRate) / 100 || 0,
+              expense_maintenance: (parseFloat(pricingParams.expenseMaintenance) || 0) / 100,
+              margin_mortality: (parseFloat(pricingParams.marginMortality) || 0) / 100,
+              margin_investment: (parseFloat(pricingParams.marginInvestment) || 0) / 100,
+              cost_acquisition_initial: (parseFloat(pricingParams.costAcquisitionInitial) || 0) / 100,
+              cost_acquisition: (parseFloat(pricingParams.costAcquisition) || 0) / 100,
+              payment_frequency: m
+            },
+            policy: {
+              policy_id: "PRICING-1",
+              dob: pricingParams.birthDate,
+              inception_date: pricingParams.startDate,
+              maturity_date: pricingParams.endDate,
+              sum_insured_initial: parseFloat(pricingParams.sumAssured) || 1,
+              net_premium: parseFloat(pricingParams.premium) || 0,
+              credit_apr: parseFloat(pricingParams.creditApr) || 0,
+              policy_type: pricingParams.insuranceClass
+            }
+          };
+
+          const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
+            ? 'http://localhost:8000'
+            : 'https://actuary-it-com.onrender.com';
+          
+          const response = await fetch(`${API_BASE_URL}/api/valuation/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const res = await response.json();
+          if (res.status === 'success') {
+            const data = res.data;
+            const Axn = data.Axn || 0.0;
+            const axn = data.axn || 0.0;
+            const Exn = data.nEx || 0.0;
+
+            const i = parseFloat(globalInterestRate) / 100 || 0;
+            const delta = i > 0 ? Math.log(1 + i) : 1;
+            const continuous_adj = i > 0 ? (i / delta) : 1;
+            const Axn_bar = Axn * continuous_adj;
+
+            const ro1 = (parseFloat(pricingParams.marginMortality) || 0) / 100;
+            const alpha = (parseFloat(pricingParams.costAcquisitionInitial) || 0) / 100;
+            const gamma = (parseFloat(pricingParams.expenseMaintenance) || 0) / 100;
+            const beta = (parseFloat(pricingParams.costAcquisition) || 0) / 100;
+
+            const axm = m === 1 ? axn : (axn - ((m - 1) / (2 * m)) * (1 - Exn));
+
+            const isSingle = (pricingParams.insuranceClass === 'life_death_single_payment' || pricingParams.insuranceClass === 'life_survival_single_payment');
+            const denominator = isSingle ? (1 - beta) : (m * (1 - beta) * axm);
+            const netDenominator = isSingle ? 1 : (m * axm);
+
+            if (pricingSubTab === 'premium') {
+              const S = parseFloat(pricingParams.sumAssured) || 0;
+              const numerator = (1 + ro1) * S * Axn_bar + alpha * S + gamma * S * axn;
+              const netNumerator = (1 + ro1) * S * Axn_bar;
+
+              const Pm_gross = denominator > 0 ? (numerator / denominator) : 0;
+              const Pm_net = netDenominator > 0 ? (netNumerator / netDenominator) : 0;
+
+              const grossPremium = isSingle ? Pm_gross : Pm_gross * m;
+              const netPremium = isSingle ? Pm_net : Pm_net * m;
+              const monthlyPremium = isSingle ? Pm_gross : Pm_gross;
+
+              setPricingResult({
+                commutations: {
+                  Dx: data.Dx || 0,
+                  Nx: data.Nx || 0,
+                  Cx: data.Cx || 0,
+                  Mx: data.Mx || 0,
+                  Axn: Axn,
+                  axn: axn,
+                  Exn: Exn,
+                  axm: axm
+                },
+                netPremium: parseFloat(netPremium.toFixed(2)),
+                grossPremium: parseFloat(grossPremium.toFixed(2)),
+                monthlyPremium: parseFloat(monthlyPremium.toFixed(2))
+              });
+            } else {
+              const Pm_gross = parseFloat(pricingParams.premium) || 0;
+              const numerator_per_S = (1 + ro1) * Axn_bar + alpha + gamma * axn;
+
+              const calculatedS = numerator_per_S > 0 ? ((Pm_gross * denominator) / numerator_per_S) : 0;
+
+              setPricingResult({
+                commutations: {
+                  Dx: data.Dx || 0,
+                  Nx: data.Nx || 0,
+                  Cx: data.Cx || 0,
+                  Mx: data.Mx || 0,
+                  Axn: Axn,
+                  axn: axn,
+                  Exn: Exn,
+                  axm: axm
+                },
+                calculatedSumAssured: parseFloat(calculatedS.toFixed(2))
+              });
+            }
+          } else {
+            alert(lang === 'AZ' ? 'Hesablama xətası: ' + res.message : 'Calculation error: ' + res.message);
+          }
+        } catch (error) {
+          console.error(error);
+          alert(lang === 'AZ' ? 'Xəta baş verdi' : 'An error occurred');
+        } finally {
+          setIsCalculating(false);
+        }
       };
 
       useEffect(() => {
@@ -1162,6 +1271,10 @@ const { useState, useEffect } = React;
                               <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border-color)', marginTop: '0.5rem' }}>
                                 <h4 style={{ marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{lang === 'AZ' ? 'Aktuar Sabitlər' : 'Actuarial Constants'}</h4>
                                 <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                                  <label className="form-label">{lang === 'AZ' ? 'Akvizisiya Xərcləri (alpha) (%)' : 'Acquisition Cost (alpha) (%)'}</label>
+                                  <input type="number" step="0.001" className="input-field" value={pricingParams.costAcquisitionInitial || 0} onChange={e => setPricingParams({ ...pricingParams, costAcquisitionInitial: e.target.value })} />
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                                   <label className="form-label">{lang === 'AZ' ? 'Dövrü Akvizisiya (betta) (%)' : 'Acquisition Cost (betta) (%)'}</label>
                                   <input type="number" step="0.001" className="input-field" value={pricingParams.costAcquisition} onChange={e => setPricingParams({ ...pricingParams, costAcquisition: e.target.value })} />
                                 </div>
@@ -1219,29 +1332,49 @@ const { useState, useEffect } = React;
                               ) : (
                                 <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
                                   <span style={{ color: 'var(--text-secondary)' }}>{lang === 'AZ' ? 'Hesablanmış Sığorta Məbləği:' : 'Calculated Sum Assured:'}</span>
-                                  <strong style={{ fontSize: '1.25rem', color: 'var(--color-primary)' }}>0 AZN</strong>
+                                  <strong style={{ fontSize: '1.25rem', color: 'var(--color-primary)' }}>{pricingResult.calculatedSumAssured} AZN</strong>
                                 </div>
                               )}
 
                               <div style={{ marginTop: '1rem' }}>
                                 <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{t.commutationLabel}</h4>
-                                <div className="commutation-grid">
-                                  <div className="commutation-box">
+                                <div className="commutation-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))', gap: '0.5rem' }}>
+                                  <div className="commutation-box" style={{ padding: '0.5rem' }}>
                                     <div className="comm-label">Dx</div>
-                                    <div className="comm-value">{pricingResult.commutations.Dx}</div>
+                                    <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.Dx}</div>
                                   </div>
-                                  <div className="commutation-box">
+                                  <div className="commutation-box" style={{ padding: '0.5rem' }}>
                                     <div className="comm-label">Nx</div>
-                                    <div className="comm-value">{pricingResult.commutations.Nx}</div>
+                                    <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.Nx}</div>
                                   </div>
-                                  <div className="commutation-box">
+                                  <div className="commutation-box" style={{ padding: '0.5rem' }}>
                                     <div className="comm-label">Cx</div>
-                                    <div className="comm-value">{pricingResult.commutations.Cx}</div>
+                                    <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.Cx}</div>
                                   </div>
-                                  <div className="commutation-box">
+                                  <div className="commutation-box" style={{ padding: '0.5rem' }}>
                                     <div className="comm-label">Mx</div>
-                                    <div className="comm-value">{pricingResult.commutations.Mx}</div>
+                                    <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.Mx}</div>
                                   </div>
+                                  {pricingResult.commutations.Axn !== undefined && (
+                                    <>
+                                      <div className="commutation-box" style={{ padding: '0.5rem' }} title="A^1_x:n">
+                                        <div className="comm-label">A<sub>x:n</sub><sup>1</sup></div>
+                                        <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.Axn.toFixed(6)}</div>
+                                      </div>
+                                      <div className="commutation-box" style={{ padding: '0.5rem' }} title="ä_x:n">
+                                        <div className="comm-label">ä<sub>x:n</sub></div>
+                                        <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.axn.toFixed(6)}</div>
+                                      </div>
+                                      <div className="commutation-box" style={{ padding: '0.5rem' }} title="nEx">
+                                        <div className="comm-label"><sub>n</sub>E<sub>x</sub></div>
+                                        <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.Exn.toFixed(6)}</div>
+                                      </div>
+                                      <div className="commutation-box" style={{ padding: '0.5rem' }} title="ä^(m)_x:n">
+                                        <div className="comm-label">ä<sub>x:n</sub><sup>(m)</sup></div>
+                                        <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.axm.toFixed(6)}</div>
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1324,6 +1457,10 @@ const { useState, useEffect } = React;
 
                           <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border-color)', marginTop: '0.5rem' }}>
                             <h4 style={{ marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{lang === 'AZ' ? 'Aktuar Sabitlər' : 'Actuarial Constants'}</h4>
+                            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                              <label className="form-label">{lang === 'AZ' ? 'Akvizisiya Xərcləri (alpha) (%)' : 'Acquisition Cost (alpha) (%)'}</label>
+                              <input type="number" step="0.001" className="input-field" value={reserveParams.costAcquisitionInitial || 0} onChange={e => setReserveParams({ ...reserveParams, costAcquisitionInitial: e.target.value })} />
+                            </div>
                             <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                               <label className="form-label">{lang === 'AZ' ? 'Dövrü Akvizisiya (betta) (%)' : 'Acquisition Cost (betta) (%)'}</label>
                               <input type="number" step="0.001" className="input-field" value={reserveParams.costAcquisition} onChange={e => setReserveParams({ ...reserveParams, costAcquisition: e.target.value })} />
