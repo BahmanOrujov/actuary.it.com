@@ -318,11 +318,21 @@ const { useState, useEffect } = React;
             ? 'http://localhost:8000'
             : 'https://actuary-it-com.onrender.com';
           
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
           const response = await fetch(`${API_BASE_URL}/api/valuation/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            headers: { 
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal
           });
+          
+          clearTimeout(timeoutId);
 
           const res = await response.json();
           if (res.status === 'success') {
@@ -482,11 +492,22 @@ const { useState, useEffect } = React;
           const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
             ? 'http://localhost:8000'
             : 'https://actuary-it-com.onrender.com';
+          
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
           const response = await fetch(`${API_BASE_URL}/api/valuation/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            headers: { 
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal
           });
+          
+          clearTimeout(timeoutId);
 
           const res = await response.json();
           if (res.status === 'success') {
