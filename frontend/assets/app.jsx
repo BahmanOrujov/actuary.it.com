@@ -43,6 +43,8 @@ const { useState, useEffect } = React;
       const [officialDoc, setOfficialDoc] = useState('telimat');
       const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
       const [articleText, setArticleText] = useState('');
+      const [pricingMenuExpanded, setPricingMenuExpanded] = useState(false);
+      const [pricingSubTab, setPricingSubTab] = useState('premium');
       const [reserveMenuExpanded, setReserveMenuExpanded] = useState(false);
       const [formulaMenuExpanded, setFormulaMenuExpanded] = useState(false);
       const [docsMenuExpanded, setDocsMenuExpanded] = useState(false);
@@ -70,15 +72,20 @@ const { useState, useEffect } = React;
       });
 
       const [pricingParams, setPricingParams] = useState({
-        insuranceClass: 'life_endowment',
-        birthDate: '',
-        startDate: '',
-        endDate: '',
-        sumAssured: '',
-        premium: '',
-        discountRate: 5.0,
-        creditInterest: 10.0,
-        salary: ''
+        insuranceClass: 'life_survival_m_payments',
+        valuationDate: '2026-01-01',
+        birthDate: '1996-01-01',
+        startDate: '2025-01-01',
+        endDate: '2045-01-01',
+        sumAssured: 100000,
+        premium: 500,
+        creditApr: 10,
+        expenseMaintenance: 0.25,
+        marginMortality: 3.0,
+        marginInvestment: 1.5,
+        costAcquisition: 0.3,
+        paymentFrequency: 12,
+        salary: 1500
       });
 
       const [pricingResult, setPricingResult] = useState(null);
@@ -666,9 +673,57 @@ const { useState, useEffect } = React;
                   {sidebarOpen ? <IconX /> : <IconMenu />}
                 </button>
                 <div className="sidebar-heading">{sidebarOpen ? t.sidebarEngines : '...'}</div>
-                <button className={`sidebar-btn ${softwareTab === 'pricing' ? 'active' : ''}`} onClick={() => setSoftwareTab('pricing')}>
-                  <IconDollar /> <span className="sidebar-btn-text">{t.pricingEngine}</span>
-                </button>
+                <button 
+                   className={`sidebar-btn ${softwareTab === 'pricing' ? 'active' : ''}`} 
+                   onClick={() => {
+                     if (!sidebarOpen) {
+                       setSidebarOpen(true);
+                       setPricingMenuExpanded(true);
+                     } else {
+                       setPricingMenuExpanded(!pricingMenuExpanded);
+                     }
+                     setSoftwareTab('pricing');
+                   }}
+                   style={{ display: 'flex', alignItems: 'center', width: '100%' }}
+                 >
+                   <IconDollar /> 
+                   <span className="sidebar-btn-text">{t.pricingEngine}</span>
+                   {sidebarOpen && (
+                     <span className={`sidebar-btn-chevron ${pricingMenuExpanded ? 'expanded' : ''}`} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+                       <IconChevronRight />
+                     </span>
+                   )}
+                 </button>
+                 {sidebarOpen && pricingMenuExpanded && (
+                   <div className="sidebar-submenu">
+                     <button 
+                       className={`sidebar-sub-btn ${softwareTab === 'pricing' && pricingSubTab === 'premium' ? 'active' : ''}`} 
+                       onClick={() => {
+                         setSoftwareTab('pricing');
+                         setPricingSubTab('premium');
+                       }}
+                       title={lang === 'AZ' ? 'Sığorta haqqı' : 'Premium'}
+                     >
+                       <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>●</span>
+                       <span>
+                         {lang === 'AZ' ? 'Sığorta haqqı' : 'Premium'}
+                       </span>
+                     </button>
+                     <button 
+                       className={`sidebar-sub-btn ${softwareTab === 'pricing' && pricingSubTab === 'sum_assured' ? 'active' : ''}`} 
+                       onClick={() => {
+                         setSoftwareTab('pricing');
+                         setPricingSubTab('sum_assured');
+                       }}
+                       title={lang === 'AZ' ? 'Sığorta məbləği' : 'Sum Assured'}
+                     >
+                       <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>●</span>
+                       <span>
+                         {lang === 'AZ' ? 'Sığorta məbləği' : 'Sum Assured'}
+                       </span>
+                     </button>
+                   </div>
+                 )}
                 <button 
                   className={`sidebar-btn ${softwareTab === 'reserve' ? 'active' : ''}`} 
                   onClick={() => {
@@ -1021,58 +1076,119 @@ const { useState, useEffect } = React;
                         <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.pricingSubTitle}</h3>
                         <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
                           <div className="form-group">
-                            <label className="form-label">{lang === 'AZ' ? 'Sığorta Sinifi' : 'Insurance Class'}</label>
+                            <label className="form-label">{lang === 'AZ' ? 'Sığorta Sinfi' : 'Insurance Class'}</label>
                             <select className="select-field" value={pricingParams.insuranceClass} onChange={e => setPricingParams({ ...pricingParams, insuranceClass: e.target.value })}>
-                              <option value="life_endowment">{lang === 'AZ' ? 'Həyatın yığım sığortası' : 'Endowment Life Insurance'}</option>
-                              <option value="credit">{lang === 'AZ' ? 'Kredit sığortası - Həyatın ölüm halında' : 'Credit Life Insurance - Death Only'}</option>
-                              <option value="mortgage">{lang === 'AZ' ? 'İpoteka sığortası - Həyatın ölüm halında' : 'Mortgage Life Insurance - Death Only'}</option>
+                              <option value="life_survival_m_payments">{lang === 'AZ' ? 'Həyatın yaşam halından sığortası (m dəfə ödənişli)' : 'Pure Endowment (m-payment)'}</option>
+                              <option value="life_survival_single_payment">{lang === 'AZ' ? 'Həyatın yaşam sığortası (birdəfəlik)' : 'Pure Endowment (single premium)'}</option>
+                              <option value="life_death_single_payment">{lang === 'AZ' ? 'Həyatın ölüm halından sığorta (birdəfəlik)' : 'Term Life Insurance (single premium)'}</option>
+                              <option value="life_death_m_payments">{lang === 'AZ' ? 'Həyatın ölüm halından sığorta (m dəfə ödənişli)' : 'Term Life Insurance (m-payment)'}</option>
                               <option value="compulsory">{lang === 'AZ' ? 'İstehsalatda bədbəxt hadisələrdən icbari sığorta' : 'Compulsory Workers\' Compensation'}</option>
                             </select>
                           </div>
-                          <div className="form-group">
-                            <label className="form-label">{lang === 'AZ' ? 'Doğum tarixi' : 'Birth Date'}</label>
-                            <input type="date" className="input-field" value={pricingParams.birthDate} onChange={e => setPricingParams({ ...pricingParams, birthDate: e.target.value })} />
-                          </div>
-                          <div className="form-group">
-                            <label className="form-label">{lang === 'AZ' ? 'Müqavilənin başlama tarixi' : 'Start Date'}</label>
-                            <input type="date" className="input-field" value={pricingParams.startDate} onChange={e => setPricingParams({ ...pricingParams, startDate: e.target.value })} />
-                          </div>
-                          <div className="form-group">
-                            <label className="form-label">{lang === 'AZ' ? 'Müqavilənin bitmə tarixi' : 'End Date'}</label>
-                            <input type="date" className="input-field" value={pricingParams.endDate} onChange={e => setPricingParams({ ...pricingParams, endDate: e.target.value })} />
-                          </div>
-                          <div className="form-group">
-                            <label className="form-label">{lang === 'AZ' ? 'Uçot dərəcəsi (%)' : 'Discount Rate (%)'}</label>
-                            <input type="number" step="0.01" className="input-field" value={globalInterestRate} onChange={e => setGlobalInterestRate(e.target.value)} />
-                          </div>
-                          
-                          {pricingParams.insuranceClass === 'life_endowment' && (
-                            <div className="form-group">
-                              <label className="form-label">{lang === 'AZ' ? 'Sığorta haqqı (aylıq)' : 'Premium (monthly)'}</label>
-                              <input type="number" className="input-field" value={pricingParams.premium} onChange={e => setPricingParams({ ...pricingParams, premium: e.target.value })} />
-                            </div>
-                          )}
 
-                          {(pricingParams.insuranceClass === 'credit' || pricingParams.insuranceClass === 'mortgage') && (
+                          {pricingParams.insuranceClass === 'compulsory' ? (
                             <>
                               <div className="form-group">
-                                <label className="form-label">{lang === 'AZ' ? 'Sığorta məbləği' : 'Sum Assured'}</label>
-                                <input type="number" className="input-field" value={pricingParams.sumAssured} onChange={e => setPricingParams({ ...pricingParams, sumAssured: e.target.value })} />
+                                <label className="form-label">{lang === 'AZ' ? 'Doğum tarixi' : 'Birth Date'}</label>
+                                <input type="date" className="input-field" value={pricingParams.birthDate} onChange={e => setPricingParams({ ...pricingParams, birthDate: e.target.value })} />
                               </div>
                               <div className="form-group">
-                                <label className="form-label">{lang === 'AZ' ? 'Kredit Faizi (%)' : 'Credit Interest (%)'}</label>
-                                <input type="number" step="0.1" className="input-field" value={pricingParams.creditInterest} onChange={e => setPricingParams({ ...pricingParams, creditInterest: e.target.value })} />
+                                <label className="form-label">{lang === 'AZ' ? 'Müqavilənin başlama tarixi' : 'Start Date'}</label>
+                                <input type="date" className="input-field" value={pricingParams.startDate} onChange={e => setPricingParams({ ...pricingParams, startDate: e.target.value })} />
+                              </div>
+                              <div className="form-group">
+                                <label className="form-label">{lang === 'AZ' ? 'Müqavilənin bitmə tarixi' : 'End Date'}</label>
+                                <input type="date" className="input-field" value={pricingParams.endDate} onChange={e => setPricingParams({ ...pricingParams, endDate: e.target.value })} />
+                              </div>
+                              <div className="form-group">
+                                <label className="form-label">{lang === 'AZ' ? 'Uçot dərəcəsi (%)' : 'Discount Rate (%)'}</label>
+                                <input type="number" step="0.01" className="input-field" value={globalInterestRate} onChange={e => setGlobalInterestRate(e.target.value)} />
+                              </div>
+                              <div className="form-group">
+                                <label className="form-label">{lang === 'AZ' ? 'Əməkhaqqı' : 'Salary'}</label>
+                                <input type="number" className="input-field" value={pricingParams.salary} onChange={e => setPricingParams({ ...pricingParams, salary: e.target.value })} />
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="form-group">
+                                <label className="form-label">{lang === 'AZ' ? 'Hesabat tarixi' : 'Valuation Date'}</label>
+                                <input type="date" className="input-field" value={pricingParams.valuationDate} onChange={e => setPricingParams({ ...pricingParams, valuationDate: e.target.value })} />
+                              </div>
+                              <div className="form-group">
+                                <label className="form-label">{lang === 'AZ' ? 'Doğum tarixi' : 'Birth Date'}</label>
+                                <input type="date" className="input-field" value={pricingParams.birthDate} onChange={e => setPricingParams({ ...pricingParams, birthDate: e.target.value })} />
+                              </div>
+                              <div className="form-group">
+                                <label className="form-label">{lang === 'AZ' ? 'Müqavilənin başlama tarixi' : 'Start Date'}</label>
+                                <input type="date" className="input-field" value={pricingParams.startDate} onChange={e => setPricingParams({ ...pricingParams, startDate: e.target.value })} />
+                              </div>
+                              <div className="form-group">
+                                <label className="form-label">{lang === 'AZ' ? 'Müqavilənin bitmə tarixi' : 'End Date'}</label>
+                                <input type="date" className="input-field" value={pricingParams.endDate} onChange={e => setPricingParams({ ...pricingParams, endDate: e.target.value })} />
+                              </div>
+
+                              {pricingSubTab === 'premium' && (
+                                <div className="form-group">
+                                  <label className="form-label">{lang === 'AZ' ? 'Sığorta məbləği' : 'Sum Assured'}</label>
+                                  <input type="number" className="input-field" value={pricingParams.sumAssured} onChange={e => setPricingParams({ ...pricingParams, sumAssured: e.target.value })} />
+                                </div>
+                              )}
+
+                              {pricingSubTab === 'sum_assured' && (
+                                <div className="form-group">
+                                  <label className="form-label">
+                                    {lang === 'AZ' 
+                                      ? ((pricingParams.insuranceClass === 'life_survival_m_payments' || pricingParams.insuranceClass === 'life_death_m_payments') ? 'Sığorta haqqı (aylıq)' : 'Sığorta haqqı') 
+                                      : ((pricingParams.insuranceClass === 'life_survival_m_payments' || pricingParams.insuranceClass === 'life_death_m_payments') ? 'Premium (monthly)' : 'Premium')
+                                    }
+                                  </label>
+                                  <input type="number" className="input-field" value={pricingParams.premium} onChange={e => setPricingParams({ ...pricingParams, premium: e.target.value })} />
+                                </div>
+                              )}
+                              
+                              {(pricingParams.insuranceClass === 'life_death_single_payment' || pricingParams.insuranceClass === 'life_death_m_payments') && (
+                                <div className="form-group">
+                                  <label className="form-label">{lang === 'AZ' ? 'Kredit Faizi (%)' : 'Credit Interest (%)'}</label>
+                                  <input type="number" step="0.1" className="input-field" value={pricingParams.creditApr} onChange={e => setPricingParams({ ...pricingParams, creditApr: e.target.value })} />
+                                </div>
+                              )}
+
+                              <div className="form-group">
+                                <label className="form-label">{t.labelInterest}</label>
+                                <input type="number" step="0.01" className="input-field" value={globalInterestRate} onChange={e => setGlobalInterestRate(e.target.value)} />
+                              </div>
+
+                              <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border-color)', marginTop: '0.5rem' }}>
+                                <h4 style={{ marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{lang === 'AZ' ? 'Aktuar Sabitlər' : 'Actuarial Constants'}</h4>
+                                <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                                  <label className="form-label">{lang === 'AZ' ? 'Dövrü Akvizisiya (betta) (%)' : 'Acquisition Cost (betta) (%)'}</label>
+                                  <input type="number" step="0.001" className="input-field" value={pricingParams.costAcquisition} onChange={e => setPricingParams({ ...pricingParams, costAcquisition: e.target.value })} />
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                                  <label className="form-label">{lang === 'AZ' ? 'İnzibati Xərclər (gamma) (%)' : 'Maintenance Exp. (gamma) (%)'}</label>
+                                  <input type="number" step="0.0001" className="input-field" value={pricingParams.expenseMaintenance} onChange={e => setPricingParams({ ...pricingParams, expenseMaintenance: e.target.value })} />
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                                  <label className="form-label">{lang === 'AZ' ? 'Ölüm Marjası (ro1) (%)' : 'Mortality Margin (ro1) (%)'}</label>
+                                  <input type="number" step="0.01" className="input-field" value={pricingParams.marginMortality} onChange={e => setPricingParams({ ...pricingParams, marginMortality: e.target.value })} />
+                                </div>
+                                
+                                {(pricingParams.insuranceClass === 'life_survival_m_payments' || pricingParams.insuranceClass === 'life_survival_single_payment') && (
+                                  <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                                    <label className="form-label">{lang === 'AZ' ? 'İnvestisiya Marjası (ro2) (%)' : 'Investment Margin (ro2) (%)'}</label>
+                                    <input type="number" step="0.01" className="input-field" value={pricingParams.marginInvestment} onChange={e => setPricingParams({ ...pricingParams, marginInvestment: e.target.value })} />
+                                  </div>
+                                )}
+                                {(pricingParams.insuranceClass !== 'life_death_single_payment' && pricingParams.insuranceClass !== 'life_survival_single_payment') && (
+                                  <div className="form-group" style={{ marginBottom: '0' }}>
+                                    <label className="form-label">{lang === 'AZ' ? 'Ödəniş Tezliyi (payment_frequency)' : 'Payment Frequency'}</label>
+                                    <input type="number" className="input-field" value={pricingParams.paymentFrequency} onChange={e => setPricingParams({ ...pricingParams, paymentFrequency: e.target.value })} />
+                                  </div>
+                                )}
                               </div>
                             </>
                           )}
-
-                          {pricingParams.insuranceClass === 'compulsory' && (
-                            <div className="form-group">
-                              <label className="form-label">{lang === 'AZ' ? 'Əməkhaqqı' : 'Salary'}</label>
-                              <input type="number" className="input-field" value={pricingParams.salary} onChange={e => setPricingParams({ ...pricingParams, salary: e.target.value })} />
-                            </div>
-                          )}
-
                         </div>
                         <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={calculatePricing}>
                           {t.btnCalculate}
@@ -1085,18 +1201,27 @@ const { useState, useEffect } = React;
                           <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.pricingOutputTitle}</h3>
                           {pricingResult ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>{t.netPremiumLabel}</span>
-                                <strong style={{ fontSize: '1.25rem', color: 'var(--color-primary)' }}>{pricingResult.netPremium} AZN</strong>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>{t.grossPremiumLabel}</span>
-                                <strong style={{ fontSize: '1.25rem', color: 'var(--color-secondary)' }}>{pricingResult.grossPremium} AZN</strong>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>{t.monthlyPremiumLabel}</span>
-                                <strong style={{ fontSize: '1.25rem', color: 'var(--color-tertiary)' }}>{pricingResult.monthlyPremium} AZN</strong>
-                              </div>
+                              {pricingSubTab === 'premium' ? (
+                                <>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>{t.netPremiumLabel}</span>
+                                    <strong style={{ fontSize: '1.25rem', color: 'var(--color-primary)' }}>{pricingResult.netPremium} AZN</strong>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>{t.grossPremiumLabel}</span>
+                                    <strong style={{ fontSize: '1.25rem', color: 'var(--color-secondary)' }}>{pricingResult.grossPremium} AZN</strong>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>{t.monthlyPremiumLabel}</span>
+                                    <strong style={{ fontSize: '1.25rem', color: 'var(--color-tertiary)' }}>{pricingResult.monthlyPremium} AZN</strong>
+                                  </div>
+                                </>
+                              ) : (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+                                  <span style={{ color: 'var(--text-secondary)' }}>{lang === 'AZ' ? 'Hesablanmış Sığorta Məbləği:' : 'Calculated Sum Assured:'}</span>
+                                  <strong style={{ fontSize: '1.25rem', color: 'var(--color-primary)' }}>0 AZN</strong>
+                                </div>
+                              )}
 
                               <div style={{ marginTop: '1rem' }}>
                                 <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{t.commutationLabel}</h4>
