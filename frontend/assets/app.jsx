@@ -34,20 +34,32 @@ const { useState, useEffect } = React;
     function App() {
       const urlParams = new URLSearchParams(window.location.search);
       const isFeedbackPage = urlParams.get('page') === 'feedback';
-      const [lang, setLang] = useState('AZ');
-      const [activeTab, setActiveTab] = useState(isFeedbackPage ? 'feedback' : 'home');
+      const [lang, setLang] = useState(() => localStorage.getItem('arpp_lang') || 'AZ');
+      const [activeTab, setActiveTab] = useState(() => localStorage.getItem('arpp_activeTab') || (isFeedbackPage ? 'feedback' : 'home'));
       const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
       const [selectedCv, setSelectedCv] = useState(null);
       const [selectedArticle, setSelectedArticle] = useState(null);
-      const [softwareTab, setSoftwareTab] = useState('pricing');
+      const [softwareTab, setSoftwareTab] = useState(() => localStorage.getItem('arpp_softwareTab') || 'pricing');
       const [officialDoc, setOfficialDoc] = useState('telimat');
       const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
       const [articleText, setArticleText] = useState('');
-      const [pricingMenuExpanded, setPricingMenuExpanded] = useState(false);
-      const [pricingSubTab, setPricingSubTab] = useState('premium');
-      const [reserveMenuExpanded, setReserveMenuExpanded] = useState(false);
-      const [formulaMenuExpanded, setFormulaMenuExpanded] = useState(false);
-      const [docsMenuExpanded, setDocsMenuExpanded] = useState(false);
+      const [pricingMenuExpanded, setPricingMenuExpanded] = useState(() => {
+        const val = localStorage.getItem('arpp_pricingMenuExpanded');
+        return val !== null ? JSON.parse(val) : true;
+      });
+      const [pricingSubTab, setPricingSubTab] = useState(() => localStorage.getItem('arpp_pricingSubTab') || 'premium');
+      const [reserveMenuExpanded, setReserveMenuExpanded] = useState(() => {
+        const val = localStorage.getItem('arpp_reserveMenuExpanded');
+        return val !== null ? JSON.parse(val) : true;
+      });
+      const [formulaMenuExpanded, setFormulaMenuExpanded] = useState(() => {
+        const val = localStorage.getItem('arpp_formulaMenuExpanded');
+        return val !== null ? JSON.parse(val) : true;
+      });
+      const [docsMenuExpanded, setDocsMenuExpanded] = useState(() => {
+        const val = localStorage.getItem('arpp_docsMenuExpanded');
+        return val !== null ? JSON.parse(val) : true;
+      });
       const [loadingArticle, setLoadingArticle] = useState(false);
       const [blogList, setBlogList] = useState(typeof blogArticles !== 'undefined' ? blogArticles : []);
       const [loadingBlog, setLoadingBlog] = useState(false);
@@ -71,48 +83,99 @@ const { useState, useEffect } = React;
         fileName: ''
       });
 
-      const [pricingParams, setPricingParams] = useState({
-        insuranceClass: 'life_survival_m_payments',
-        valuationDate: '2026-01-01',
-        birthDate: '1996-01-01',
-        startDate: '2025-01-01',
-        endDate: '2045-01-01',
-        sumAssured: 100000,
-        premium: 500,
-        creditApr: 10,
-        expenseMaintenance: 0.25,
-        marginMortality: 3.0,
-        marginInvestment: 1.5,
-        costAcquisition: 0.3,
-        paymentFrequency: 12,
-        salary: 1500
+      const [pricingParams, setPricingParams] = useState(() => {
+        const val = localStorage.getItem('arpp_pricingParams');
+        return val !== null ? JSON.parse(val) : {
+          insuranceClass: 'life_survival_m_payments',
+          valuationDate: '2026-01-01',
+          birthDate: '1996-01-01',
+          startDate: '2025-01-01',
+          endDate: '2045-01-01',
+          sumAssured: 100000,
+          premium: 500,
+          creditApr: 10,
+          costAcquisitionInitial: 0.0,
+          expenseMaintenance: 0.25,
+          marginMortality: 3.0,
+          marginInvestment: 1.5,
+          costAcquisition: 0.3,
+          paymentFrequency: 12,
+          salary: 1500
+        };
       });
 
       const [pricingResult, setPricingResult] = useState(null);
 
-      const [reserveParams, setReserveParams] = useState({
-        policyId: 'POL-2401',
-        valuationDate: '2026-01-01',
-        birthDate: '1996-01-01',
-        startDate: '2025-01-01',
-        endDate: '2045-01-01',
-        sumAssured: 100000,
-        premium: 500,
-        creditApr: 10,
-        policyType: 'life_survival_m_payments',
-        interest: 5.0,
-        expenseMaintenance: 0.25,
-        marginMortality: 3.0,
-        marginInvestment: 1.5,
-        costAcquisitionInitial: 0.0,
-        costAcquisition: 0.3,
-        paymentFrequency: 12
+      const [reserveParams, setReserveParams] = useState(() => {
+        const val = localStorage.getItem('arpp_reserveParams');
+        return val !== null ? JSON.parse(val) : {
+          policyId: 'POL-2401',
+          valuationDate: '2026-01-01',
+          birthDate: '1996-01-01',
+          startDate: '2025-01-01',
+          endDate: '2045-01-01',
+          sumAssured: 100000,
+          premium: 500,
+          creditApr: 10,
+          policyType: 'life_survival_m_payments',
+          interest: 5.0,
+          expenseMaintenance: 0.25,
+          marginMortality: 3.0,
+          marginInvestment: 1.5,
+          costAcquisitionInitial: 0.0,
+          costAcquisition: 0.3,
+          paymentFrequency: 12
+        };
       });
 
       const [reserveResult, setReserveResult] = useState(null);
 
       const [mortalityTable, setMortalityTable] = useState([]);
-      const [globalInterestRate, setGlobalInterestRate] = useState("5.0");
+      const [globalInterestRate, setGlobalInterestRate] = useState(() => localStorage.getItem('arpp_globalInterestRate') || "5.0");
+
+      useEffect(() => {
+        localStorage.setItem('arpp_lang', lang);
+      }, [lang]);
+
+      useEffect(() => {
+        localStorage.setItem('arpp_activeTab', activeTab);
+      }, [activeTab]);
+
+      useEffect(() => {
+        localStorage.setItem('arpp_softwareTab', softwareTab);
+      }, [softwareTab]);
+
+      useEffect(() => {
+        localStorage.setItem('arpp_pricingSubTab', pricingSubTab);
+      }, [pricingSubTab]);
+
+      useEffect(() => {
+        localStorage.setItem('arpp_pricingMenuExpanded', JSON.stringify(pricingMenuExpanded));
+      }, [pricingMenuExpanded]);
+
+      useEffect(() => {
+        localStorage.setItem('arpp_reserveMenuExpanded', JSON.stringify(reserveMenuExpanded));
+      }, [reserveMenuExpanded]);
+
+      useEffect(() => {
+        localStorage.setItem('arpp_formulaMenuExpanded', JSON.stringify(formulaMenuExpanded));
+      }, [formulaMenuExpanded]);
+
+      useEffect(() => {
+        localStorage.setItem('arpp_docsMenuExpanded', JSON.stringify(docsMenuExpanded));
+      }, [docsMenuExpanded]);
+
+      useEffect(() => {
+        localStorage.setItem('arpp_pricingParams', JSON.stringify(pricingParams));
+      }, [pricingParams]);
+
+      useEffect(() => {
+        localStorage.setItem('arpp_reserveParams', JSON.stringify(reserveParams));
+      }, [reserveParams]);
+
+      useEffect(() => {
+        localStorage.setItem('arpp_globalInterestRate', globalInterestRate);
+      }, [globalInterestRate]);
 
       useEffect(() => {
         if ((softwareTab === 'pricing' || softwareTab === 'formula-explorer')) {
@@ -313,9 +376,10 @@ const { useState, useEffect } = React;
               });
             } else {
               const Pm_gross = parseFloat(pricingParams.premium) || 0;
-              const numerator_per_S = (1 + ro1) * Axn_bar + alpha + gamma * axn;
+              const denominator_S = (1 + ro1) * Axn_bar + alpha + gamma * axn;
+              const numerator_S = isSingle ? (Pm_gross * (1 - beta)) : (m * Pm_gross * (1 - beta) * axm);
 
-              const calculatedS = numerator_per_S > 0 ? ((Pm_gross * denominator) / numerator_per_S) : 0;
+              const calculatedS = denominator_S > 0 ? (numerator_S / denominator_S) : 0;
 
               setPricingResult({
                 commutations: {
@@ -366,6 +430,7 @@ const { useState, useEffect } = React;
 
         // Auto-calculate on initial load so data is visible when page is refreshed
         calculateReserve();
+        calculatePricing();
       }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
       const calculateReserve = async () => {
@@ -1178,7 +1243,12 @@ const { useState, useEffect } = React;
                 {/* SUB-TAB: PRICING ENGINE */}
                 {softwareTab === 'pricing' && (
                   <div>
-                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.pricingTitle}</h2>
+                    <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
+                      {lang === 'AZ' 
+                        ? `Tarif Modulu - ${pricingSubTab === 'premium' ? 'Sığorta haqqı' : 'Sığorta məbləği'}` 
+                        : `Pricing Engine - ${pricingSubTab === 'premium' ? 'Premium' : 'Sum Assured'}`
+                      }
+                    </h2>
                     <div className="responsive-grid-2">
                       {/* Inputs */}
                       <div className="glass-card">
