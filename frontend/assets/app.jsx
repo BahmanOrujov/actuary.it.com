@@ -34,7 +34,7 @@ const { useState, useEffect } = React;
     function App() {
       const urlParams = new URLSearchParams(window.location.search);
       const isFeedbackPage = urlParams.get('page') === 'feedback';
-      const [lang, setLang] = useState('EN');
+      const [lang, setLang] = useState('AZ');
       const [activeTab, setActiveTab] = useState(isFeedbackPage ? 'feedback' : 'home');
       const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
       const [selectedCv, setSelectedCv] = useState(null);
@@ -1317,15 +1317,9 @@ const { useState, useEffect } = React;
                               {pricingSubTab === 'premium' ? (
                                 <>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>{t.netPremiumLabel}</span>
-                                    <strong style={{ fontSize: '1.25rem', color: 'var(--color-primary)' }}>{pricingResult.netPremium} AZN</strong>
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>{t.grossPremiumLabel}</span>
-                                    <strong style={{ fontSize: '1.25rem', color: 'var(--color-secondary)' }}>{pricingResult.grossPremium} AZN</strong>
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>{t.monthlyPremiumLabel}</span>
+                                    <span style={{ color: 'var(--text-secondary)' }}>
+                                      {lang === 'AZ' ? 'Hesablanmış Sığorta Haqqı:' : 'Calculated Premium:'}
+                                    </span>
                                     <strong style={{ fontSize: '1.25rem', color: 'var(--color-tertiary)' }}>{pricingResult.monthlyPremium} AZN</strong>
                                   </div>
                                 </>
