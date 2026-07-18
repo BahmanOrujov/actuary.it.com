@@ -368,7 +368,13 @@ const { useState, useEffect } = React;
                   Axn: Axn,
                   axn: axn,
                   Exn: Exn,
-                  axm: axm
+                  axm: axm,
+                  age_inception_months: data.age_inception_months,
+                  age_valuation_months: data.age_valuation_months,
+                  age_maturity_months: data.age_maturity_months,
+                  contract_term_months: data.contract_term_months,
+                  elapsed_months_since_inception: data.elapsed_months_since_inception,
+                  remaining_term_months: data.remaining_term_months
                 },
                 netPremium: parseFloat(netPremium.toFixed(2)),
                 grossPremium: parseFloat(grossPremium.toFixed(2)),
@@ -390,7 +396,13 @@ const { useState, useEffect } = React;
                   Axn: Axn,
                   axn: axn,
                   Exn: Exn,
-                  axm: axm
+                  axm: axm,
+                  age_inception_months: data.age_inception_months,
+                  age_valuation_months: data.age_valuation_months,
+                  age_maturity_months: data.age_maturity_months,
+                  contract_term_months: data.contract_term_months,
+                  elapsed_months_since_inception: data.elapsed_months_since_inception,
+                  remaining_term_months: data.remaining_term_months
                 },
                 calculatedSumAssured: parseFloat(calculatedS.toFixed(2))
               });
@@ -1431,6 +1443,26 @@ const { useState, useEffect } = React;
                                     </>
                                   )}
                                 </div>
+                                <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                                  <h5 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                                    {lang === 'AZ' ? 'Hesablama üçün gərəkli müqavilə və yaş məlumatları (aylarla):' : 'Required contract & age details for calculation (months):'}
+                                  </h5>
+                                  <div className="commutation-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.5rem' }}>
+                                    <div className="commutation-box" style={{ padding: '0.5rem' }} title={lang === 'AZ' ? 'Müqavilə başlayanda sığortalının yaşı (ay)' : 'Insured age at contract start (months)'}>
+                                      <div className="comm-label">{lang === 'AZ' ? 'Başlanğıc Yaşı' : 'Inception Age'}</div>
+                                      <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.age_inception_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                    </div>
+                                    <div className="commutation-box" style={{ padding: '0.5rem' }} title={lang === 'AZ' ? 'Müqavilə bitəndə sığortalının yaşı (ay)' : 'Insured age at contract end (months)'}>
+                                      <div className="comm-label">{lang === 'AZ' ? 'Son Yaşı' : 'Maturity Age'}</div>
+                                      <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.age_maturity_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                    </div>
+                                    <div className="commutation-box" style={{ padding: '0.5rem' }} title={lang === 'AZ' ? 'Müqavilənin müddəti (ay)' : 'Contract term (months)'}>
+                                      <div className="comm-label">{lang === 'AZ' ? 'Müqavilə Müddəti' : 'Contract Term'}</div>
+                                      <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.contract_term_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
                               </div>
                             </div>
                           ) : (
@@ -1615,6 +1647,37 @@ const { useState, useEffect } = React;
                                 <div className="commutation-box" style={{ gridColumn: 'span 2', background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.3)' }} title={lang === 'AZ' ? 'Uzunmüddətli öhdəliklər ehtiyatı (Riyazi ehtiyat)' : 'Reserve for Long-Term Liabilities (Mathematical Reserve)'}>
                                   <div className="comm-label">{lang === 'AZ' ? 'Uzunmüddətli öhdəliklər ehtiyatı (Riyazi ehtiyat)' : 'Reserve for Long-Term Liabilities (Mathematical Reserve)'}</div>
                                   <div className="comm-value" style={{ color: 'var(--color-primary)' }}>{reserveResult.engineData.final_reserve || reserveResult.engineData.net_mathematical_reserve}</div>
+                                </div>
+                              </div>
+                              <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+                                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                                  {lang === 'AZ' ? 'Hesablama üçün gərəkli müqavilə və yaş məlumatları (aylarla):' : 'Required contract & age details for calculation (months):'}
+                                </h4>
+                                <div className="commutation-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.5rem' }}>
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'Müqavilə başlayanda sığortalının yaşı (ay)' : 'Insured age at contract start (months)'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'Müqavilə Başlayanda Yaş' : 'Age at Inception'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.age_inception_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                  </div>
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'Hesabat tarixində sığortalının yaşı (ay)' : 'Insured age at valuation date (months)'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'Hesabat Tarixində Yaş' : 'Age at Valuation'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.age_valuation_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                  </div>
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'Müqavilə bitəndə sığortalının yaşı (ay)' : 'Insured age at contract end (months)'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'Müqavilə Bitəndə Yaş' : 'Age at Maturity'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.age_maturity_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                  </div>
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'Müqavilənin ümumi müddəti (ay)' : 'Total duration of the contract (months)'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'Müqavilə Müddəti' : 'Contract Term'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.contract_term_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                  </div>
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'Keçən müddət (ay)' : 'Elapsed months since inception'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'Keçən Müddət (ay)' : 'Elapsed Months'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.elapsed_months_since_inception} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                  </div>
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'Qalan müddət (ay)' : 'Remaining months to maturity'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'Qalan Müddət (ay)' : 'Remaining Months'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.remaining_term_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                  </div>
                                 </div>
                               </div>
                               ) : (

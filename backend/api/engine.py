@@ -264,6 +264,19 @@ class ActuarialValuationEngine:
         axn = (Nx[s] - Nx[e]) / Dx_s
         Exn = Dx[e] / Dx_s
 
+        # Additional age/duration fields in months requested by the user
+        age_inception_m = (policy.inception_date.year - policy.dob.year) * 12 + (policy.inception_date.month - policy.dob.month)
+        age_inception_m = max(0, age_inception_m)
+        
+        age_maturity_m = (policy.maturity_date.year - policy.dob.year) * 12 + (policy.maturity_date.month - policy.dob.month)
+        age_maturity_m = max(0, age_maturity_m)
+        
+        contract_term_m = (policy.maturity_date.year - policy.inception_date.year) * 12 + (policy.maturity_date.month - policy.inception_date.month)
+        contract_term_m = max(0, contract_term_m)
+        
+        elapsed_m_from_start = (REPORT_DATE.year - policy.inception_date.year) * 12 + (REPORT_DATE.month - policy.inception_date.month)
+        elapsed_m_from_start = max(0, elapsed_m_from_start)
+
         if p_type in ["life_endowment", "yigim", "yığım", "endowment", "life_survival_m_payments", "life_survival_single_payment"] or "yığım" in p_type or "yigim" in p_type or "endowment" in p_type or "life_survival_m_payments" in p_type or "life_survival_single_payment" in p_type:
 
             # 3. Calculate components
@@ -324,7 +337,13 @@ class ActuarialValuationEngine:
                 'Dx': float(round(Dx[s], 4)),
                 'Nx': float(round(Nx[s], 4)),
                 'Cx': float(round(Cx[s], 4)),
-                'Mx': float(round(Mx[s], 4))
+                'Mx': float(round(Mx[s], 4)),
+                'age_inception_months': age_inception_m,
+                'age_valuation_months': age_m,
+                'age_maturity_months': age_maturity_m,
+                'contract_term_months': contract_term_m,
+                'elapsed_months_since_inception': elapsed_m_from_start,
+                'remaining_term_months': rem_m
             }
         else:
             anchor_date_prev = TimeMetrics.align_to_payment_cycle(self.cfg.valuation_date, policy.inception_date)
@@ -385,7 +404,13 @@ class ActuarialValuationEngine:
                 'Dx': float(round(Dx[s], 4)),
                 'Nx': float(round(Nx[s], 4)),
                 'Cx': float(round(Cx[s], 4)),
-                'Mx': float(round(Mx[s], 4))
+                'Mx': float(round(Mx[s], 4)),
+                'age_inception_months': age_inception_m,
+                'age_valuation_months': age_m,
+                'age_maturity_months': age_maturity_m,
+                'contract_term_months': contract_term_m,
+                'elapsed_months_since_inception': elapsed_m_from_start,
+                'remaining_term_months': rem_m
             }
 
 # Global singleton for mortality service
@@ -406,6 +431,7 @@ def evaluate_single_policy(params_data: dict, policy_data: dict) -> dict:
         expense_maintenance=float(params_data.get('expense_maintenance', 0.0025)),
         margin_mortality=float(params_data.get('margin_mortality', 0.03)),
         margin_investment=float(params_data.get('margin_investment', 0.0)),
+        cost_acquisition_initial=float(params_data.get('cost_acquisition_initial', 0.0)),
         cost_acquisition=float(params_data.get('cost_acquisition', 0.01)),
         payment_frequency=int(params_data.get('payment_frequency', 12)),
         default_policy_type=str(params_data.get('default_policy_type', 'Ipoteka'))
