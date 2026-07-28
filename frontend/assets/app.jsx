@@ -1513,10 +1513,7 @@ const { useState, useEffect } = React;
                     <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.reserveTitle}</h2>
                     <div className="responsive-grid-1-5">
                       <div className="glass-card" style={{ height: 'fit-content' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                          <h3 style={{ fontSize: '1.2rem', margin: 0 }}>{t.reserveScenario}</h3>
-                          <span className="info-chip" style={{ marginTop: 0, fontSize: '0.72rem' }}>⚡ Real-Time Aktuar Mode</span>
-                        </div>
+                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.reserveScenario}</h3>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                           <div className="form-group">
