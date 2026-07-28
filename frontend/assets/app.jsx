@@ -1492,7 +1492,22 @@ const { useState, useEffect } = React;
                                       <div className="comm-label">{lang === 'AZ' ? 'Müqavilə Müddəti' : 'Contract Term'}</div>
                                       <div className="comm-value" style={{ fontSize: '0.85rem' }}>{pricingResult.commutations.contract_term_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
                                     </div>
-                     {/* SUB-TAB: RESERVE ENGINE */}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-muted)' }}>
+                              {t.pricingPrompt}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB-TAB: RESERVE ENGINE */}
                 {softwareTab === 'reserve' && (
                   <div>
                     <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.reserveTitle}</h2>
@@ -1741,14 +1756,6 @@ const { useState, useEffect } = React;
                           </details>
 
                           <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '0.9rem', fontSize: '1.05rem', borderRadius: '10px' }} onClick={calculateReserve} disabled={isCalculating}>
-                            {isCalculating ? (lang === 'AZ' ? 'Hesablanır...' : 'Calculating...') : t.btnCalculateReserve}
-                          </button>
-                        </div>
-                      </div>-field" value={reserveParams.paymentFrequency} onChange={e => setReserveParams({ ...reserveParams, paymentFrequency: e.target.value })} />
-                              </div>
-                            )}
-                          </div>
-                          <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={calculateReserve} disabled={isCalculating}>
                             {isCalculating ? (lang === 'AZ' ? 'Hesablanır...' : 'Calculating...') : t.btnCalculateReserve}
                           </button>
                         </div>
