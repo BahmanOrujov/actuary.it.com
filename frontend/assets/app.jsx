@@ -154,7 +154,7 @@ const { useState, useEffect } = React;
 
       const [mortalityTable, setMortalityTable] = useState([]);
       const [globalInterestRate, setGlobalInterestRate] = useState(() => localStorage.getItem('arpp_globalInterestRate') || "5.0");
-      const [theme, setTheme] = useState(() => localStorage.getItem('arpp_theme') || 'dark');
+      const [theme, setTheme] = useState(() => localStorage.getItem('arpp_theme') || 'light');
 
       useEffect(() => {
         localStorage.setItem('arpp_lang', lang);
@@ -2260,7 +2260,6 @@ const { useState, useEffect } = React;
                                             <th style={{ padding: '0.85rem 0.6rem' }} title={lang === 'AZ' ? 'Zərərlərin Tənzimləmə Xərcləri / Risk Marjası' : 'Risk Margin'}>{lang === 'AZ' ? 'ZTX (Zərərlərin Tənz. X.)' : 'Risk Margin'}</th>
                                             <th style={{ padding: '0.85rem 0.6rem' }} title={lang === 'AZ' ? 'Sığorta Haqları (Aktivlər)' : 'Asset Premiums'}>{lang === 'AZ' ? 'SH (Sığorta Haqları)' : 'Asset Premiums'}</th>
                                             <th style={{ padding: '0.85rem 0.6rem', color: 'var(--color-primary)', fontWeight: 'bold' }}>{lang === 'AZ' ? 'Riyazi Ehtiyat' : 'Mathematical Reserve'}</th>
-                                            <th style={{ textAlign: 'center', padding: '0.85rem 0.6rem' }}>{lang === 'AZ' ? 'Status' : 'Status'}</th>
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -2291,15 +2290,6 @@ const { useState, useEffect } = React;
                                                   <td style={{ padding: '0.65rem 0.6rem' }}>{Number(row.asset_premiums || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼</td>
                                                   <td style={{ padding: '0.65rem 0.6rem', color: isSel ? '#f59e0b' : 'var(--color-primary)', fontWeight: 'bold' }}>
                                                     {Number(row.final_reserve || row.net_mathematical_reserve || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼
-                                                  </td>
-                                                  <td style={{ textAlign: 'center', padding: '0.65rem 0.6rem' }}>
-                                                    {isSel ? (
-                                                      <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.25)', color: '#f59e0b', border: '1px solid rgba(234, 179, 8, 0.5)', fontSize: '0.75rem', padding: '0.2rem 0.55rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                                                        ⭐ {lang === 'AZ' ? 'Daxil edilmiş Hesabat Tarixi' : 'Valuation Date'}
-                                                      </span>
-                                                    ) : (
-                                                      <span style={{ opacity: 0.25, fontSize: '0.75rem' }}>—</span>
-                                                    )}
                                                   </td>
                                                 </tr>
                                               );
