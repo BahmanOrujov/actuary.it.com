@@ -1981,3 +1981,41 @@ html, body {
   color: #ffffff;
 }
 
+/* Dual Top & Bottom Prominent Scrollbars */
+.top-scrollbar-wrapper::-webkit-scrollbar,
+.table-scroll-container::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.top-scrollbar-wrapper::-webkit-scrollbar-track,
+.table-scroll-container::-webkit-scrollbar-track {
+  background: rgba(10, 10, 18, 0.4);
+  border-radius: 6px;
+}
+
+.top-scrollbar-wrapper::-webkit-scrollbar-thumb,
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #6366f1 0%, #4f46e5 100%);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
+.top-scrollbar-wrapper::-webkit-scrollbar-thumb:hover,
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, #818cf8 0%, #6366f1 100%);
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.8);
+}
+
+[data-theme="light"] .top-scrollbar-wrapper::-webkit-scrollbar-track,
+[data-theme="light"] .table-scroll-container::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+
+[data-theme="light"] .top-scrollbar-wrapper::-webkit-scrollbar-thumb,
+[data-theme="light"] .table-scroll-container::-webkit-scrollbar-thumb {
+  background: #4f46e5;
+  border: 1px solid #cbd5e1;
+}
+

@@ -136,6 +136,22 @@ const { useState, useEffect } = React;
       const [scheduleSearch, setScheduleSearch] = useState('');
       const [scheduleDisplayFormat, setScheduleDisplayFormat] = useState('table'); // 'table', 'cards'
 
+      const topScrollRef = React.useRef(null);
+      const tableScrollRef = React.useRef(null);
+      const [scrollDummyWidth, setScrollDummyWidth] = useState(1000);
+
+      const handleTopScroll = () => {
+        if (topScrollRef.current && tableScrollRef.current) {
+          tableScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+        }
+      };
+
+      const handleTableScroll = () => {
+        if (topScrollRef.current && tableScrollRef.current) {
+          topScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft;
+        }
+      };
+
       const [mortalityTable, setMortalityTable] = useState([]);
       const [globalInterestRate, setGlobalInterestRate] = useState(() => localStorage.getItem('arpp_globalInterestRate') || "5.0");
       const [theme, setTheme] = useState(() => localStorage.getItem('arpp_theme') || 'dark');
@@ -148,6 +164,12 @@ const { useState, useEffect } = React;
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('arpp_theme', theme);
       }, [theme]);
+
+      useEffect(() => {
+        if (tableScrollRef.current) {
+          setScrollDummyWidth(tableScrollRef.current.scrollWidth || 1000);
+        }
+      }, [reserveResult, scheduleSearch, scheduleDisplayFormat, reserveViewMode]);
 
       useEffect(() => {
         localStorage.setItem('arpp_activeTab', activeTab);
@@ -2189,8 +2211,33 @@ const { useState, useEffect } = React;
 
                                 {reserveResult.engineData && (reserveResult.engineData.monthly_schedule && reserveResult.engineData.monthly_schedule.length > 0) ? (
                                   scheduleDisplayFormat === 'table' ? (
-                                    <div style={{ overflowX: 'auto', maxHeight: '550px', overflowY: 'auto', borderRadius: '12px', border: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.2)' }}>
-                                      <table className="custom-table" style={{ width: '100%', fontSize: '0.85rem', textAlign: 'right', borderCollapse: 'collapse' }}>
+                                    <div>
+                                      {/* Top Horizontal Scrollbar */}
+                                      <div 
+                                        ref={topScrollRef} 
+                                        onScroll={handleTopScroll}
+                                        className="top-scrollbar-wrapper"
+                                        style={{
+                                          overflowX: 'auto',
+                                          overflowY: 'hidden',
+                                          height: '12px',
+                                          marginBottom: '6px',
+                                          borderRadius: '6px',
+                                          background: 'rgba(99, 102, 241, 0.08)',
+                                          border: '1px solid var(--border-color)'
+                                        }}
+                                      >
+                                        <div style={{ width: `${scrollDummyWidth}px`, height: '1px' }}></div>
+                                      </div>
+
+                                      {/* Table Container with Bottom Horizontal Scrollbar */}
+                                      <div 
+                                        ref={tableScrollRef}
+                                        onScroll={handleTableScroll}
+                                        className="table-scroll-container"
+                                        style={{ overflowX: 'auto', maxHeight: '550px', overflowY: 'auto', borderRadius: '12px', border: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.2)' }}
+                                      >
+                                        <table className="custom-table" style={{ width: '100%', fontSize: '0.85rem', textAlign: 'right', borderCollapse: 'collapse' }}>
                                         <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-glass)', backdropFilter: 'blur(12px)', zIndex: 5 }}>
                                           <tr>
                                             <th style={{ textAlign: 'center', padding: '0.85rem 0.6rem' }}>Ay №</th>
@@ -2246,7 +2293,8 @@ const { useState, useEffect } = React;
                                             })}
                                         </tbody>
                                       </table>
-                                    </div>
+                                     </div>
+                                   </div>
                                   ) : (
                                     <div className="mobile-schedule-cards" style={{ maxHeight: '550px', overflowY: 'auto', paddingRight: '0.25rem' }}>
                                       {reserveResult.engineData.monthly_schedule
