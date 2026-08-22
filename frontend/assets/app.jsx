@@ -182,58 +182,56 @@ const { useState, useEffect } = React;
       }, [globalInterestRate]);
 
       useEffect(() => {
-        if ((softwareTab === 'pricing' || softwareTab === 'formula-explorer')) {
-          fetch('./assets/Monthlydeathtable.csv')
-            .then(res => res.text())
-            .then(text => {
-              const lines = text.trim().split('\n').slice(1);
-              const data = lines.map((line, idx) => {
-                const parts = line.split(',');
-                let x, lxStr, dxStr;
-                if (parts.length > 3) {
-                  x = parts[0];
-                  dxStr = parts[parts.length - 1];
-                  lxStr = parts.slice(1, parts.length - 1).join('').replace(/"/g, '');
-                } else {
-                  x = parts[0];
-                  lxStr = parts[1]?.replace(/"/g, '');
-                  dxStr = parts[2];
-                }
-                return { 
-                  month: idx,
-                  x: parseInt(x), 
-                  lx: parseFloat(lxStr), 
-                  dx: parseFloat(dxStr) 
-                };
-              });
-              const v = 1.0 / (1.0 + (((parseFloat(globalInterestRate) || 0) / 100) / 12)); // using monthly interest rate
-              // Recompute lx sequentially starting from month 2
-              for (let i = 1; i < data.length; i++) {
-                data[i].lx = data[i-1].lx - data[i-1].dx;
+        fetch('./assets/Monthlydeathtable.csv')
+          .then(res => res.text())
+          .then(text => {
+            const lines = text.trim().split('\n').slice(1);
+            const data = lines.map((line, idx) => {
+              const parts = line.split(',');
+              let x, lxStr, dxStr;
+              if (parts.length > 3) {
+                x = parts[0];
+                dxStr = parts[parts.length - 1];
+                lxStr = parts.slice(1, parts.length - 1).join('').replace(/"/g, '');
+              } else {
+                x = parts[0];
+                lxStr = parts[1]?.replace(/"/g, '');
+                dxStr = parts[2];
               }
-              
-              for (let i = 0; i < data.length; i++) {
-                data[i].qx = data[i].dx / data[i].lx;
-                const lx_plus_1 = i + 1 < data.length ? data[i+1].lx : 0;
-                data[i].px = lx_plus_1 / data[i].lx;
-                data[i].Dx = data[i].lx * Math.pow(v, i);
-                data[i].Cx = data[i].dx * Math.pow(v, i + 1);
-              }
-              
-              let Nx_sum = 0;
-              let Mx_sum = 0;
-              for (let i = data.length - 1; i >= 0; i--) {
-                Nx_sum += data[i].Dx;
-                Mx_sum += data[i].Cx;
-                data[i].Nx = Nx_sum;
-                data[i].Mx = Mx_sum;
-              }
-              
-              setMortalityTable(data);
-            })
-            .catch(err => console.error(err));
-        }
-      }, [softwareTab, globalInterestRate]);      const [searchPolicyId, setSearchPolicyId] = useState('');
+              return { 
+                month: idx,
+                x: parseInt(x), 
+                lx: parseFloat(lxStr), 
+                dx: parseFloat(dxStr) 
+              };
+            });
+            const v = 1.0 / (1.0 + (((parseFloat(globalInterestRate) || 0) / 100) / 12)); // using monthly interest rate
+            // Recompute lx sequentially starting from month 2
+            for (let i = 1; i < data.length; i++) {
+              data[i].lx = data[i-1].lx - data[i-1].dx;
+            }
+            
+            for (let i = 0; i < data.length; i++) {
+              data[i].qx = data[i].dx / data[i].lx;
+              const lx_plus_1 = i + 1 < data.length ? data[i+1].lx : 0;
+              data[i].px = lx_plus_1 / data[i].lx;
+              data[i].Dx = data[i].lx * Math.pow(v, i);
+              data[i].Cx = data[i].dx * Math.pow(v, i + 1);
+            }
+            
+            let Nx_sum = 0;
+            let Mx_sum = 0;
+            for (let i = data.length - 1; i >= 0; i--) {
+              Nx_sum += data[i].Dx;
+              Mx_sum += data[i].Cx;
+              data[i].Nx = Nx_sum;
+              data[i].Mx = Mx_sum;
+            }
+            
+            setMortalityTable(data);
+          })
+          .catch(err => console.error(err));
+      }, [globalInterestRate]);      const [searchPolicyId, setSearchPolicyId] = useState('');
       const [searchedPolicy, setSearchedPolicy] = useState(null);
 
       const [reportsList, setReportsList] = useState([]);
@@ -544,28 +542,32 @@ const { useState, useEffect } = React;
       };
 
       useEffect(() => {
-        if (reserveResult && reserveResult.engineData && (!reserveResult.engineData.monthly_schedule || reserveResult.engineData.monthly_schedule.length === 0)) {
-          const sched = generateMonthlyScheduleJS(
-            reserveParams,
-            {
-              startDate: reserveParams.startDate,
-              endDate: reserveParams.endDate,
-              dob: reserveParams.birthDate,
-              sumAssured: reserveParams.sumAssured,
-              premium: reserveParams.premium,
-              policyType: reserveParams.policyType
-            },
-            mortalityTable,
-            globalInterestRate
-          );
-          if (sched && sched.length > 0) {
-            setReserveResult(prev => prev ? {
-              ...prev,
-              engineData: {
-                ...prev.engineData,
-                monthly_schedule: sched
-              }
-            } : prev);
+        if (mortalityTable && mortalityTable.length > 0 && reserveResult && reserveResult.engineData) {
+          const currentSched = reserveResult.engineData.monthly_schedule;
+          const needsUpdate = !currentSched || currentSched.length === 0 || (currentSched.length > 0 && currentSched[0].liability_benefits === 0 && currentSched[0].final_reserve === 0);
+          if (needsUpdate) {
+            const sched = generateMonthlyScheduleJS(
+              reserveParams,
+              {
+                startDate: reserveParams.startDate,
+                endDate: reserveParams.endDate,
+                dob: reserveParams.birthDate,
+                sumAssured: reserveParams.sumAssured,
+                premium: reserveParams.premium,
+                policyType: reserveParams.policyType
+              },
+              mortalityTable,
+              globalInterestRate
+            );
+            if (sched && sched.length > 0) {
+              setReserveResult(prev => prev ? {
+                ...prev,
+                engineData: {
+                  ...prev.engineData,
+                  monthly_schedule: sched
+                }
+              } : prev);
+            }
           }
         }
       }, [mortalityTable, reserveResult, reserveParams, globalInterestRate]);
