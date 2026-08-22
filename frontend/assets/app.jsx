@@ -132,7 +132,7 @@ const { useState, useEffect } = React;
       });
 
       const [reserveResult, setReserveResult] = useState(null);
-      const [reserveViewMode, setReserveViewMode] = useState('both'); // 'combinator', 'monthly', 'both'
+      const [reserveViewMode, setReserveViewMode] = useState('monthly'); // 'monthly', 'combinator'
 
       const [mortalityTable, setMortalityTable] = useState([]);
       const [globalInterestRate, setGlobalInterestRate] = useState(() => localStorage.getItem('arpp_globalInterestRate') || "5.0");
@@ -1898,10 +1898,10 @@ const { useState, useEffect } = React;
                             <div className="preset-pills" style={{ marginTop: 0 }}>
                               <button 
                                 type="button"
-                                className={`preset-pill ${reserveViewMode === 'both' ? 'active' : ''}`}
-                                onClick={() => setReserveViewMode('both')}
+                                className={`preset-pill ${reserveViewMode === 'monthly' ? 'active' : ''}`}
+                                onClick={() => setReserveViewMode('monthly')}
                               >
-                                🔍 {lang === 'AZ' ? 'Hər İkisini Göstər' : 'Show Both'}
+                                📅 {lang === 'AZ' ? 'Aylıq Ehtiyat Cədvəli' : 'Monthly Schedule'}
                               </button>
                               <button 
                                 type="button"
@@ -1910,13 +1910,6 @@ const { useState, useEffect } = React;
                               >
                                 📊 {lang === 'AZ' ? 'Vuruqlar & Tək Tarix' : 'Commutation & Metrics'}
                               </button>
-                              <button 
-                                type="button"
-                                className={`preset-pill ${reserveViewMode === 'monthly' ? 'active' : ''}`}
-                                onClick={() => setReserveViewMode('monthly')}
-                              >
-                                📅 {lang === 'AZ' ? 'Aylıq Ehtiyat Cədvəli' : 'Monthly Schedule'}
-                              </button>
                             </div>
                           )}
                         </div>
@@ -1924,7 +1917,7 @@ const { useState, useEffect } = React;
                         {reserveResult ? (
                           <div>
                             {/* SECTION 1: COMMUTATION & SINGLE DATE METRICS */}
-                            {(reserveViewMode === 'combinator' || reserveViewMode === 'both') && (
+                            {reserveViewMode === 'combinator' && (
                               <div style={{ marginTop: '1rem', marginBottom: '2rem' }}>
                                 <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{lang === 'AZ' ? 'Aktuar Mühərrik Göstəriciləri (Seçilmiş Hesabat Tarixi Üçün)' : 'Actuarial Engine Metrics (Selected Valuation Date)'}</h4>
                                 {reserveResult.engineData ? (
@@ -2070,8 +2063,8 @@ const { useState, useEffect } = React;
                             )}
 
                             {/* SECTION 2: MONTHLY SCHEDULE TABLE */}
-                            {(reserveViewMode === 'monthly' || reserveViewMode === 'both') && (
-                              <div style={{ marginTop: reserveViewMode === 'both' ? '2rem' : '1rem', borderTop: reserveViewMode === 'both' ? '1px solid var(--border-color)' : 'none', paddingTop: reserveViewMode === 'both' ? '1.5rem' : '0' }}>
+                            {reserveViewMode === 'monthly' && (
+                              <div style={{ marginTop: '1rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                                   <h4 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     📅 {lang === 'AZ' ? 'Aylıq Riyazi Ehtiyat Cədvəli (Hər Ayın Sonu)' : 'Monthly Mathematical Reserve Schedule'}
