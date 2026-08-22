@@ -133,6 +133,7 @@ const { useState, useEffect } = React;
 
       const [reserveResult, setReserveResult] = useState(null);
       const [reserveViewMode, setReserveViewMode] = useState('monthly'); // 'monthly', 'combinator'
+      const [scheduleSearch, setScheduleSearch] = useState('');
 
       const [mortalityTable, setMortalityTable] = useState([]);
       const [globalInterestRate, setGlobalInterestRate] = useState(() => localStorage.getItem('arpp_globalInterestRate') || "5.0");
@@ -1895,17 +1896,17 @@ const { useState, useEffect } = React;
                           <h3 style={{ fontSize: '1.2rem', margin: 0 }}>{t.reserveOutputTitle}</h3>
                           
                           {reserveResult && (
-                            <div className="preset-pills" style={{ marginTop: 0 }}>
+                            <div className="view-mode-tabs">
                               <button 
                                 type="button"
-                                className={`preset-pill ${reserveViewMode === 'monthly' ? 'active' : ''}`}
+                                className={`view-mode-tab ${reserveViewMode === 'monthly' ? 'active' : ''}`}
                                 onClick={() => setReserveViewMode('monthly')}
                               >
                                 📅 {lang === 'AZ' ? 'Aylıq Ehtiyat Cədvəli' : 'Monthly Schedule'}
                               </button>
                               <button 
                                 type="button"
-                                className={`preset-pill ${reserveViewMode === 'combinator' ? 'active' : ''}`}
+                                className={`view-mode-tab ${reserveViewMode === 'combinator' ? 'active' : ''}`}
                                 onClick={() => setReserveViewMode('combinator')}
                               >
                                 📊 {lang === 'AZ' ? 'Vuruqlar & Tək Tarix' : 'Commutation & Metrics'}
@@ -2065,65 +2066,155 @@ const { useState, useEffect } = React;
                             {/* SECTION 2: MONTHLY SCHEDULE TABLE */}
                             {reserveViewMode === 'monthly' && (
                               <div style={{ marginTop: '1rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                  <h4 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    📅 {lang === 'AZ' ? 'Aylıq Riyazi Ehtiyat Cədvəli (Hər Ayın Sonu)' : 'Monthly Mathematical Reserve Schedule'}
-                                  </h4>
-                                  <span style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem', borderRadius: '12px', background: 'rgba(234, 179, 8, 0.15)', color: '#f59e0b', border: '1px solid rgba(234, 179, 8, 0.3)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                                    ⭐ {lang === 'AZ' ? 'Qızılı haşiyəli sətir daxil edilmiş Hesabat Tarixini təmsil edir' : 'Highlighted row represents the entered Valuation Date'}
-                                  </span>
+                                {/* KPI Micro Summary Cards */}
+                                {reserveResult.engineData && (
+                                  <div className="schedule-kpi-grid">
+                                    <div className="schedule-kpi-card">
+                                      <div className="schedule-kpi-title">
+                                        ⏳ {lang === 'AZ' ? 'Müqavilə Müddəti' : 'Contract Term'}
+                                      </div>
+                                      <div className="schedule-kpi-val">
+                                        {reserveResult.engineData.contract_term_months || (reserveResult.engineData.monthly_schedule?.length || 0)} {lang === 'AZ' ? 'ay' : 'mo'}
+                                      </div>
+                                    </div>
+
+                                    <div className="schedule-kpi-card">
+                                      <div className="schedule-kpi-title">
+                                        ⭐ {lang === 'AZ' ? 'Hesabat Tarixi' : 'Valuation Date'}
+                                      </div>
+                                      <div className="schedule-kpi-val" style={{ fontSize: '1rem', color: '#f59e0b' }}>
+                                        {(() => {
+                                          const sel = (reserveResult.engineData.monthly_schedule || []).find(r => r.is_selected);
+                                          return sel ? (sel.date_formatted || sel.date) : reserveParams.valuationDate;
+                                        })()}
+                                      </div>
+                                    </div>
+
+                                    <div className="schedule-kpi-card">
+                                      <div className="schedule-kpi-title">
+                                        🛡️ {lang === 'AZ' ? 'Tarixdəki Ehtiyat' : 'Selected Reserve'}
+                                      </div>
+                                      <div className="schedule-kpi-val" style={{ color: 'var(--color-primary)' }}>
+                                        {(() => {
+                                          const sel = (reserveResult.engineData.monthly_schedule || []).find(r => r.is_selected);
+                                          const val = sel ? (sel.final_reserve || sel.net_mathematical_reserve) : (reserveResult.engineData.final_reserve || reserveResult.engineData.net_mathematical_reserve);
+                                          return Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₼';
+                                        })()}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Toolbar: Search & Export CSV */}
+                                <div className="table-toolbar">
+                                  <div className="table-search-box">
+                                    <span className="table-search-icon">🔍</span>
+                                    <input 
+                                      type="text" 
+                                      className="table-search-input" 
+                                      placeholder={lang === 'AZ' ? 'Aydan və ya tarixdən axtar...' : 'Search by month or date...'} 
+                                      value={scheduleSearch} 
+                                      onChange={e => setScheduleSearch(e.target.value)} 
+                                    />
+                                  </div>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    {reserveResult.engineData && reserveResult.engineData.monthly_schedule && (
+                                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                        {(() => {
+                                          const full = reserveResult.engineData.monthly_schedule;
+                                          const filtered = full.filter(r => {
+                                            if (!scheduleSearch.trim()) return true;
+                                            const q = scheduleSearch.toLowerCase();
+                                            return r.month_index.toString().includes(q) || (r.date_formatted || r.date).toLowerCase().includes(q);
+                                          });
+                                          return lang === 'AZ' ? `${filtered.length} / ${full.length} ay göstərilir` : `Showing ${filtered.length} / ${full.length} months`;
+                                        })()}
+                                      </span>
+                                    )}
+
+                                    <button 
+                                      type="button" 
+                                      className="export-btn"
+                                      onClick={() => {
+                                        if (reserveResult.engineData && reserveResult.engineData.monthly_schedule) {
+                                          const schedule = reserveResult.engineData.monthly_schedule;
+                                          let csv = 'Ay,Hesabat Tarixi,SO (AZN),IAX (AZN),ZTX (AZN),SH (AZN),Riyazi Ehtiyat (AZN),Secilmis Tarix\n';
+                                          schedule.forEach(row => {
+                                            csv += `${row.month_index},"${row.date_formatted || row.date}",${row.liability_benefits},${row.liability_expenses},${row.liability_risk_margin},${row.asset_premiums},${row.final_reserve || row.net_mathematical_reserve},"${row.is_selected ? 'Beli' : 'Xeyr'}"\n`;
+                                          });
+                                          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                                          const url = URL.createObjectURL(blob);
+                                          const link = document.createElement('a');
+                                          link.setAttribute('href', url);
+                                          link.setAttribute('download', `Ayliq_Ehtiyat_Cedveli_${reserveParams.policyId || 'POL'}.csv`);
+                                          document.body.appendChild(link);
+                                          link.click();
+                                          document.body.removeChild(link);
+                                        }
+                                      }}
+                                    >
+                                      📥 {lang === 'AZ' ? 'CSV Export Et' : 'Export CSV'}
+                                    </button>
+                                  </div>
                                 </div>
 
                                 {reserveResult.engineData && (reserveResult.engineData.monthly_schedule && reserveResult.engineData.monthly_schedule.length > 0) ? (
-                                  <div style={{ overflowX: 'auto', maxHeight: '550px', overflowY: 'auto', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.15)' }}>
+                                  <div style={{ overflowX: 'auto', maxHeight: '550px', overflowY: 'auto', borderRadius: '12px', border: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.2)' }}>
                                     <table className="custom-table" style={{ width: '100%', fontSize: '0.85rem', textAlign: 'right', borderCollapse: 'collapse' }}>
-                                      <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-glass)', backdropFilter: 'blur(10px)', zIndex: 5 }}>
+                                      <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-glass)', backdropFilter: 'blur(12px)', zIndex: 5 }}>
                                         <tr>
-                                          <th style={{ textAlign: 'center', padding: '0.75rem 0.5rem' }}>Ay №</th>
-                                          <th style={{ textAlign: 'center', padding: '0.75rem 0.5rem' }}>{lang === 'AZ' ? 'Hesabat Tarixi (Ayın Sonu)' : 'Valuation Date'}</th>
-                                          <th style={{ padding: '0.75rem 0.5rem' }}>{lang === 'AZ' ? 'SÖ (Sığorta Ödənişləri)' : 'Liability Benefits'}</th>
-                                          <th style={{ padding: '0.75rem 0.5rem' }}>{lang === 'AZ' ? 'İAX (İnzibati X.)' : 'Admin Expenses'}</th>
-                                          <th style={{ padding: '0.75rem 0.5rem' }}>{lang === 'AZ' ? 'ZTX (Zərərlərin Tənz. X.)' : 'Risk Margin'}</th>
-                                          <th style={{ padding: '0.75rem 0.5rem' }}>{lang === 'AZ' ? 'SH (Sığorta Haqları)' : 'Asset Premiums'}</th>
-                                          <th style={{ padding: '0.75rem 0.5rem', color: 'var(--color-primary)', fontWeight: 'bold' }}>{lang === 'AZ' ? 'Riyazi Ehtiyat' : 'Mathematical Reserve'}</th>
-                                          <th style={{ textAlign: 'center', padding: '0.75rem 0.5rem' }}>{lang === 'AZ' ? 'Status' : 'Status'}</th>
+                                          <th style={{ textAlign: 'center', padding: '0.85rem 0.6rem' }}>Ay №</th>
+                                          <th style={{ textAlign: 'center', padding: '0.85rem 0.6rem' }}>{lang === 'AZ' ? 'Hesabat Tarixi (Ayın Sonu)' : 'Valuation Date'}</th>
+                                          <th style={{ padding: '0.85rem 0.6rem' }} title={lang === 'AZ' ? 'Sığorta Ödənişləri (Öhdəliklər)' : 'Liability Benefits'}>{lang === 'AZ' ? 'SÖ (Sığorta Ödənişləri)' : 'Liability Benefits'}</th>
+                                          <th style={{ padding: '0.85rem 0.6rem' }} title={lang === 'AZ' ? 'İnzibati və Adm. Xərclər' : 'Administrative Expenses'}>{lang === 'AZ' ? 'İAX (İnzibati X.)' : 'Admin Expenses'}</th>
+                                          <th style={{ padding: '0.85rem 0.6rem' }} title={lang === 'AZ' ? 'Zərərlərin Tənzimləmə Xərcləri / Risk Marjası' : 'Risk Margin'}>{lang === 'AZ' ? 'ZTX (Zərərlərin Tənz. X.)' : 'Risk Margin'}</th>
+                                          <th style={{ padding: '0.85rem 0.6rem' }} title={lang === 'AZ' ? 'Sığorta Haqları (Aktivlər)' : 'Asset Premiums'}>{lang === 'AZ' ? 'SH (Sığorta Haqları)' : 'Asset Premiums'}</th>
+                                          <th style={{ padding: '0.85rem 0.6rem', color: 'var(--color-primary)', fontWeight: 'bold' }}>{lang === 'AZ' ? 'Riyazi Ehtiyat' : 'Mathematical Reserve'}</th>
+                                          <th style={{ textAlign: 'center', padding: '0.85rem 0.6rem' }}>{lang === 'AZ' ? 'Status' : 'Status'}</th>
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {reserveResult.engineData.monthly_schedule.map((row, idx) => {
-                                          const isSel = row.is_selected;
-                                          return (
-                                            <tr 
-                                              key={idx} 
-                                              style={{ 
-                                                background: isSel ? 'rgba(234, 179, 8, 0.12)' : (idx % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent'),
-                                                borderLeft: isSel ? '4px solid #eab308' : 'none',
-                                                fontWeight: isSel ? 'bold' : 'normal'
-                                              }}
-                                            >
-                                              <td style={{ textAlign: 'center', padding: '0.6rem 0.5rem' }}>{row.month_index}</td>
-                                              <td style={{ textAlign: 'center', padding: '0.6rem 0.5rem' }}>
-                                                {row.date_formatted || row.date}
-                                              </td>
-                                              <td style={{ padding: '0.6rem 0.5rem' }}>{Number(row.liability_benefits || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼</td>
-                                              <td style={{ padding: '0.6rem 0.5rem' }}>{Number(row.liability_expenses || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼</td>
-                                              <td style={{ padding: '0.6rem 0.5rem' }}>{Number(row.liability_risk_margin || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼</td>
-                                              <td style={{ padding: '0.6rem 0.5rem' }}>{Number(row.asset_premiums || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼</td>
-                                              <td style={{ padding: '0.6rem 0.5rem', color: isSel ? '#f59e0b' : 'var(--color-primary)', fontWeight: 'bold' }}>
-                                                {Number(row.final_reserve || row.net_mathematical_reserve || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼
-                                              </td>
-                                              <td style={{ textAlign: 'center', padding: '0.6rem 0.5rem' }}>
-                                                {isSel ? (
-                                                  <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.25)', color: '#f59e0b', border: '1px solid rgba(234, 179, 8, 0.5)', fontSize: '0.75rem', padding: '0.2rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                                                    ⭐ {lang === 'AZ' ? 'Hesabat Tarixi' : 'Valuation Date'}
-                                                  </span>
-                                                ) : (
-                                                  <span style={{ opacity: 0.3, fontSize: '0.75rem' }}>—</span>
-                                                )}
-                                              </td>
-                                            </tr>
-                                          );
-                                        })}
+                                        {reserveResult.engineData.monthly_schedule
+                                          .filter(r => {
+                                            if (!scheduleSearch.trim()) return true;
+                                            const q = scheduleSearch.toLowerCase();
+                                            return r.month_index.toString().includes(q) || (r.date_formatted || r.date).toLowerCase().includes(q);
+                                          })
+                                          .map((row, idx) => {
+                                            const isSel = row.is_selected;
+                                            return (
+                                              <tr 
+                                                key={idx} 
+                                                className={isSel ? 'selected-schedule-row' : ''}
+                                                style={{ 
+                                                  background: isSel ? undefined : (idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'transparent'),
+                                                  transition: 'all 0.15s ease'
+                                                }}
+                                              >
+                                                <td style={{ textAlign: 'center', padding: '0.65rem 0.6rem' }}>{row.month_index}</td>
+                                                <td style={{ textAlign: 'center', padding: '0.65rem 0.6rem' }}>
+                                                  {row.date_formatted || row.date}
+                                                </td>
+                                                <td style={{ padding: '0.65rem 0.6rem' }}>{Number(row.liability_benefits || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼</td>
+                                                <td style={{ padding: '0.65rem 0.6rem' }}>{Number(row.liability_expenses || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼</td>
+                                                <td style={{ padding: '0.65rem 0.6rem' }}>{Number(row.liability_risk_margin || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼</td>
+                                                <td style={{ padding: '0.65rem 0.6rem' }}>{Number(row.asset_premiums || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼</td>
+                                                <td style={{ padding: '0.65rem 0.6rem', color: isSel ? '#f59e0b' : 'var(--color-primary)', fontWeight: 'bold' }}>
+                                                  {Number(row.final_reserve || row.net_mathematical_reserve || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼
+                                                </td>
+                                                <td style={{ textAlign: 'center', padding: '0.65rem 0.6rem' }}>
+                                                  {isSel ? (
+                                                    <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.25)', color: '#f59e0b', border: '1px solid rgba(234, 179, 8, 0.5)', fontSize: '0.75rem', padding: '0.2rem 0.55rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                                                      ⭐ {lang === 'AZ' ? 'Daxil edilmiş Hesabat Tarixi' : 'Valuation Date'}
+                                                    </span>
+                                                  ) : (
+                                                    <span style={{ opacity: 0.25, fontSize: '0.75rem' }}>—</span>
+                                                  )}
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
                                       </tbody>
                                     </table>
                                   </div>
