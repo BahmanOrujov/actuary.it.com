@@ -1798,3 +1798,186 @@ html, body {
   }
 }
 
+/* LIGHT MODE (WHITE THEME) SYSTEM OVERRIDES */
+[data-theme="light"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.9);
+  --bg-glass-hover: rgba(241, 245, 249, 0.95);
+  --border-color: rgba(203, 213, 225, 0.7);
+  --border-glow: rgba(99, 102, 241, 0.3);
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+
+  --color-primary: #4f46e5;
+  --color-primary-glow: rgba(79, 70, 229, 0.15);
+  --color-secondary: #db2777;
+  --color-secondary-glow: rgba(219, 39, 119, 0.15);
+  --color-tertiary: #0d9488;
+
+  --shadow-premium: 0 10px 30px rgba(15, 23, 42, 0.08);
+  --shadow-glow: 0 0 20px rgba(79, 70, 229, 0.1);
+}
+
+[data-theme="light"] body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+[data-theme="light"] .app-header {
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+[data-theme="light"] .software-sidebar {
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+}
+
+[data-theme="light"] .sidebar-btn {
+  color: #475569;
+}
+
+[data-theme="light"] .sidebar-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+[data-theme="light"] .sidebar-btn.active {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(79, 70, 229, 0.04) 100%);
+  color: #4f46e5;
+}
+
+[data-theme="light"] .bg-glow-1 {
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 70%);
+}
+
+[data-theme="light"] .bg-glow-2 {
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.12) 0%, rgba(236, 72, 153, 0) 70%);
+}
+
+[data-theme="light"] .text-gradient {
+  background: linear-gradient(135deg, #0f172a 30%, #334155 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+[data-theme="light"] .text-gradient-primary {
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+[data-theme="light"] .glass-container,
+[data-theme="light"] .glass-card {
+  background: #ffffff;
+  border-color: rgba(203, 213, 225, 0.7);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .glass-card:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.12);
+}
+
+[data-theme="light"] .input-field,
+[data-theme="light"] .table-search-input {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .input-field:focus,
+[data-theme="light"] .table-search-input:focus {
+  background: #ffffff;
+  border-color: #4f46e5;
+}
+
+[data-theme="light"] .custom-table th {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+}
+
+[data-theme="light"] .custom-table td {
+  color: #1e293b !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+[data-theme="light"] .custom-table tr:hover {
+  background: #f8fafc !important;
+}
+
+[data-theme="light"] .selected-schedule-row {
+  background: linear-gradient(90deg, rgba(234, 179, 8, 0.18) 0%, rgba(234, 179, 8, 0.03) 100%) !important;
+}
+
+[data-theme="light"] .mobile-schedule-card {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .mobile-card-row {
+  color: #475569;
+}
+
+[data-theme="light"] .mobile-card-row.total-row {
+  color: #0f172a;
+  border-top-color: #e2e8f0;
+}
+
+[data-theme="light"] .view-mode-tabs {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .view-mode-tab {
+  color: #475569;
+}
+
+[data-theme="light"] .view-mode-tab.active {
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+  color: #ffffff;
+}
+
+[data-theme="light"] .schedule-kpi-card {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+[data-theme="light"] .commutation-box {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+[data-theme="light"] .comm-label {
+  color: #64748b;
+}
+
+[data-theme="light"] .comm-value {
+  color: #0f172a;
+}
+
+[data-theme="light"] .nav-link {
+  color: #475569;
+}
+
+[data-theme="light"] .nav-link:hover,
+[data-theme="light"] .nav-link.active {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .lang-btn {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+[data-theme="light"] .lang-btn.active {
+  background: #4f46e5;
+  color: #ffffff;
+}
+

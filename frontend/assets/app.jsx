@@ -138,10 +138,16 @@ const { useState, useEffect } = React;
 
       const [mortalityTable, setMortalityTable] = useState([]);
       const [globalInterestRate, setGlobalInterestRate] = useState(() => localStorage.getItem('arpp_globalInterestRate') || "5.0");
+      const [theme, setTheme] = useState(() => localStorage.getItem('arpp_theme') || 'dark');
 
       useEffect(() => {
         localStorage.setItem('arpp_lang', lang);
       }, [lang]);
+
+      useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('arpp_theme', theme);
+      }, [theme]);
 
       useEffect(() => {
         localStorage.setItem('arpp_activeTab', activeTab);
@@ -775,10 +781,31 @@ const { useState, useEffect } = React;
 
               </nav>
 
-              {/* Language Switcher */}
-              <div className="lang-switcher">
-                <button className={`lang-btn ${lang === 'AZ' ? 'active' : ''}`} onClick={() => setLang('AZ')}>AZ</button>
-                <button className={`lang-btn ${lang === 'EN' ? 'active' : ''}`} onClick={() => setLang('EN')}>EN</button>
+              {/* Language & Theme Switchers */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="lang-switcher">
+                  <button className={`lang-btn ${lang === 'AZ' ? 'active' : ''}`} onClick={() => setLang('AZ')}>AZ</button>
+                  <button className={`lang-btn ${lang === 'EN' ? 'active' : ''}`} onClick={() => setLang('EN')}>EN</button>
+                </div>
+
+                <div className="lang-switcher">
+                  <button 
+                    className={`lang-btn ${theme === 'dark' ? 'active' : ''}`} 
+                    onClick={() => setTheme('dark')}
+                    title={lang === 'AZ' ? 'Qaranlıq rejim' : 'Dark Mode'}
+                    style={{ fontSize: '0.9rem', padding: '0.2rem 0.5rem' }}
+                  >
+                    🌙
+                  </button>
+                  <button 
+                    className={`lang-btn ${theme === 'light' ? 'active' : ''}`} 
+                    onClick={() => setTheme('light')}
+                    title={lang === 'AZ' ? 'İşıqlı rejim' : 'Light Mode'}
+                    style={{ fontSize: '0.9rem', padding: '0.2rem 0.5rem' }}
+                  >
+                    ☀️
+                  </button>
+                </div>
               </div>
             </div>
           </header>
