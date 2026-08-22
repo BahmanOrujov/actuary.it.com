@@ -1643,3 +1643,158 @@ html, body {
   font-weight: 700 !important;
 }
 
+/* Responsive Mobile & Web Schedule UX Upgrades */
+.display-format-pills {
+  display: inline-flex;
+  background: rgba(10, 10, 18, 0.5);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.display-format-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.display-format-btn.active {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.mobile-schedule-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.mobile-schedule-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem;
+  transition: var(--transition-fast);
+}
+
+.mobile-schedule-card:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.mobile-schedule-card.selected-card {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.03) 100%);
+  border: 1.5px solid #f59e0b;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.15);
+}
+
+.mobile-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.mobile-card-header .month-num {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+}
+
+.mobile-card-header .month-date {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+
+.mobile-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+}
+
+.mobile-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-secondary);
+}
+
+.mobile-card-row.total-row {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mobile-card-row .total-val {
+  font-size: 1.05rem;
+  color: #818cf8;
+}
+
+.selected-card .total-val {
+  color: #f59e0b;
+}
+
+@media (max-width: 768px) {
+  .glass-card {
+    padding: 1rem !important;
+    border-radius: 12px !important;
+  }
+
+  .schedule-kpi-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.6rem !important;
+  }
+
+  .table-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+
+  .table-search-box {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .export-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .view-mode-tabs {
+    width: 100% !important;
+  }
+
+  .view-mode-tab {
+    flex: 1 !important;
+    justify-content: center !important;
+    padding: 0.6rem 0.4rem !important;
+    font-size: 0.78rem !important;
+  }
+
+  .custom-table th, .custom-table td {
+    padding: 0.65rem 0.4rem !important;
+    font-size: 0.76rem !important;
+    white-space: nowrap;
+  }
+}
+
