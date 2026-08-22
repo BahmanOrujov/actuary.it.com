@@ -457,6 +457,119 @@ const { useState, useEffect } = React;
         calculatePricing();
       }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+      const generateMonthlyScheduleJS = (params, policy, mortTable, interestRate) => {
+        const schedule = [];
+        if (!policy.startDate || !policy.endDate || !policy.dob) return schedule;
+
+        const start = new Date(policy.startDate);
+        const end = new Date(policy.endDate);
+        const dob = new Date(policy.dob);
+        const valDate = new Date(params.valuationDate || policy.startDate);
+
+        const ageInceptionMonths = Math.max(0, (start.getFullYear() - dob.getFullYear()) * 12 + (start.getMonth() - dob.getMonth()));
+        const totalMonths = Math.max(1, (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()));
+
+        const S = parseFloat(policy.sumAssured) || 0;
+        const P = parseFloat(policy.premium) || 0;
+        const ro1 = (parseFloat(params.marginMortality) || 3.0) / 100;
+        const ro2 = (parseFloat(params.marginInvestment) || 1.5) / 100;
+        const gamma = (parseFloat(params.expenseMaintenance) || 0.25) / 100;
+        const beta = (parseFloat(params.costAcquisition) || 0.3) / 100;
+        const m = (policy.policyType === 'life_death_single_payment' || policy.policyType === 'life_survival_single_payment') ? 1 : (parseInt(params.paymentFrequency) || 12);
+        const isSingle = (policy.policyType === 'life_death_single_payment' || policy.policyType === 'life_survival_single_payment');
+
+        let curYear = start.getFullYear();
+        let curMonth = start.getMonth();
+        let monthIdx = 1;
+
+        while (true) {
+          const lastDayObj = new Date(curYear, curMonth + 1, 0);
+          const dateStr = lastDayObj.toISOString().split('T')[0];
+
+          if (lastDayObj > end && schedule.length > 0) break;
+
+          const isSelected = (lastDayObj.getFullYear() === valDate.getFullYear() && lastDayObj.getMonth() === valDate.getMonth());
+
+          const elapsedM = Math.min(totalMonths, Math.max(0, (lastDayObj.getFullYear() - start.getFullYear()) * 12 + (lastDayObj.getMonth() - start.getMonth())));
+
+          let res_so = 0, res_ztx = 0, res_iax = 0, res_sh = 0, final_reserve = 0;
+
+          if (mortTable && mortTable.length > 0) {
+            const s = Math.min(mortTable.length - 1, ageInceptionMonths + elapsedM);
+            const e = Math.min(mortTable.length - 1, ageInceptionMonths + totalMonths);
+
+            const Dx_s = mortTable[s]?.Dx || 1;
+            const Mx_s = mortTable[s]?.Mx || 0;
+            const Nx_s = mortTable[s]?.Nx || 0;
+
+            const Dx_e = mortTable[e]?.Dx || 0;
+            const Mx_e = mortTable[e]?.Mx || 0;
+            const Nx_e = mortTable[e]?.Nx || 0;
+
+            const Axn = Dx_s > 0 ? (Mx_s - Mx_e) / Dx_s : 0;
+            const nEx = Dx_s > 0 ? Dx_e / Dx_s : 0;
+            const axn = Dx_s > 0 ? (Nx_s - Nx_e) / Dx_s : 0;
+
+            res_so = S * Axn + S * nEx;
+            res_ztx = (ro1 * S * Axn) + (ro2 * S * nEx);
+            res_iax = (gamma / m) * S * axn;
+            res_sh = isSingle ? 0 : (1 - beta) * P * axn;
+            const net_res = res_so + res_ztx + res_iax - res_sh;
+            final_reserve = Math.max(0, net_res);
+          }
+
+          schedule.push({
+            month_index: monthIdx,
+            date: dateStr,
+            date_formatted: `${String(lastDayObj.getDate()).padStart(2, '0')}.${String(lastDayObj.getMonth() + 1).padStart(2, '0')}.${lastDayObj.getFullYear()}`,
+            is_selected: isSelected,
+            liability_benefits: parseFloat(res_so.toFixed(2)),
+            liability_expenses: parseFloat(res_iax.toFixed(2)),
+            liability_risk_margin: parseFloat(res_ztx.toFixed(2)),
+            asset_premiums: parseFloat(res_sh.toFixed(2)),
+            net_mathematical_reserve: parseFloat(final_reserve.toFixed(2)),
+            final_reserve: parseFloat(final_reserve.toFixed(2))
+          });
+
+          if (lastDayObj >= end) break;
+          monthIdx++;
+          curMonth++;
+          if (curMonth > 11) {
+            curMonth = 0;
+            curYear++;
+          }
+        }
+
+        return schedule;
+      };
+
+      useEffect(() => {
+        if (reserveResult && reserveResult.engineData && (!reserveResult.engineData.monthly_schedule || reserveResult.engineData.monthly_schedule.length === 0)) {
+          const sched = generateMonthlyScheduleJS(
+            reserveParams,
+            {
+              startDate: reserveParams.startDate,
+              endDate: reserveParams.endDate,
+              dob: reserveParams.birthDate,
+              sumAssured: reserveParams.sumAssured,
+              premium: reserveParams.premium,
+              policyType: reserveParams.policyType
+            },
+            mortalityTable,
+            globalInterestRate
+          );
+          if (sched && sched.length > 0) {
+            setReserveResult(prev => prev ? {
+              ...prev,
+              engineData: {
+                ...prev.engineData,
+                monthly_schedule: sched
+              }
+            } : prev);
+          }
+        }
+      }, [mortalityTable, reserveResult, reserveParams, globalInterestRate]);
+
       const calculateReserve = async () => {
         setIsCalculating(true);
         try {
@@ -494,10 +607,26 @@ const { useState, useEffect } = React;
 
           const res = await response.json();
           if (res.status === 'success') {
+            const engineData = res.data || {};
+            if (!engineData.monthly_schedule || engineData.monthly_schedule.length === 0) {
+              engineData.monthly_schedule = generateMonthlyScheduleJS(
+                reserveParams,
+                {
+                  startDate: reserveParams.startDate,
+                  endDate: reserveParams.endDate,
+                  dob: reserveParams.birthDate,
+                  sumAssured: reserveParams.sumAssured,
+                  premium: reserveParams.premium,
+                  policyType: reserveParams.policyType
+                },
+                mortalityTable,
+                globalInterestRate
+              );
+            }
             setReserveResult({
               policyId: reserveParams.policyId,
               currentYear: reserveParams.currentYear,
-              engineData: res.data,
+              engineData: engineData,
               tableData: []
             });
           } else {
