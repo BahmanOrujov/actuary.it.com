@@ -1694,12 +1694,26 @@ const { useState, useEffect } = React;
                 {softwareTab === 'reserve' && (
                   <div>
                     <h2 className="section-title text-gradient-primary" style={{ marginBottom: '1.5rem', textAlign: 'left' }}>{t.reserveTitle}</h2>
-                    <div className="responsive-grid-1-5">
-                      <div className="glass-card" style={{ height: 'fit-content' }}>
-                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.reserveScenario}</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
+                      {/* TOP SECTION: INPUT FORM */}
+                      <div className="glass-card" style={{ width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                          <div>
+                            <h3 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              📝 {t.reserveScenario}
+                            </h3>
+                            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                              {lang === 'AZ' ? 'Müqavilə göstəricilərini daxil edin — hesablama nəticələri aşağıda tam formatda açılacaq' : 'Enter contract parameters below — results will open full-width below'}
+                            </p>
+                          </div>
+                          <button className="btn-primary" style={{ padding: '0.75rem 1.8rem', fontSize: '1rem', borderRadius: '10px' }} onClick={calculateReserve} disabled={isCalculating}>
+                            {isCalculating ? (lang === 'AZ' ? 'Hesablanır...' : 'Calculating...') : (lang === 'AZ' ? '⚡ Hesabla və Cədvəli Yarat' : '⚡ Calculate & Generate')}
+                          </button>
+                        </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                          <div className="form-group">
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
+                          {/* Insurance Class */}
+                          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                             <label className="form-label">{lang === 'AZ' ? 'Sığorta Sinfi' : 'Insurance Class'}</label>
                             <select className="input-field" value={reserveParams.policyType} onChange={e => setReserveParams({ ...reserveParams, policyType: e.target.value })}>
                               <option value="life_survival_m_payments">{lang === 'AZ' ? 'Həyatın yaşam halından sığortası (m dəfə ödənişli)' : 'Pure Endowment (m-payment)'}</option>
@@ -1709,89 +1723,31 @@ const { useState, useEffect } = React;
                             </select>
                           </div>
 
-                          {/* Date inputs grid */}
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div className="form-group">
-                              <label className="form-label">{lang === 'AZ' ? 'Doğum Tarixi' : 'Birth Date'}</label>
-                              <input type="date" className="input-field" value={reserveParams.birthDate} onChange={e => setReserveParams({ ...reserveParams, birthDate: e.target.value })} />
-                            </div>
-
-                            <div className="form-group">
-                              <label className="form-label">{lang === 'AZ' ? 'Hesabat Tarixi' : 'Valuation Date'}</label>
-                              <input type="date" className="input-field" value={reserveParams.valuationDate} onChange={e => setReserveParams({ ...reserveParams, valuationDate: e.target.value })} />
-                            </div>
+                          {/* Birth Date */}
+                          <div className="form-group">
+                            <label className="form-label">{lang === 'AZ' ? 'Doğum Tarixi' : 'Birth Date'}</label>
+                            <input type="date" className="input-field" value={reserveParams.birthDate} onChange={e => setReserveParams({ ...reserveParams, birthDate: e.target.value })} />
                           </div>
 
-                          {/* Dynamic Age Tag */}
-                          {reserveParams.birthDate && reserveParams.valuationDate && (
-                            <div className="info-chip">
-                              👤 {lang === 'AZ' ? 'Hesabat tarixində sığortalının yaşı:' : 'Insured age at valuation:'}{' '}
-                              <strong>
-                                {(() => {
-                                  const d1 = new Date(reserveParams.birthDate);
-                                  const d2 = new Date(reserveParams.valuationDate);
-                                  const diffMs = d2 - d1;
-                                  return diffMs > 0 ? (diffMs / (365.25 * 24 * 3600 * 1000)).toFixed(1) + (lang === 'AZ' ? ' yaş' : ' yrs') : '—';
-                                })()}
-                              </strong>
-                            </div>
-                          )}
-
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div className="form-group">
-                              <label className="form-label">{lang === 'AZ' ? 'Müqavilə Başlama' : 'Start Date'}</label>
-                              <input type="date" className="input-field" value={reserveParams.startDate} onChange={e => setReserveParams({ ...reserveParams, startDate: e.target.value })} />
-                            </div>
-
-                            <div className="form-group">
-                              <label className="form-label">{lang === 'AZ' ? 'Müqavilə Bitmə' : 'End Date'}</label>
-                              <input type="date" className="input-field" value={reserveParams.endDate} onChange={e => setReserveParams({ ...reserveParams, endDate: e.target.value })} />
-                            </div>
+                          {/* Valuation Date */}
+                          <div className="form-group">
+                            <label className="form-label">{lang === 'AZ' ? 'Hesabat Tarixi' : 'Valuation Date'}</label>
+                            <input type="date" className="input-field" value={reserveParams.valuationDate} onChange={e => setReserveParams({ ...reserveParams, valuationDate: e.target.value })} />
                           </div>
 
-                          {/* Term Presets & Helper */}
-                          <div>
-                            <div className="form-label-row">
-                              <span className="helper-badge">{lang === 'AZ' ? 'Müddət qısayolları:' : 'Quick Term:'}</span>
-                            </div>
-                            <div className="preset-pills">
-                              {[5, 10, 15, 20, 25, 30].map(years => {
-                                const start = new Date(reserveParams.startDate || '2025-01-01');
-                                const calcEnd = new Date(start);
-                                calcEnd.setFullYear(calcEnd.getFullYear() + years);
-                                const calcEndStr = calcEnd.toISOString().split('T')[0];
-                                const isActive = reserveParams.endDate === calcEndStr;
-                                return (
-                                  <button 
-                                    key={years} 
-                                    type="button" 
-                                    className={`preset-pill ${isActive ? 'active' : ''}`}
-                                    onClick={() => setReserveParams({ ...reserveParams, endDate: calcEndStr })}
-                                  >
-                                    +{years} {lang === 'AZ' ? 'il' : 'yrs'}
-                                  </button>
-                                );
-                              })}
-                            </div>
-
-                            {reserveParams.startDate && reserveParams.endDate && (
-                              <div className="info-chip">
-                                ⏳ {lang === 'AZ' ? 'Müqavilə Müddəti:' : 'Policy Duration:'}{' '}
-                                <strong>
-                                  {(() => {
-                                    const d1 = new Date(reserveParams.startDate);
-                                    const d2 = new Date(reserveParams.endDate);
-                                    const diffMs = d2 - d1;
-                                    const yrs = Math.round(diffMs / (365.25 * 24 * 3600 * 1000));
-                                    const mos = Math.round(diffMs / (30.4375 * 24 * 3600 * 1000));
-                                    return diffMs > 0 ? `${yrs} ${lang === 'AZ' ? 'il' : 'yrs'} (${mos} ${lang === 'AZ' ? 'ay' : 'months'})` : '—';
-                                  })()}
-                                </strong>
-                              </div>
-                            )}
+                          {/* Start Date */}
+                          <div className="form-group">
+                            <label className="form-label">{lang === 'AZ' ? 'Müqavilə Başlama Tarixi' : 'Start Date'}</label>
+                            <input type="date" className="input-field" value={reserveParams.startDate} onChange={e => setReserveParams({ ...reserveParams, startDate: e.target.value })} />
                           </div>
 
-                          {/* Sum Assured Input */}
+                          {/* End Date */}
+                          <div className="form-group">
+                            <label className="form-label">{lang === 'AZ' ? 'Müqavilə Bitmə Tarixi' : 'End Date'}</label>
+                            <input type="date" className="input-field" value={reserveParams.endDate} onChange={e => setReserveParams({ ...reserveParams, endDate: e.target.value })} />
+                          </div>
+
+                          {/* Sum Assured */}
                           <div className="form-group">
                             <div className="form-label-row">
                               <label className="form-label">{lang === 'AZ' ? 'Sığorta Məbləği' : 'Sum Assured'}</label>
@@ -1820,7 +1776,7 @@ const { useState, useEffect } = React;
                             </div>
                           </div>
 
-                          {/* Premium Input */}
+                          {/* Premium */}
                           <div className="form-group">
                             <div className="form-label-row">
                               <label className="form-label">
@@ -1842,6 +1798,15 @@ const { useState, useEffect } = React;
                             </div>
                           </div>
 
+                          {/* Technical Interest Rate */}
+                          <div className="form-group">
+                            <label className="form-label">{t.labelInterest}</label>
+                            <div className="input-group">
+                              <input type="number" step="0.01" className="input-field" value={globalInterestRate} onChange={e => setGlobalInterestRate(e.target.value)} />
+                              <span className="input-addon">%</span>
+                            </div>
+                          </div>
+
                           {/* Credit APR if applicable */}
                           {(reserveParams.policyType === 'life_death_single_payment' || reserveParams.policyType === 'life_death_m_payments') && (
                             <div className="form-group">
@@ -1852,96 +1817,144 @@ const { useState, useEffect } = React;
                               </div>
                             </div>
                           )}
+                        </div>
 
-                          {/* Technical Interest Rate */}
-                          <div className="form-group">
-                            <label className="form-label">{t.labelInterest}</label>
-                            <div className="input-group">
-                              <input type="number" step="0.01" className="input-field" value={globalInterestRate} onChange={e => setGlobalInterestRate(e.target.value)} />
-                              <span className="input-addon">%</span>
-                            </div>
+                        {/* Quick Term Shortcuts & Realtime Info Bar */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                          <div className="preset-pills" style={{ marginTop: 0 }}>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', alignSelf: 'center', marginRight: '0.3rem' }}>{lang === 'AZ' ? 'Müddət qısayolları:' : 'Quick Term:'}</span>
+                            {[5, 10, 15, 20, 25, 30].map(years => {
+                              const start = new Date(reserveParams.startDate || '2025-01-01');
+                              const calcEnd = new Date(start);
+                              calcEnd.setFullYear(calcEnd.getFullYear() + years);
+                              const calcEndStr = calcEnd.toISOString().split('T')[0];
+                              const isActive = reserveParams.endDate === calcEndStr;
+                              return (
+                                <button 
+                                  key={years} 
+                                  type="button" 
+                                  className={`preset-pill ${isActive ? 'active' : ''}`}
+                                  onClick={() => setReserveParams({ ...reserveParams, endDate: calcEndStr })}
+                                >
+                                  +{years} {lang === 'AZ' ? 'il' : 'yrs'}
+                                </button>
+                              );
+                            })}
                           </div>
 
-                          {/* Actuarial Constants Accordion / Section */}
-                          <details style={{ background: 'var(--bg-secondary)', borderRadius: '10px', border: '1px solid var(--border-color)', padding: '0.85rem 1rem' }}>
-                            <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', outline: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span>⚙️</span> {lang === 'AZ' ? 'Dərin Aktuar Sabitlər (Alpha, Beta, Margins)' : 'Advanced Actuarial Constants'}
-                            </summary>
-                            <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                              <div className="form-group">
-                                <label className="form-label" style={{ fontSize: '0.82rem' }}>{lang === 'AZ' ? 'Akvizisiya Xərcləri (α) (%)' : 'Acquisition Cost (alpha) (%)'}</label>
-                                <div className="input-group">
-                                  <input type="number" step="0.001" className="input-field" value={reserveParams.costAcquisitionInitial || 0} onChange={e => setReserveParams({ ...reserveParams, costAcquisitionInitial: e.target.value })} />
-                                  <span className="input-addon">%</span>
-                                </div>
-                              </div>
-
-                              <div className="form-group">
-                                <label className="form-label" style={{ fontSize: '0.82rem' }}>{lang === 'AZ' ? 'Dövrü Akvizisiya (β) (%)' : 'Renewal Acquisition (beta) (%)'}</label>
-                                <div className="input-group">
-                                  <input type="number" step="0.001" className="input-field" value={reserveParams.costAcquisition} onChange={e => setReserveParams({ ...reserveParams, costAcquisition: e.target.value })} />
-                                  <span className="input-addon">%</span>
-                                </div>
-                              </div>
-
-                              <div className="form-group">
-                                <label className="form-label" style={{ fontSize: '0.82rem' }}>{lang === 'AZ' ? 'İnzibati Xərclər (γ) (%)' : 'Maintenance Expense (gamma) (%)'}</label>
-                                <div className="input-group">
-                                  <input type="number" step="0.0001" className="input-field" value={reserveParams.expenseMaintenance} onChange={e => setReserveParams({ ...reserveParams, expenseMaintenance: e.target.value })} />
-                                  <span className="input-addon">%</span>
-                                </div>
-                              </div>
-
-                              <div className="form-group">
-                                <label className="form-label" style={{ fontSize: '0.82rem' }}>{lang === 'AZ' ? 'Ölüm Marjası (ρ₁)' : 'Mortality Margin (rho1)'}</label>
-                                <div className="input-group">
-                                  <input type="number" step="0.01" className="input-field" value={reserveParams.marginMortality} onChange={e => setReserveParams({ ...reserveParams, marginMortality: e.target.value })} />
-                                  <span className="input-addon">%</span>
-                                </div>
-                              </div>
-                              
-                              {(reserveParams.policyType === 'life_survival_m_payments' || reserveParams.policyType === 'life_survival_single_payment') && (
-                                <div className="form-group">
-                                  <label className="form-label" style={{ fontSize: '0.82rem' }}>{lang === 'AZ' ? 'İnvestisiya Marjası (ρ₂)' : 'Investment Margin (rho2)'}</label>
-                                  <div className="input-group">
-                                    <input type="number" step="0.01" className="input-field" value={reserveParams.marginInvestment} onChange={e => setReserveParams({ ...reserveParams, marginInvestment: e.target.value })} />
-                                    <span className="input-addon">%</span>
-                                  </div>
-                                </div>
-                              )}
-
-                              {(reserveParams.policyType !== 'life_death_single_payment' && reserveParams.policyType !== 'life_survival_single_payment') && (
-                                <div className="form-group">
-                                  <label className="form-label" style={{ fontSize: '0.82rem' }}>{lang === 'AZ' ? 'İldə Ödəniş Sayı (m)' : 'Payment Frequency (m)'}</label>
-                                  <div className="segmented-control">
-                                    {[
-                                      { label: lang === 'AZ' ? 'Aylıq (12)' : 'Monthly (12)', val: 12 },
-                                      { label: lang === 'AZ' ? 'Rüblük (4)' : 'Quarterly (4)', val: 4 },
-                                      { label: lang === 'AZ' ? 'Yarımillik (2)' : 'Semi-Annual (2)', val: 2 },
-                                      { label: lang === 'AZ' ? 'İllik (1)' : 'Annual (1)', val: 1 },
-                                    ].map(opt => (
-                                      <button 
-                                        key={opt.val} 
-                                        type="button" 
-                                        className={`segmented-option ${Number(reserveParams.paymentFrequency) === opt.val ? 'active' : ''}`}
-                                        onClick={() => setReserveParams({ ...reserveParams, paymentFrequency: opt.val })}
-                                      >
-                                        {opt.label}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
+                          {reserveParams.startDate && reserveParams.endDate && (
+                            <div className="info-chip">
+                              ⏳ {lang === 'AZ' ? 'Müqavilə Müddəti:' : 'Policy Duration:'}{' '}
+                              <strong>
+                                {(() => {
+                                  const d1 = new Date(reserveParams.startDate);
+                                  const d2 = new Date(reserveParams.endDate);
+                                  const diffMs = d2 - d1;
+                                  const yrs = Math.round(diffMs / (365.25 * 24 * 3600 * 1000));
+                                  const mos = Math.round(diffMs / (30.4375 * 24 * 3600 * 1000));
+                                  return diffMs > 0 ? `${yrs} ${lang === 'AZ' ? 'il' : 'yrs'} (${mos} ${lang === 'AZ' ? 'ay' : 'months'})` : '—';
+                                })()}
+                              </strong>
                             </div>
-                          </details>
+                          )}
 
+                          {reserveParams.birthDate && reserveParams.valuationDate && (
+                            <div className="info-chip">
+                              👤 {lang === 'AZ' ? 'Hesabat tarixində sığortalının yaşı:' : 'Age at valuation:'}{' '}
+                              <strong>
+                                {(() => {
+                                  const d1 = new Date(reserveParams.birthDate);
+                                  const d2 = new Date(reserveParams.valuationDate);
+                                  const diffMs = d2 - d1;
+                                  return diffMs > 0 ? (diffMs / (365.25 * 24 * 3600 * 1000)).toFixed(1) + (lang === 'AZ' ? ' yaş' : ' yrs') : '—';
+                                })()}
+                              </strong>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Collapsible Actuarial Constants */}
+                        <details style={{ background: 'var(--bg-secondary)', borderRadius: '10px', border: '1px solid var(--border-color)', padding: '0.85rem 1rem', marginTop: '1rem' }}>
+                          <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)', outline: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span>⚙️</span> {lang === 'AZ' ? 'Dərin Aktuar Sabitlər (Alpha, Beta, Margins, m-payments)' : 'Advanced Actuarial Constants'}
+                          </summary>
+                          <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                            <div className="form-group">
+                              <label className="form-label" style={{ fontSize: '0.82rem' }}>{lang === 'AZ' ? 'Akvizisiya Xərcləri (α) (%)' : 'Acquisition Cost (alpha) (%)'}</label>
+                              <div className="input-group">
+                                <input type="number" step="0.001" className="input-field" value={reserveParams.costAcquisitionInitial || 0} onChange={e => setReserveParams({ ...reserveParams, costAcquisitionInitial: e.target.value })} />
+                                <span className="input-addon">%</span>
+                              </div>
+                            </div>
+
+                            <div className="form-group">
+                              <label className="form-label" style={{ fontSize: '0.82rem' }}>{lang === 'AZ' ? 'Dövrü Akvizisiya (β) (%)' : 'Renewal Acquisition (beta) (%)'}</label>
+                              <div className="input-group">
+                                <input type="number" step="0.001" className="input-field" value={reserveParams.costAcquisition} onChange={e => setReserveParams({ ...reserveParams, costAcquisition: e.target.value })} />
+                                <span className="input-addon">%</span>
+                              </div>
+                            </div>
+
+                            <div className="form-group">
+                              <label className="form-label" style={{ fontSize: '0.82rem' }}>{lang === 'AZ' ? 'İnzibati Xərclər (γ) (%)' : 'Maintenance Expense (gamma) (%)'}</label>
+                              <div className="input-group">
+                                <input type="number" step="0.0001" className="input-field" value={reserveParams.expenseMaintenance} onChange={e => setReserveParams({ ...reserveParams, expenseMaintenance: e.target.value })} />
+                                <span className="input-addon">%</span>
+                              </div>
+                            </div>
+
+                            <div className="form-group">
+                              <label className="form-label" style={{ fontSize: '0.82rem' }}>{lang === 'AZ' ? 'Ölüm Marjası (ρ₁)' : 'Mortality Margin (rho1)'}</label>
+                              <div className="input-group">
+                                <input type="number" step="0.01" className="input-field" value={reserveParams.marginMortality} onChange={e => setReserveParams({ ...reserveParams, marginMortality: e.target.value })} />
+                                <span className="input-addon">%</span>
+                              </div>
+                            </div>
+                            
+                            {(reserveParams.policyType === 'life_survival_m_payments' || reserveParams.policyType === 'life_survival_single_payment') && (
+                              <div className="form-group">
+                                <label className="form-label" style={{ fontSize: '0.82rem' }}>{lang === 'AZ' ? 'İnvestisiya Marjası (ρ₂)' : 'Investment Margin (rho2)'}</label>
+                                <div className="input-group">
+                                  <input type="number" step="0.01" className="input-field" value={reserveParams.marginInvestment} onChange={e => setReserveParams({ ...reserveParams, marginInvestment: e.target.value })} />
+                                  <span className="input-addon">%</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {(reserveParams.policyType !== 'life_death_single_payment' && reserveParams.policyType !== 'life_survival_single_payment') && (
+                              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                <label className="form-label" style={{ fontSize: '0.82rem' }}>{lang === 'AZ' ? 'İldə Ödəniş Sayı (m)' : 'Payment Frequency (m)'}</label>
+                                <div className="segmented-control">
+                                  {[
+                                    { label: lang === 'AZ' ? 'Aylıq (12)' : 'Monthly (12)', val: 12 },
+                                    { label: lang === 'AZ' ? 'Rüblük (4)' : 'Quarterly (4)', val: 4 },
+                                    { label: lang === 'AZ' ? 'Yarımillik (2)' : 'Semi-Annual (2)', val: 2 },
+                                    { label: lang === 'AZ' ? 'İllik (1)' : 'Annual (1)', val: 1 },
+                                  ].map(opt => (
+                                    <button 
+                                      key={opt.val} 
+                                      type="button" 
+                                      className={`segmented-option ${Number(reserveParams.paymentFrequency) === opt.val ? 'active' : ''}`}
+                                      onClick={() => setReserveParams({ ...reserveParams, paymentFrequency: opt.val })}
+                                    >
+                                      {opt.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </details>
+
+                        <div style={{ marginTop: '1.25rem' }}>
                           <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '0.9rem', fontSize: '1.05rem', borderRadius: '10px' }} onClick={calculateReserve} disabled={isCalculating}>
-                            {isCalculating ? (lang === 'AZ' ? 'Hesablanır...' : 'Calculating...') : t.btnCalculateReserve}
+                            {isCalculating ? (lang === 'AZ' ? 'Hesablanır...' : 'Calculating...') : (lang === 'AZ' ? '⚡ Hesabla və Cədvəli Aşağıda Göstər' : '⚡ Calculate & View Results Below')}
                           </button>
                         </div>
                       </div>
 
-                      <div className="glass-card">
+                      {/* BOTTOM SECTION: CALCULATED RESULTS (FULL-WIDTH CARD) */}
+                      <div className="glass-card" style={{ width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                           <h3 style={{ fontSize: '1.2rem', margin: 0 }}>{t.reserveOutputTitle}</h3>
                           
