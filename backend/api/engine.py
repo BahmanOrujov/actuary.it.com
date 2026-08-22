@@ -1,4 +1,5 @@
 import os
+import calendar
 import pandas as pd
 import numpy as np
 from dateutil.relativedelta import relativedelta
@@ -431,6 +432,71 @@ def get_mortality_service():
         _mortality_service = MortalityService(csv_path)
     return _mortality_service
 
+def generate_monthly_schedule(cfg: ValuationParameters, policy: PolicyRecord) -> list:
+    """Generates mathematical reserve and components (SÖ, İAX, ZTX, SH, Ehtiyat) for the last day of every month from inception_date to maturity_date."""
+    schedule = []
+    start_date = policy.inception_date
+    end_date = policy.maturity_date
+    
+    cur_year = start_date.year
+    cur_month = start_date.month
+    
+    month_idx = 1
+    selected_val_date_str = cfg.valuation_date.strftime('%Y-%m-%d')
+    mortality_svc = get_mortality_service()
+    
+    while True:
+        last_day = calendar.monthrange(cur_year, cur_month)[1]
+        m_end_date = pd.Timestamp(year=cur_year, month=cur_month, day=last_day)
+        
+        if m_end_date > end_date and len(schedule) > 0:
+            break
+            
+        m_cfg = ValuationParameters(
+            valuation_date=m_end_date,
+            interest_rate_annual=cfg.interest_rate_annual,
+            expense_maintenance=cfg.expense_maintenance,
+            margin_mortality=cfg.margin_mortality,
+            margin_investment=cfg.margin_investment,
+            cost_acquisition_initial=cfg.cost_acquisition_initial,
+            cost_acquisition=cfg.cost_acquisition,
+            payment_frequency=cfg.payment_frequency,
+            default_policy_type=cfg.default_policy_type
+        )
+        
+        m_engine = ActuarialValuationEngine(m_cfg, mortality_svc)
+        m_res = m_engine.execute_valuation(policy)
+        
+        m_date_str = m_end_date.strftime('%Y-%m-%d')
+        is_selected = (
+            (m_end_date.year == cfg.valuation_date.year and m_end_date.month == cfg.valuation_date.month)
+            or (m_date_str == selected_val_date_str)
+        )
+        
+        schedule.append({
+            'month_index': month_idx,
+            'date': m_date_str,
+            'date_formatted': m_end_date.strftime('%d.%m.%Y'),
+            'is_selected': is_selected,
+            'liability_benefits': m_res.get('liability_benefits', 0.0),
+            'liability_expenses': m_res.get('liability_expenses', 0.0),
+            'liability_risk_margin': m_res.get('liability_risk_margin', 0.0),
+            'asset_premiums': m_res.get('asset_premiums', 0.0),
+            'net_mathematical_reserve': m_res.get('net_mathematical_reserve', 0.0),
+            'final_reserve': m_res.get('final_reserve', 0.0)
+        })
+        
+        if m_end_date >= end_date:
+            break
+            
+        month_idx += 1
+        cur_month += 1
+        if cur_month > 12:
+            cur_month = 1
+            cur_year += 1
+            
+    return schedule
+
 def evaluate_single_policy(params_data: dict, policy_data: dict) -> dict:
     """Entry point for Django view."""
     cfg = ValuationParameters(
@@ -457,5 +523,11 @@ def evaluate_single_policy(params_data: dict, policy_data: dict) -> dict:
     )
     
     engine = ActuarialValuationEngine(cfg, get_mortality_service())
-    return engine.execute_valuation(policy)
+    res = engine.execute_valuation(policy)
+    try:
+        res['monthly_schedule'] = generate_monthly_schedule(cfg, policy)
+    except Exception as e:
+        print(f"Error generating monthly schedule: {e}", flush=True)
+        res['monthly_schedule'] = []
+    return res
 

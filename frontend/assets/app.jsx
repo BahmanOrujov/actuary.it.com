@@ -132,6 +132,7 @@ const { useState, useEffect } = React;
       });
 
       const [reserveResult, setReserveResult] = useState(null);
+      const [reserveViewMode, setReserveViewMode] = useState('both'); // 'combinator', 'monthly', 'both'
 
       const [mortalityTable, setMortalityTable] = useState([]);
       const [globalInterestRate, setGlobalInterestRate] = useState(() => localStorage.getItem('arpp_globalInterestRate') || "5.0");
@@ -1759,153 +1760,256 @@ const { useState, useEffect } = React;
                       </div>
 
                       <div className="glass-card">
-                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>{t.reserveOutputTitle}</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                          <h3 style={{ fontSize: '1.2rem', margin: 0 }}>{t.reserveOutputTitle}</h3>
+                          
+                          {reserveResult && (
+                            <div className="preset-pills" style={{ marginTop: 0 }}>
+                              <button 
+                                type="button"
+                                className={`preset-pill ${reserveViewMode === 'both' ? 'active' : ''}`}
+                                onClick={() => setReserveViewMode('both')}
+                              >
+                                🔍 {lang === 'AZ' ? 'Hər İkisini Göstər' : 'Show Both'}
+                              </button>
+                              <button 
+                                type="button"
+                                className={`preset-pill ${reserveViewMode === 'combinator' ? 'active' : ''}`}
+                                onClick={() => setReserveViewMode('combinator')}
+                              >
+                                📊 {lang === 'AZ' ? 'Vuruqlar & Tək Tarix' : 'Commutation & Metrics'}
+                              </button>
+                              <button 
+                                type="button"
+                                className={`preset-pill ${reserveViewMode === 'monthly' ? 'active' : ''}`}
+                                onClick={() => setReserveViewMode('monthly')}
+                              >
+                                📅 {lang === 'AZ' ? 'Aylıq Ehtiyat Cədvəli' : 'Monthly Schedule'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
                         {reserveResult ? (
                           <div>
-                            <div style={{ marginTop: '1rem', marginBottom: '2rem' }}>
-                              <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{lang === 'AZ' ? 'Aktuar Mühərrik Göstəriciləri' : 'Actuarial Engine Metrics'}</h4>
-                              {reserveResult.engineData ? (
-                              <>
-                              <div className="commutation-grid">
-                                <div className="commutation-box" title={lang === 'AZ' ? 'Tam Yaş (İllik)' : 'Complete Age (Years)'}>
-                                  <div className="comm-label">{lang === 'AZ' ? 'Tam Yaş' : 'Age (years)'}</div>
-                                  <div className="comm-value">{reserveResult.engineData.age_years}</div>
-                                </div>
-                                <div className="commutation-box" title={lang === 'AZ' ? 'Yaş (Aylıq)' : 'Age (Monthly)'}>
-                                  <div className="comm-label">{lang === 'AZ' ? 'Yaş (ay)' : 'Age (months)'}</div>
-                                  <div className="comm-value">{reserveResult.engineData.age_months}</div>
-                                </div>
-                                <div className="commutation-box" title={lang === 'AZ' ? 'Aylıq Ölüm Ehtimalı' : 'Monthly Mortality Probability'}>
-                                  <div className="comm-label">{lang === 'AZ' ? 'qx (ay)' : 'qx (month)'}</div>
-                                  <div className="comm-value">{reserveResult.engineData.qx_monthly}</div>
-                                </div>
-                                <div className="commutation-box" title={lang === 'AZ' ? 'İllik Ölüm Ehtimalı' : 'Annual Mortality Probability'}>
-                                  <div className="comm-label">{lang === 'AZ' ? 'qx (il)' : 'qx (year)'}</div>
-                                  <div className="comm-value">{reserveResult.engineData.qx_annual}</div>
-                                </div>
-                                <div className="commutation-box" title="Dx[s] — başlama yaşında komutasiya">
-                                  <div className="comm-label">Dx</div>
-                                  <div className="comm-value">{reserveResult.engineData.Dx}</div>
-                                </div>
-                                <div className="commutation-box" title="Nx[s] — başlama yaşında komutasiya">
-                                  <div className="comm-label">Nx</div>
-                                  <div className="comm-value">{reserveResult.engineData.Nx}</div>
-                                </div>
-                                <div className="commutation-box" title="Cx[s] — başlama yaşında komutasiya">
-                                  <div className="comm-label">Cx</div>
-                                  <div className="comm-value">{reserveResult.engineData.Cx}</div>
-                                </div>
-                                <div className="commutation-box" title="Mx[s] — başlama yaşında komutasiya">
-                                  <div className="comm-label">Mx</div>
-                                  <div className="comm-value">{reserveResult.engineData.Mx}</div>
-                                </div>
-                                {reserveResult.engineData.Dx_e !== undefined && (
-                                  <div className="commutation-box" style={{ opacity: 0.75 }} title="Dx[e] — bitiş yaşında komutasiya (nEx = Dx[e]/Dx[s])">
-                                    <div className="comm-label">Dx<sub>(e)</sub></div>
-                                    <div className="comm-value">{reserveResult.engineData.Dx_e}</div>
+                            {/* SECTION 1: COMMUTATION & SINGLE DATE METRICS */}
+                            {(reserveViewMode === 'combinator' || reserveViewMode === 'both') && (
+                              <div style={{ marginTop: '1rem', marginBottom: '2rem' }}>
+                                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{lang === 'AZ' ? 'Aktuar Mühərrik Göstəriciləri (Seçilmiş Hesabat Tarixi Üçün)' : 'Actuarial Engine Metrics (Selected Valuation Date)'}</h4>
+                                {reserveResult.engineData ? (
+                                <>
+                                <div className="commutation-grid">
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'Tam Yaş (İllik)' : 'Complete Age (Years)'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'Tam Yaş' : 'Age (years)'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.age_years}</div>
                                   </div>
-                                )}
-                                {reserveResult.engineData.Nx_e !== undefined && (
-                                  <div className="commutation-box" style={{ opacity: 0.75 }} title="Nx[e] — bitiş yaşında komutasiya (axn = (Nx[s]-Nx[e])/Dx[s])">
-                                    <div className="comm-label">Nx<sub>(e)</sub></div>
-                                    <div className="comm-value">{reserveResult.engineData.Nx_e}</div>
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'Yaş (Aylıq)' : 'Age (Monthly)'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'Yaş (ay)' : 'Age (months)'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.age_months}</div>
                                   </div>
-                                )}
-                                {reserveResult.engineData.Cx_e !== undefined && (
-                                  <div className="commutation-box" style={{ opacity: 0.75 }} title="Cx[e] — bitiş yaşında komutasiya">
-                                    <div className="comm-label">Cx<sub>(e)</sub></div>
-                                    <div className="comm-value">{reserveResult.engineData.Cx_e}</div>
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'Aylıq Ölüm Ehtimalı' : 'Monthly Mortality Probability'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'qx (ay)' : 'qx (month)'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.qx_monthly}</div>
                                   </div>
-                                )}
-                                {reserveResult.engineData.Mx_e !== undefined && (
-                                  <div className="commutation-box" style={{ opacity: 0.75 }} title="Mx[e] — bitiş yaşında komutasiya (Axn = (Mx[s]-Mx[e])/Dx[s])">
-                                    <div className="comm-label">Mx<sub>(e)</sub></div>
-                                    <div className="comm-value">{reserveResult.engineData.Mx_e}</div>
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'İllik Ölüm Ehtimalı' : 'Annual Mortality Probability'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'qx (il)' : 'qx (year)'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.qx_annual}</div>
                                   </div>
-                                )}
-                                {reserveResult.engineData.Axn !== undefined && (
-                                  <div className="commutation-box" title="Ax:n">
-                                    <div className="comm-label">Ax:n</div>
-                                    <div className="comm-value">{reserveResult.engineData.Axn}</div>
+                                  <div className="commutation-box" title="Dx[s] — başlama yaşında komutasiya">
+                                    <div className="comm-label">Dx</div>
+                                    <div className="comm-value">{reserveResult.engineData.Dx}</div>
                                   </div>
-                                )}
-                                {reserveResult.engineData.nEx !== undefined && (
-                                  <div className="commutation-box" title="nEx">
-                                    <div className="comm-label">nEx</div>
-                                    <div className="comm-value">{reserveResult.engineData.nEx}</div>
+                                  <div className="commutation-box" title="Nx[s] — başlama yaşında komutasiya">
+                                    <div className="comm-label">Nx</div>
+                                    <div className="comm-value">{reserveResult.engineData.Nx}</div>
                                   </div>
-                                )}
-                                {reserveResult.engineData.axn !== undefined && (
-                                  <div className="commutation-box" title="ax:n">
-                                    <div className="comm-label">ax:n</div>
-                                    <div className="comm-value">{reserveResult.engineData.axn}</div>
+                                  <div className="commutation-box" title="Cx[s] — başlama yaşında komutasiya">
+                                    <div className="comm-label">Cx</div>
+                                    <div className="comm-value">{reserveResult.engineData.Cx}</div>
                                   </div>
-                                )}
-                                <div className="commutation-box" title={lang === 'AZ' ? 'Sığorta ödənişləri' : 'Liability Benefits'}>
-                                  <div className="comm-label">{lang === 'AZ' ? 'SÖ (Sığorta ödənişləri)' : 'LB (Liability Benefits)'}</div>
-                                  <div className="comm-value">{reserveResult.engineData.liability_benefits}</div>
+                                  <div className="commutation-box" title="Mx[s] — başlama yaşında komutasiya">
+                                    <div className="comm-label">Mx</div>
+                                    <div className="comm-value">{reserveResult.engineData.Mx}</div>
+                                  </div>
+                                  {reserveResult.engineData.Dx_e !== undefined && (
+                                    <div className="commutation-box" style={{ opacity: 0.75 }} title="Dx[e] — bitiş yaşında komutasiya (nEx = Dx[e]/Dx[s])">
+                                      <div className="comm-label">Dx<sub>(e)</sub></div>
+                                      <div className="comm-value">{reserveResult.engineData.Dx_e}</div>
+                                    </div>
+                                  )}
+                                  {reserveResult.engineData.Nx_e !== undefined && (
+                                    <div className="commutation-box" style={{ opacity: 0.75 }} title="Nx[e] — bitiş yaşında komutasiya (axn = (Nx[s]-Nx[e])/Dx[s])">
+                                      <div className="comm-label">Nx<sub>(e)</sub></div>
+                                      <div className="comm-value">{reserveResult.engineData.Nx_e}</div>
+                                    </div>
+                                  )}
+                                  {reserveResult.engineData.Cx_e !== undefined && (
+                                    <div className="commutation-box" style={{ opacity: 0.75 }} title="Cx[e] — bitiş yaşında komutasiya">
+                                      <div className="comm-label">Cx<sub>(e)</sub></div>
+                                      <div className="comm-value">{reserveResult.engineData.Cx_e}</div>
+                                    </div>
+                                  )}
+                                  {reserveResult.engineData.Mx_e !== undefined && (
+                                    <div className="commutation-box" style={{ opacity: 0.75 }} title="Mx[e] — bitiş yaşında komutasiya (Axn = (Mx[s]-Mx[e])/Dx[s])">
+                                      <div className="comm-label">Mx<sub>(e)</sub></div>
+                                      <div className="comm-value">{reserveResult.engineData.Mx_e}</div>
+                                    </div>
+                                  )}
+                                  {reserveResult.engineData.Axn !== undefined && (
+                                    <div className="commutation-box" title="Ax:n">
+                                      <div className="comm-label">Ax:n</div>
+                                      <div className="comm-value">{reserveResult.engineData.Axn}</div>
+                                    </div>
+                                  )}
+                                  {reserveResult.engineData.nEx !== undefined && (
+                                    <div className="commutation-box" title="nEx">
+                                      <div className="comm-label">nEx</div>
+                                      <div className="comm-value">{reserveResult.engineData.nEx}</div>
+                                    </div>
+                                  )}
+                                  {reserveResult.engineData.axn !== undefined && (
+                                    <div className="commutation-box" title="ax:n">
+                                      <div className="comm-label">ax:n</div>
+                                      <div className="comm-value">{reserveResult.engineData.axn}</div>
+                                    </div>
+                                  )}
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'Sığorta ödənişləri' : 'Liability Benefits'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'SÖ (Sığorta ödənişləri)' : 'LB (Liability Benefits)'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.liability_benefits}</div>
+                                  </div>
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'Zərərlərin tənzimləmə xərcləri' : 'Loss Adjustment Expenses'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'ZTX (Zərərlərin tənzimləmə x. )' : 'LAE (Loss Adjustment Expenses)'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.liability_risk_margin}</div>
+                                  </div>
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'İnzibati və Administrativ xərclər' : 'Administrative Expenses'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'İAX (İnzibati və Adm. x. )' : 'AE (Administrative Expenses)'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.liability_expenses}</div>
+                                  </div>
+                                  <div className="commutation-box" title={lang === 'AZ' ? 'Sığorta haqları' : 'Asset Premiums'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'SH (Sığorta haqları)' : 'AP (Asset Premiums)'}</div>
+                                    <div className="comm-value">{reserveResult.engineData.asset_premiums}</div>
+                                  </div>
+                                  {reserveResult.engineData.active_sum_insured !== undefined && (
+                                    <div className="commutation-box" title={lang === 'AZ' ? 'Sığorta məbləği' : 'Sum Assured'}>
+                                      <div className="comm-label">{lang === 'AZ' ? 'S (Sığorta məbləği)' : 'S (Sum Assured)'}</div>
+                                      <div className="comm-value">{reserveResult.engineData.active_sum_insured}</div>
+                                    </div>
+                                  )}
+                                  <div className="commutation-box" style={{ gridColumn: 'span 2', background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.3)' }} title={lang === 'AZ' ? 'Uzunmüddətli öhdəliklər ehtiyatı (Riyazi ehtiyat)' : 'Reserve for Long-Term Liabilities (Mathematical Reserve)'}>
+                                    <div className="comm-label">{lang === 'AZ' ? 'Uzunmüddətli öhdəliklər ehtiyatı (Riyazi ehtiyat)' : 'Reserve for Long-Term Liabilities (Mathematical Reserve)'}</div>
+                                    <div className="comm-value" style={{ color: 'var(--color-primary)' }}>{reserveResult.engineData.final_reserve || reserveResult.engineData.net_mathematical_reserve}</div>
+                                  </div>
                                 </div>
-                                <div className="commutation-box" title={lang === 'AZ' ? 'Zərərlərin tənzimləmə xərcləri' : 'Loss Adjustment Expenses'}>
-                                  <div className="comm-label">{lang === 'AZ' ? 'ZTX (Zərərlərin tənzimləmə x. )' : 'LAE (Loss Adjustment Expenses)'}</div>
-                                  <div className="comm-value">{reserveResult.engineData.liability_risk_margin}</div>
-                                </div>
-                                <div className="commutation-box" title={lang === 'AZ' ? 'İnzibati və Administrativ xərclər' : 'Administrative Expenses'}>
-                                  <div className="comm-label">{lang === 'AZ' ? 'İAX (İnzibati və Adm. x. )' : 'AE (Administrative Expenses)'}</div>
-                                  <div className="comm-value">{reserveResult.engineData.liability_expenses}</div>
-                                </div>
-                                <div className="commutation-box" title={lang === 'AZ' ? 'Sığorta haqları' : 'Asset Premiums'}>
-                                  <div className="comm-label">{lang === 'AZ' ? 'SH (Sığorta haqları)' : 'AP (Asset Premiums)'}</div>
-                                  <div className="comm-value">{reserveResult.engineData.asset_premiums}</div>
-                                </div>
-                                {reserveResult.engineData.active_sum_insured !== undefined && (
-                                  <div className="commutation-box" title={lang === 'AZ' ? 'Sığorta məbləği' : 'Sum Assured'}>
-                                    <div className="comm-label">{lang === 'AZ' ? 'S (Sığorta məbləği)' : 'S (Sum Assured)'}</div>
-                                    <div className="comm-value">{reserveResult.engineData.active_sum_insured}</div>
+                                <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+                                  <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                                    {lang === 'AZ' ? 'Hesablama üçün gərəkli müqavilə və yaş məlumatları (aylarla):' : 'Required contract & age details for calculation (months):'}
+                                  </h4>
+                                  <div className="commutation-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.5rem' }}>
+                                    <div className="commutation-box" title={lang === 'AZ' ? 'Müqavilə başlayanda sığortalının yaşı (ay)' : 'Insured age at contract start (months)'}>
+                                      <div className="comm-label">{lang === 'AZ' ? 'Müqavilə Başlayanda Yaş' : 'Age at Inception'}</div>
+                                      <div className="comm-value">{reserveResult.engineData.age_inception_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                    </div>
+                                    <div className="commutation-box" title={lang === 'AZ' ? 'Hesabat tarixində sığortalının yaşı (ay)' : 'Insured age at valuation date (months)'}>
+                                      <div className="comm-label">{lang === 'AZ' ? 'Hesabat Tarixində Yaş' : 'Age at Valuation'}</div>
+                                      <div className="comm-value">{reserveResult.engineData.age_valuation_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                    </div>
+                                    <div className="commutation-box" title={lang === 'AZ' ? 'Müqavilə bitəndə sığortalının yaşı (ay)' : 'Insured age at contract end (months)'}>
+                                      <div className="comm-label">{lang === 'AZ' ? 'Müqavilə Bitəndə Yaş' : 'Age at Maturity'}</div>
+                                      <div className="comm-value">{reserveResult.engineData.age_maturity_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                    </div>
+                                    <div className="commutation-box" title={lang === 'AZ' ? 'Müqavilənin ümumi müddəti (ay)' : 'Total duration of the contract (months)'}>
+                                      <div className="comm-label">{lang === 'AZ' ? 'Müqavilə Müddəti' : 'Contract Term'}</div>
+                                      <div className="comm-value">{reserveResult.engineData.contract_term_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                    </div>
+                                    <div className="commutation-box" title={lang === 'AZ' ? 'Keçən müddət (ay)' : 'Elapsed months since inception'}>
+                                      <div className="comm-label">{lang === 'AZ' ? 'Keçən Müddət (ay)' : 'Elapsed Months'}</div>
+                                      <div className="comm-value">{reserveResult.engineData.elapsed_months_since_inception} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                    </div>
+                                    <div className="commutation-box" title={lang === 'AZ' ? 'Qalan müddət (ay)' : 'Remaining months to maturity'}>
+                                      <div className="comm-label">{lang === 'AZ' ? 'Qalan Müddət (ay)' : 'Remaining Months'}</div>
+                                      <div className="comm-value">{reserveResult.engineData.remaining_term_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
+                                    </div>
                                   </div>
-                                )}
-                                <div className="commutation-box" style={{ gridColumn: 'span 2', background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.3)' }} title={lang === 'AZ' ? 'Uzunmüddətli öhdəliklər ehtiyatı (Riyazi ehtiyat)' : 'Reserve for Long-Term Liabilities (Mathematical Reserve)'}>
-                                  <div className="comm-label">{lang === 'AZ' ? 'Uzunmüddətli öhdəliklər ehtiyatı (Riyazi ehtiyat)' : 'Reserve for Long-Term Liabilities (Mathematical Reserve)'}</div>
-                                  <div className="comm-value" style={{ color: 'var(--color-primary)' }}>{reserveResult.engineData.final_reserve || reserveResult.engineData.net_mathematical_reserve}</div>
                                 </div>
+                                </>
+                                ) : (
+                                  <div style={{ color: 'var(--text-muted)' }}>{lang === 'AZ' ? 'Məlumat yoxdur' : 'No data available'}</div>
+                                )}
                               </div>
-                              <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
-                                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                                  {lang === 'AZ' ? 'Hesablama üçün gərəkli müqavilə və yaş məlumatları (aylarla):' : 'Required contract & age details for calculation (months):'}
-                                </h4>
-                                <div className="commutation-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.5rem' }}>
-                                  <div className="commutation-box" title={lang === 'AZ' ? 'Müqavilə başlayanda sığortalının yaşı (ay)' : 'Insured age at contract start (months)'}>
-                                    <div className="comm-label">{lang === 'AZ' ? 'Müqavilə Başlayanda Yaş' : 'Age at Inception'}</div>
-                                    <div className="comm-value">{reserveResult.engineData.age_inception_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
-                                  </div>
-                                  <div className="commutation-box" title={lang === 'AZ' ? 'Hesabat tarixində sığortalının yaşı (ay)' : 'Insured age at valuation date (months)'}>
-                                    <div className="comm-label">{lang === 'AZ' ? 'Hesabat Tarixində Yaş' : 'Age at Valuation'}</div>
-                                    <div className="comm-value">{reserveResult.engineData.age_valuation_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
-                                  </div>
-                                  <div className="commutation-box" title={lang === 'AZ' ? 'Müqavilə bitəndə sığortalının yaşı (ay)' : 'Insured age at contract end (months)'}>
-                                    <div className="comm-label">{lang === 'AZ' ? 'Müqavilə Bitəndə Yaş' : 'Age at Maturity'}</div>
-                                    <div className="comm-value">{reserveResult.engineData.age_maturity_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
-                                  </div>
-                                  <div className="commutation-box" title={lang === 'AZ' ? 'Müqavilənin ümumi müddəti (ay)' : 'Total duration of the contract (months)'}>
-                                    <div className="comm-label">{lang === 'AZ' ? 'Müqavilə Müddəti' : 'Contract Term'}</div>
-                                    <div className="comm-value">{reserveResult.engineData.contract_term_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
-                                  </div>
-                                  <div className="commutation-box" title={lang === 'AZ' ? 'Keçən müddət (ay)' : 'Elapsed months since inception'}>
-                                    <div className="comm-label">{lang === 'AZ' ? 'Keçən Müddət (ay)' : 'Elapsed Months'}</div>
-                                    <div className="comm-value">{reserveResult.engineData.elapsed_months_since_inception} {lang === 'AZ' ? 'ay' : 'mo'}</div>
-                                  </div>
-                                  <div className="commutation-box" title={lang === 'AZ' ? 'Qalan müddət (ay)' : 'Remaining months to maturity'}>
-                                    <div className="comm-label">{lang === 'AZ' ? 'Qalan Müddət (ay)' : 'Remaining Months'}</div>
-                                    <div className="comm-value">{reserveResult.engineData.remaining_term_months} {lang === 'AZ' ? 'ay' : 'mo'}</div>
-                                  </div>
+                            )}
+
+                            {/* SECTION 2: MONTHLY SCHEDULE TABLE */}
+                            {(reserveViewMode === 'monthly' || reserveViewMode === 'both') && (
+                              <div style={{ marginTop: reserveViewMode === 'both' ? '2rem' : '1rem', borderTop: reserveViewMode === 'both' ? '1px solid var(--border-color)' : 'none', paddingTop: reserveViewMode === 'both' ? '1.5rem' : '0' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                  <h4 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    📅 {lang === 'AZ' ? 'Aylıq Riyazi Ehtiyat Cədvəli (Hər Ayın Sonu)' : 'Monthly Mathematical Reserve Schedule'}
+                                  </h4>
+                                  <span style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem', borderRadius: '12px', background: 'rgba(234, 179, 8, 0.15)', color: '#f59e0b', border: '1px solid rgba(234, 179, 8, 0.3)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                                    ⭐ {lang === 'AZ' ? 'Qızılı haşiyəli sətir daxil edilmiş Hesabat Tarixini təmsil edir' : 'Highlighted row represents the entered Valuation Date'}
+                                  </span>
                                 </div>
+
+                                {reserveResult.engineData && (reserveResult.engineData.monthly_schedule && reserveResult.engineData.monthly_schedule.length > 0) ? (
+                                  <div style={{ overflowX: 'auto', maxHeight: '550px', overflowY: 'auto', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.15)' }}>
+                                    <table className="custom-table" style={{ width: '100%', fontSize: '0.85rem', textAlign: 'right', borderCollapse: 'collapse' }}>
+                                      <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-glass)', backdropFilter: 'blur(10px)', zIndex: 5 }}>
+                                        <tr>
+                                          <th style={{ textAlign: 'center', padding: '0.75rem 0.5rem' }}>Ay №</th>
+                                          <th style={{ textAlign: 'center', padding: '0.75rem 0.5rem' }}>{lang === 'AZ' ? 'Hesabat Tarixi (Ayın Sonu)' : 'Valuation Date'}</th>
+                                          <th style={{ padding: '0.75rem 0.5rem' }}>{lang === 'AZ' ? 'SÖ (Sığorta Ödənişləri)' : 'Liability Benefits'}</th>
+                                          <th style={{ padding: '0.75rem 0.5rem' }}>{lang === 'AZ' ? 'İAX (İnzibati X.)' : 'Admin Expenses'}</th>
+                                          <th style={{ padding: '0.75rem 0.5rem' }}>{lang === 'AZ' ? 'ZTX (Zərərlərin Tənz. X.)' : 'Risk Margin'}</th>
+                                          <th style={{ padding: '0.75rem 0.5rem' }}>{lang === 'AZ' ? 'SH (Sığorta Haqları)' : 'Asset Premiums'}</th>
+                                          <th style={{ padding: '0.75rem 0.5rem', color: 'var(--color-primary)', fontWeight: 'bold' }}>{lang === 'AZ' ? 'Riyazi Ehtiyat' : 'Mathematical Reserve'}</th>
+                                          <th style={{ textAlign: 'center', padding: '0.75rem 0.5rem' }}>{lang === 'AZ' ? 'Status' : 'Status'}</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {reserveResult.engineData.monthly_schedule.map((row, idx) => {
+                                          const isSel = row.is_selected;
+                                          return (
+                                            <tr 
+                                              key={idx} 
+                                              style={{ 
+                                                background: isSel ? 'rgba(234, 179, 8, 0.12)' : (idx % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent'),
+                                                borderLeft: isSel ? '4px solid #eab308' : 'none',
+                                                fontWeight: isSel ? 'bold' : 'normal'
+                                              }}
+                                            >
+                                              <td style={{ textAlign: 'center', padding: '0.6rem 0.5rem' }}>{row.month_index}</td>
+                                              <td style={{ textAlign: 'center', padding: '0.6rem 0.5rem' }}>
+                                                {row.date_formatted || row.date}
+                                              </td>
+                                              <td style={{ padding: '0.6rem 0.5rem' }}>{Number(row.liability_benefits || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼</td>
+                                              <td style={{ padding: '0.6rem 0.5rem' }}>{Number(row.liability_expenses || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼</td>
+                                              <td style={{ padding: '0.6rem 0.5rem' }}>{Number(row.liability_risk_margin || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼</td>
+                                              <td style={{ padding: '0.6rem 0.5rem' }}>{Number(row.asset_premiums || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼</td>
+                                              <td style={{ padding: '0.6rem 0.5rem', color: isSel ? '#f59e0b' : 'var(--color-primary)', fontWeight: 'bold' }}>
+                                                {Number(row.final_reserve || row.net_mathematical_reserve || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼
+                                              </td>
+                                              <td style={{ textAlign: 'center', padding: '0.6rem 0.5rem' }}>
+                                                {isSel ? (
+                                                  <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.25)', color: '#f59e0b', border: '1px solid rgba(234, 179, 8, 0.5)', fontSize: '0.75rem', padding: '0.2rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                                                    ⭐ {lang === 'AZ' ? 'Hesabat Tarixi' : 'Valuation Date'}
+                                                  </span>
+                                                ) : (
+                                                  <span style={{ opacity: 0.3, fontSize: '0.75rem' }}>—</span>
+                                                )}
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                ) : (
+                                  <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>
+                                    {lang === 'AZ' ? 'Aylıq cədvəl üçün hesablama aparılır...' : 'Monthly schedule data loading...'}
+                                  </div>
+                                )}
                               </div>
-                              </>
-                              ) : (
-                                <div style={{ color: 'var(--text-muted)' }}>{lang === 'AZ' ? 'Məlumat yoxdur' : 'No data available'}</div>
-                              )}
-                            </div>
-
-
+                            )}
                           </div>
                         ) : (
                           <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)' }}>
