@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Any, Callable
 
 import numpy as np
@@ -9,12 +10,39 @@ import pandas as pd
 from scipy import stats
 
 from risk.dcc import _q_to_r, sym_sqrt
-from risk.engine import fit_system
+from risk.engine import capm_drift, fit_system
 from risk.garch import SQRT_2_PI, AssetModel
 from risk.simulate import simulate_paths
 from validation import stat_tests as st
 
 log = logging.getLogger(__name__)
+
+# Part of the validation cache key: bump when the backtest changes what it measures, so results computed by
+# older code are not reused for new runs. 2: forecasts use the production CAPM drift (was the sample mean).
+VALIDATION_VERSION = 2
+
+
+@dataclass
+class DriftInputs:
+    """What Generate uses for the CAPM drift, supplied to the backtest point-in-time.
+
+    market: daily log returns of the CAPM market index; rf: annual rate, constant or a daily series (read
+    as of each origin); mrp: annual market risk premium. None everywhere means zero expected return."""
+    market: pd.Series | None = None
+    rf: float | pd.Series = 0.0
+    mrp: float = 0.0
+
+
+def _origin_drift(win: pd.DataFrame, models: list[AssetModel], drift: DriftInputs, origin: pd.Timestamp) -> np.ndarray:
+    """Production drift as it would have been computed at the origin: no data after the origin is used."""
+    mret = drift.market.loc[:origin] if drift.market is not None else None
+    if isinstance(drift.rf, pd.Series):
+        past = drift.rf.loc[:origin]
+        rf = float(past.iloc[-1]) if len(past) else float(drift.rf.iloc[0])
+    else:
+        rf = float(drift.rf)
+    mu, _ = capm_drift(win, mret, rf, drift.mrp, models)
+    return mu
 
 
 def _advance_state(models: list[AssetModel], corr, r_new: np.ndarray, s2: np.ndarray, Q: np.ndarray | None):
@@ -36,8 +64,10 @@ def _advance_state(models: list[AssetModel], corr, r_new: np.ndarray, s2: np.nda
     return np.maximum(nxt, 1e-12), Q
 
 
-def _one_step_sample(models, corr, pool_u, s2, Q, M, rng) -> np.ndarray:
-    """M x N one-step-ahead return draws (unscaled log returns) from the filtered state."""
+def _one_step_sample(models, corr, pool_u, s2, Q, M, rng, mu_daily: np.ndarray) -> np.ndarray:
+    """M x N one-step-ahead return draws (unscaled log returns) from the filtered state.
+
+    As in simulate_paths: the (centred) shock pool gives the spread, mu_daily (CAPM) the drift."""
     u = pool_u[rng.integers(0, len(pool_u), M)]
     if len(models) > 1:
         R = _q_to_r(Q) if corr.kind == "DCC" else corr.Qbar
@@ -45,8 +75,7 @@ def _one_step_sample(models, corr, pool_u, s2, Q, M, rng) -> np.ndarray:
     else:
         z = u
     scale = np.array([m.scale for m in models])
-    mus = np.array([m.mu for m in models])
-    return (mus + np.sqrt(s2) * z) / scale
+    return mu_daily + np.sqrt(s2) * z / scale
 
 
 class HAR:
@@ -91,8 +120,11 @@ def _kde_logscore(sample: np.ndarray, y: float) -> float | None:
 
 
 def run_backtest(R_full: pd.DataFrame, qty: np.ndarray, price_last: pd.Series, cfg: dict[str, Any],
-                 seed: int, progress: Callable[[float], None] | None = None) -> dict[str, Any]:
-    """R_full: aligned log returns (base ccy, no gaps). qty: holdings used as a hypothetical constant portfolio."""
+                 seed: int, progress: Callable[[float], None] | None = None,
+                 drift: DriftInputs | None = None) -> dict[str, Any]:
+    """R_full: aligned log returns (base ccy, no gaps). qty: holdings used as a hypothetical constant portfolio.
+    drift: the CAPM inputs of Generate; without them the forecasts assume zero expected return."""
+    drift = drift or DriftInputs()
     vc = cfg["validation"]
     alpha = vc["alpha"]
     est_years = cfg["data"]["estimation_window_years"]
@@ -127,9 +159,11 @@ def run_backtest(R_full: pd.DataFrame, qty: np.ndarray, price_last: pd.Series, c
         win = R_full.loc[o - pd.DateOffset(years=est_years):o]
         fs = fit_system(win, cfg, full=False)
         models, corr = fs.models, fs.corr
+        mu_d = _origin_drift(win, models, drift, o)
         specs_used.append({"origin": str(o.date()), "specs": {m.symbol: f"{m.kind}-{m.dist}" for m in models},
                            "corr": corr.kind,
-                           "breaks_applied": [b["symbol"] for b in fs.info.get("breaks", []) if b.get("applied")]})
+                           "breaks_applied": [b["symbol"] for b in fs.info.get("breaks", []) if b.get("applied")],
+                           "drift_annual": {m.symbol: round(float(mu_d[i]) * 252, 4) for i, m in enumerate(models)}})
         har = HAR(port_r.loc[win.index].dropna().to_numpy(), tuple(vc["har_lags"]))
         nxt_o = origins[k + 1] if k + 1 < len(origins) else R_full.index[-1]
         test_days = R_full.loc[o:nxt_o].index[1:]
@@ -141,7 +175,7 @@ def run_backtest(R_full: pd.DataFrame, qty: np.ndarray, price_last: pd.Series, c
             prev = R_full.index[pos - 1]
             w = qty * px.loc[prev].to_numpy()
             w = w / w.sum()
-            sample = _one_step_sample(models, corr, fs.pool_u, s2, Q, M, rng)
+            sample = _one_step_sample(models, corr, fs.pool_u, s2, Q, M, rng, mu_d)
             port = np.log(np.exp(sample) @ w)
             realized_vec = R_full.loc[d].to_numpy()
             y = float(port_r.loc[d])
@@ -179,9 +213,10 @@ def run_backtest(R_full: pd.DataFrame, qty: np.ndarray, price_last: pd.Series, c
             })
             pred.append(port.astype(np.float32))
             for i, m in enumerate(models):
-                qz95, qz99 = np.quantile(m.z, [0.05, 0.01])
-                v95 = -(m.mu + np.sqrt(s2[i]) * qz95) / m.scale
-                v99 = -(m.mu + np.sqrt(s2[i]) * qz99) / m.scale
+                # centred standardized residuals, as in the simulation pool: the drift comes from mu_d only
+                qz95, qz99 = np.quantile(m.z - m.z.mean(), [0.05, 0.01])
+                v95 = -(mu_d[i] + np.sqrt(s2[i]) * qz95 / m.scale)
+                v99 = -(mu_d[i] + np.sqrt(s2[i]) * qz99 / m.scale)
                 asset_hits[m.symbol].append((int(-realized_vec[i] > v95), int(-realized_vec[i] > v99)))
             s2, Q = _advance_state(models, corr, realized_vec, s2, Q)
         # 63-day distribution from the origin: portfolio and each instrument
@@ -191,11 +226,10 @@ def run_backtest(R_full: pd.DataFrame, qty: np.ndarray, price_last: pd.Series, c
             w0 = qty * px.loc[o].to_numpy()
             V0 = w0.sum()
             realized = float((np.exp(fut.sum(axis=0)) * w0).sum() / V0 - 1)
-            mu0 = np.array([m.mu / m.scale for m in models])
             res = {}
             sims_pu = None
             for pu in (True, False):
-                sim = simulate_paths(models, corr, fs.pool_u, mu0, H, vc["backtest_scenarios"],
+                sim = simulate_paths(models, corr, fs.pool_u, mu_d, H, vc["backtest_scenarios"],
                                      cfg["model"]["param_sets"], np.random.default_rng(seed + k), param_uncertainty=pu)
                 if pu:
                     sims_pu = sim.log_returns.sum(axis=1)  # S x N cumulative log returns per instrument

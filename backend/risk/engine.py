@@ -233,6 +233,26 @@ def _market_returns(md: MarketData, ticker: str, ccy_fx: pd.Series | float) -> p
         return None
 
 
+def drift_index(cfg: dict[str, Any], positions: list[dict[str, Any]]) -> tuple[str, str]:
+    """Main exchange by market value and its market index ticker (the CAPM market)."""
+    weights_ex: dict[str, float] = {}
+    for p in positions:
+        weights_ex[p["exchange"]] = weights_ex.get(p["exchange"], 0) + p["market_value_base"]
+    main_ex = max(weights_ex, key=weights_ex.get)
+    return main_ex, cfg["data"]["market_index"].get(main_ex, "^GSPC")
+
+
+def capm_drift(R: pd.DataFrame, mret: pd.Series | None, rf: float, mrp: float,
+               models: list[AssetModel]) -> tuple[np.ndarray, list[float]]:
+    """Daily log-return drift per instrument: (rf + beta * MRP) / 252 - sigma_bar^2 / 2.
+
+    Used by Generate and by the backtest, so the validation tests the drift the client actually sees.
+    Betas are estimated on R (the estimation window only, in the backtest)."""
+    betas = [capm_beta(R[m.symbol], mret)[0] if mret is not None else 1.0 for m in models]
+    s2bar = np.array([m.long_run_var / m.scale ** 2 for m in models])
+    return (rf + np.array(betas) * mrp) / 252 - 0.5 * s2bar, betas
+
+
 def prepare_returns(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any], symbols: list[str],
                     base: str, admin: dict[str, Any], truncate: bool = True) -> tuple[pd.DataFrame, dict[str, pd.Series]]:
     """Aligned daily log-returns in base currency; union calendar with forward-filled prices.
@@ -354,22 +374,13 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
 
     # drift (CAPM) and zero-drift sensitivity
     mv0 = np.array([p["market_value_base"] for p in positions])
-    weights_ex: dict[str, float] = {}
-    for p in positions:
-        weights_ex[p["exchange"]] = weights_ex.get(p["exchange"], 0) + p["market_value_base"]
-    main_ex = max(weights_ex, key=weights_ex.get)
-    idx_ticker = cfg["data"]["market_index"].get(main_ex, "^GSPC")
+    main_ex, idx_ticker = drift_index(cfg, positions)
     mret = market.get(idx_ticker) if idx_ticker in market else _market_returns(md, idx_ticker, 1.0)
     rf = md.risk_free(base)
     from app.admin_settings import mrp_for
 
     mrp = mrp_for(None, base, cfg)  # cfg already carries the admin overrides frozen into the snapshot
-    betas = []
-    for s in symbols:
-        b, r2 = capm_beta(R[s], mret) if mret is not None else (1.0, 0.0)
-        betas.append(b)
-    s2bar = np.array([m.long_run_var / m.scale ** 2 for m in models])
-    mu_daily = (rf + np.array(betas) * mrp) / 252 - 0.5 * s2bar
+    mu_daily, betas = capm_drift(R, mret, rf, mrp, models)
     admin["drift"] = {"rf": rf, "mrp": mrp, "index": idx_ticker, "betas": dict(zip(symbols, betas)),
                       "mu_daily": dict(zip(symbols, mu_daily.tolist()))}
 

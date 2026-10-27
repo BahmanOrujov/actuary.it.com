@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import select, update
 
-from app.admin_settings import effective_cfg
+from app.admin_settings import effective_cfg, mrp_for
 from app.config import get_settings
 from app.db import SessionLocal, init_db, retry_locked
 from app.models import Alert, AnalysisRun, Job, Portfolio, Recommendation, RunDiagnostics, RunResult
@@ -22,8 +22,8 @@ from data.service import MarketData
 from portfolio.snapshot import build_portfolio_data
 from recommend.monitor import monitor_all
 from recommend.risk_based import build_recommendations
-from risk.engine import AnalysisError, prepare_returns, run_generate
-from validation.backtest import evaluate, run_backtest
+from risk.engine import AnalysisError, _market_returns, drift_index, prepare_returns, run_generate
+from validation.backtest import VALIDATION_VERSION, DriftInputs, evaluate, run_backtest
 from validation.report import _clean, write_report
 
 log = logging.getLogger("worker")
@@ -166,9 +166,20 @@ def process_generate(job: Job) -> None:
         write_report(portfolio.id, run_id, admin, cached)
 
 
+def _drift_inputs(md: MarketData, cfg: dict, snap: dict) -> DriftInputs:
+    """The CAPM inputs Generate uses (same index, MRP), with the risk-free rate as a history for point-in-time use."""
+    base = snap["base_currency"]
+    _, idx_ticker = drift_index(cfg, snap["positions"])
+    rf_hist = md.risk_free_history(base)
+    return DriftInputs(market=_market_returns(md, idx_ticker, 1.0),
+                       rf=rf_hist if rf_hist is not None else md.risk_free(base),
+                       mrp=mrp_for(None, base, cfg))
+
+
 def _validation_key(snap: dict) -> str:
     body = {"pos": sorted((p["symbol"], round(p["quantity"], 4)) for p in snap["positions"]),
-            "as_of": snap["data_as_of"], "cfg": snap["config"], "base": snap["base_currency"]}
+            "as_of": snap["data_as_of"], "cfg": snap["config"], "base": snap["base_currency"],
+            "validation_version": VALIDATION_VERSION}
     return hashlib.sha256(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()[:20]
 
 
@@ -225,8 +236,9 @@ def process_validate(job: Job) -> None:
         price_last = pd.Series({p["symbol"]: p["market_value_base"] / p["quantity"] for p in pdata.snapshot["positions"]})
         diag = db.get(RunDiagnostics, run_id)
         admin = diag.payload
+        drift = _drift_inputs(md, cfg, pdata.snapshot)
         retry_locked(db.commit)
-        bt = run_backtest(R_full, qty, price_last, cfg, run.seed)
+        bt = run_backtest(R_full, qty, price_last, cfg, run.seed, drift=drift)
         val = _clean(evaluate(bt, cfg, _mc_rel(admin)))
 
         # PROMPT.md 6.8, step 1 of the gate-failure sequence: try the next specification. If it validates
@@ -241,7 +253,7 @@ def process_validate(job: Job) -> None:
             # a second specification attempt doubles the chance of passing by luck: Bonferroni over the two
             # attempts, i.e. the fallback must pass its gates at alpha / 2
             cfg_fb["validation"]["alpha"] = cfg["validation"]["alpha"] / 2
-            bt_fb = run_backtest(R_full, qty, price_last, cfg_fb, run.seed)
+            bt_fb = run_backtest(R_full, qty, price_last, cfg_fb, run.seed, drift=drift)
             val_fb = _clean(evaluate(bt_fb, cfg_fb, _mc_rel(admin)))
             val["fallback_tried"] = {"spec": fb, "verdict": val_fb["verdict"], "failed_gates": val_fb.get("failed_gates")}
             if VERDICT_RANK[val_fb["verdict"]] > VERDICT_RANK[val["verdict"]]:

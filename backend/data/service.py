@@ -301,6 +301,24 @@ class MarketData:
                 self.messages_admin(f"rf {currency}: {ticker} alınmadı, config dəyəri istifadə olundu.")
         return float(drift["rf"].get(currency, 0.03))
 
+    def risk_free_history(self, currency: str) -> pd.Series | None:
+        """Daily annual risk-free rate (decimal) for point-in-time use in the backtest.
+
+        None when an admin override is set or no rate ticker is configured/available: the caller then uses
+        the constant risk_free() value."""
+        from app.admin_settings import get_override
+
+        if get_override(self.db, f"rf.{currency}") is not None:
+            return None
+        ticker = self.cfg["model"]["drift"].get("rf_ticker", {}).get(currency)
+        if not ticker:
+            return None
+        try:
+            s = self.bars(ticker)["close"].astype(float).dropna() / 100.0
+        except Exception:
+            return None
+        return s if len(s) else None
+
 
 def _mul(a: pd.Series | float, b: pd.Series | float) -> pd.Series | float:
     if isinstance(a, float) and isinstance(b, float):

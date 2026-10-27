@@ -203,3 +203,37 @@ def test_kappa2_detects_real_break():
     r = np.concatenate([rng.standard_normal(700) * 0.01, rng.standard_normal(560) * 0.025])
     t, k = kappa2(r)
     assert t.p_value < 0.01 and abs(k - 700) < 60
+
+
+def test_backtest_drift_is_production_capm_and_point_in_time():
+    """The backtest must validate the drift clients see (CAPM), not the window's sample mean, and must not
+    read the risk-free rate or index returns after the origin."""
+    import pandas as pd
+
+    from app.config import get_settings
+    from risk.engine import capm_drift, fit_system
+    from validation.backtest import DriftInputs, _origin_drift
+
+    cfg = get_settings().raw
+    rng = np.random.default_rng(7)
+    idx = pd.bdate_range("2019-01-01", periods=1400)
+    mkt = pd.Series(rng.standard_normal(len(idx)) * 0.01, index=idx)
+    # a strong trend: the sample mean (>20%/yr) is far above the CAPM drift
+    a = 0.002 + 1.2 * mkt + rng.standard_normal(len(idx)) * 0.01
+    b = 0.0015 + 0.8 * mkt + rng.standard_normal(len(idx)) * 0.012
+    R = pd.DataFrame({"AAA": a, "BBB": b}, index=idx)
+    origin = idx[1200]
+    win = R.loc[:origin]
+    fs = fit_system(win, cfg, full=False, parallel=False)
+    rf = pd.Series(0.03, index=idx)
+    rf.loc[idx[1201]:] = 0.20  # a future jump the backtest must not see
+    mu = _origin_drift(win, fs.models, DriftInputs(market=mkt, rf=rf, mrp=0.05), origin)
+    expected, betas = capm_drift(win, mkt.loc[:origin], 0.03, 0.05, fs.models)
+    np.testing.assert_allclose(mu, expected)
+    assert betas[0] == pytest.approx(1.2, abs=0.1) and betas[1] == pytest.approx(0.8, abs=0.1)
+    sample_mean = win.mean().to_numpy()
+    assert np.all(mu * 252 < 0.1) and np.all(sample_mean * 252 > 0.2)
+    # without drift inputs the forecasts assume zero expected (simple) return
+    mu0 = _origin_drift(win, fs.models, DriftInputs(), origin)
+    s2bar = np.array([m.long_run_var / m.scale ** 2 for m in fs.models])
+    np.testing.assert_allclose(mu0, -0.5 * s2bar)
