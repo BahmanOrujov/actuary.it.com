@@ -1,0 +1,195 @@
+# Portfel Analizi — main configuration.
+# Secrets live in .env, never here.
+
+app:
+  mode: personal            # personal | commercial  (overridable by APP_MODE in .env)
+  brand: "Portfel Analizi"
+  default_language: az
+  default_base_currency: USD
+  supported_currencies: [USD, EUR, GBP, AZN]
+
+data:
+  # investing.com is NEVER queried programmatically. Symbols are only identifiers.
+  provider: yahoo           # yahoo (personal only) | api:<name> (future, licensed)
+  exchange_suffixes:        # exchange code -> Yahoo suffix
+    NASDAQ: ""
+    NYSE: ""
+    NYSEARCA: ""
+    AMEX: ""
+    LSE: ".L"
+    XETRA: ".DE"
+    EPA: ".PA"
+  yahoo_exchange_codes:     # Yahoo exchange codes -> our exchange code
+    NMS: NASDAQ
+    NGM: NASDAQ
+    NCM: NASDAQ
+    NYQ: NYSE
+    PCX: NYSEARCA
+    ASE: AMEX
+    LSE: LSE
+    GER: XETRA
+    PAR: EPA
+  exchange_calendars:       # our exchange code -> exchange_calendars name
+    NASDAQ: XNYS
+    NYSE: XNYS
+    NYSEARCA: XNYS
+    AMEX: XNYS
+    LSE: XLON
+    XETRA: XETR
+    EPA: XPAR
+  exchange_currency:        # shown for search candidates; confirmed from the provider on selection
+    NASDAQ: USD
+    NYSE: USD
+    NYSEARCA: USD
+    AMEX: USD
+    LSE: GBP
+    XETRA: EUR
+    EPA: EUR
+  exchange_mic:
+    NASDAQ: XNAS
+    NYSE: XNYS
+    NYSEARCA: ARCX
+    AMEX: XASE
+    LSE: XLON
+    XETRA: XETR
+    EPA: XPAR
+  market_index:             # exchange code -> benchmark index
+    NASDAQ: "^GSPC"
+    NYSE: "^GSPC"
+    NYSEARCA: "^GSPC"
+    AMEX: "^GSPC"
+    LSE: "^FTSE"
+    XETRA: "^GDAXI"
+    EPA: "^FCHI"
+  factor_tickers:
+    rates: "^TNX"
+    oil: "BZ=F"
+  fx_fallback:              # used when Yahoo has no FX ticker
+    USDAZN: 1.70
+  rate_limit:
+    min_interval_seconds: 1.5
+    max_retries: 3
+    backoff_base_seconds: 2.0
+  refresh_after_hour_utc: 22  # do not refresh a symbol more than once per day after this hour
+  min_history_years_stress: 15
+  estimation_window_years: 5
+  min_estimation_years: 2
+  quality:
+    mad_z_threshold: 12.0
+    stale_run_days: 10
+    split_jump_ratio: 0.45
+
+portfolio:
+  fractional_decimals: 4
+  cost_method: fifo         # fifo | average
+  price_tolerance_pct: 2.0  # warn if entered price outside [Low, High] by more than this
+  risk_profiles:            # 3-month CVaR95 limits (fraction of value)
+    conservative: 0.08
+    moderate: 0.15
+    aggressive: 0.25
+  default_risk_profile: moderate
+
+model:
+  horizon_days: 63
+  scenarios: 10000
+  scenarios_max: 50000
+  memory_budget_bytes: 1200000000   # caps adaptive S for large portfolios (S x 63 x N float32 arrays)
+  mc_rel_error_target: 0.01
+  param_sets: 200
+  seed: 20261027
+  sample_paths: 8
+  history_days: 252           # past value shown before the fan chart (6-12 months)
+  percentiles: [5, 25, 50, 75, 95]
+  garch:
+    vol_models: [GARCH, GJR, EGARCH]
+    dists: [normal, t, skewt]
+    default: [GJR, skewt]
+    scale: 100.0
+  ewma_lambda: 0.94
+  break_policy:               # PROMPT.md 6.1: variance breaks shape the estimation window
+    enabled: true
+    trim: 0.15                # candidate break dates within [15%, 85%] of the window
+    test_spec: [GJR, t]       # specification used for the LR when the selection fell back to EWMA
+  short_history_years: 2.0
+  proxy_history_months: 6
+  dcc:
+    use_engle_sheppard: true
+    es_lags: 5
+  loss_thresholds: [0.05, 0.10, 0.20]
+  drift:
+    mrp: 0.05                 # default market risk premium (annual)
+    mrp_by_currency:          # admin can override per currency
+      USD: 0.05
+      EUR: 0.05
+      GBP: 0.05
+      AZN: 0.05
+    rf:                       # fallback annual risk-free rates by currency
+      USD: 0.04
+      EUR: 0.025
+      GBP: 0.04
+      AZN: 0.07
+    rf_ticker:
+      USD: "^IRX"
+
+stress:
+  historical:
+    - {name: "2008 Q4", start: "2008-09-30", end: "2008-12-31"}
+    - {name: "COVID 2020", start: "2020-02-19", end: "2020-03-23"}
+    - {name: "2022", start: "2022-01-03", end: "2022-12-30"}
+  hypothetical:
+    - {name: "Bazar -20%", factor: market, shock: -0.20}
+    - {name: "Faiz +100 bp", factor: rates, shock: 1.0}
+    - {name: "Neft -30%", factor: oil, shock: -0.30}
+
+validation:
+  alpha: 0.05
+  backtest_months: 24
+  backtest_refit_every_months: 1
+  var_levels: [0.95, 0.99]
+  es_level: 0.975
+  interval_levels: [0.50, 0.80, 0.90, 0.95, 0.98]
+  gate_interval_levels: [0.50, 0.90]   # gate 5 and per-instrument 63-day coverage
+  mcs_size: 0.10
+  bootstrap_reps: 500
+  block_size: 21
+  backtest_scenarios: 2000
+  one_step_samples: 2000     # FHS draws for each daily one-step forecast
+  hs_window: 250             # historical-simulation competitor window (days)
+  ewma_cov_window: 500       # EWMA-normal competitor covariance window (days)
+  har_lags: [1, 5, 22]       # HAR competitor: daily, weekly, monthly
+  dq_lags: 4                 # Engle-Manganelli DQ lags; also Mincer-Zarnowitz HAC lags
+  aci_gamma: 0.01            # adaptive conformal step size
+  aci_tolerance: 0.10        # |ACI coverage - nominal| for "passes after conformal calibration"
+  kupiec_power_alt: 0.02     # alternative exceedance rate for the reported power of Kupiec 99%
+  power_reps: 2000
+  ljung_box_lags: [5, 10, 20]
+  fallback_spec: {vol: GJR, dist: skewt}   # gate-failure step 1: the specification tried next
+
+recommend:
+  risk_share_ratio: 1.5
+  max_position_weight: 0.20
+  max_cluster_weight: 0.40
+  cluster_corr_threshold: 0.5
+  disclaimer: "Bu, investisiya məsləhəti deyil; qərar verməyə kömək edən təhlildir. Nəticələr zəmanət deyil, ehtimaldır."
+
+features:
+  csv_import: true          # forced off in commercial mode
+  signal_model: false       # stage B, gated
+  rl: false                 # stage C, gated
+
+security:
+  rate_limit_per_minute: 120
+  login_rate_limit_per_minute: 10
+  session_days: 7
+  password_reset_minutes: 30     # reset link lifetime; in personal mode the link is printed to the server console
+  password_min_length: 10
+  password_min_unique_chars: 5
+  max_failed_logins: 5           # failed attempts before the account is locked
+  lockout_minutes: 15            # first lock; doubles on each further lock, capped below
+  lockout_max_minutes: 1440
+
+jobs:
+  poll_interval_seconds: 1.0
+  sqlite_retries: 8
+  monitor_interval_minutes: 60   # 90%-band monitoring of the latest runs (PROMPT.md 7.1)
+  max_workers: 3                 # process pool for model fitting; raise on machines with more RAM (~200 MB each)
