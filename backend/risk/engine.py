@@ -20,6 +20,7 @@ from risk.dcc import CorrModel, fit_ccc, fit_dcc
 from risk.diagnostics import return_diagnostics
 from risk.factors import capm_beta, clusters, hhi, multifactor
 from risk.garch import AssetModel, fit_ewma, garch_break_test, select_garch
+from risk.insights import collect as collect_insights
 from risk.measures import compute_measures, var_cvar
 from risk.simulate import build_pool, simulate_paths
 from validation.stat_tests import engle_sheppard, hosking_portmanteau
@@ -230,6 +231,16 @@ def _market_returns(md: MarketData, ticker: str, ccy_fx: pd.Series | float) -> p
         return np.log(px / px.shift(1)).dropna()
     except Exception as exc:
         md.messages_admin(f"İndeks {ticker} alınmadı: {exc}")
+        return None
+
+
+def _avg_volume(md: MarketData, symbol: str, days: int) -> float | None:
+    """Average daily traded shares over the last `days` sessions (None if the provider has no volume)."""
+    try:
+        v = md.bars(symbol)["volume"].astype(float).dropna()
+        v = v[v > 0].tail(days)
+        return float(v.mean()) if len(v) else None
+    except Exception:
         return None
 
 
@@ -512,6 +523,17 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
         "clusters": labels, "stress": stress, "asset_end": [a["end"] for a in meas["assets"]],
         "sim_cum_end": None,
     }
+    # CIO / CRO views: finished in the worker once the portfolio's risk limit is known
+    if len(symbols) > 1:
+        d_l = np.sqrt(np.diag(fs.corr.Qbar))
+        C_long = fs.corr.Qbar / np.outer(d_l, d_l)
+    else:
+        C_long = np.eye(1)
+    rec_ctx["insight"] = collect_insights(
+        models=models, R=R, mret=mret, corr_now=Cnow, corr_long=C_long, meas=meas, mv0=mv0, cash=snap["cash"],
+        positions=positions, names=names, base=base, rf=rf, betas=betas, H=H, stress=stress,
+        adv=[_avg_volume(md, s, cfg["insights"]["liquidity_adv_days"]) for s in symbols],
+        effective_n=1 / hhi(weights))
     # target / stop-loss probabilities
     targets = []
     inst_ids = [p["instrument_id"] for p in positions]

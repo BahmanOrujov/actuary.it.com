@@ -25,7 +25,8 @@ test("client flow", async ({ page }) => {
   await page.getByLabel(/^Parol/).fill("e2e-password-1");
   await page.locator("form").getByRole("button", { name: "Qeydiyyat" }).click();
   // a new user lands on the empty overview; the portfolio is created in the dialog and opens by itself
-  await expect(page.getByRole("heading", { name: "Xoş gəlmisiniz" })).toBeVisible();
+  // password hashing is CPU-bound: allow for a busy machine (e.g. a validation running in the worker)
+  await expect(page.getByRole("heading", { name: "Xoş gəlmisiniz" })).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: "İlk portfeli yarat" }).click();
   await page.getByRole("dialog").getByLabel("Ad").fill("E2E portfel");
   await page.getByRole("dialog").getByRole("button", { name: "Yarat" }).click();
@@ -36,14 +37,20 @@ test("client flow", async ({ page }) => {
 
   await page.getByRole("button", { name: "Generate" }).click();
   // the dashboard opens by itself when the run started here finishes
-  await expect(page.getByText("Qısa cavab")).toBeVisible({ timeout: 6 * 60_000 });
+  // the investment view (CIO brief) opens first; the risk view (CRO panel) is one tab away
+  await expect(page.getByText("CIO brifinqi")).toBeVisible({ timeout: 6 * 60_000 });
   await expect(page).toHaveURL(/\/results$/);
+  // one holding: no risk-return map (nothing to compare), the risk-source split is always there
+  await expect(page.getByRole("heading", { name: /Riskin mənbəyi/ })).toBeVisible();
   await expect(page.getByText(/CVaR 95%/).first()).toBeVisible();
   await expect(page.getByText(/proqnoz qiymət deyil/).first()).toBeVisible();
 
+  await page.getByRole("navigation", { name: "Portfel bölmələri" }).getByRole("link", { name: "Risk" }).click();
+  await expect(page.getByText("CRO paneli")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Əsas risk göstəriciləri/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /nə qədər güvənə bilərəm/ })).toBeVisible();
 
-  await page.getByRole("link", { name: "Tərkib" }).click();
+  await page.getByRole("navigation", { name: "Portfel bölmələri" }).getByRole("link", { name: "Tərkib" }).click();
   await addStock(page, "AAPL", "2");
   await expect(page.getByText(/Portfel dəyişib/)).toBeVisible({ timeout: 15_000 });
 });

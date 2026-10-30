@@ -109,6 +109,17 @@ def test_full_generate_flow(alice, bob, admin):
     assert latest["validation_status"] == "done"
     assert latest["reliability"] in ("high", "medium", "low")
     assert latest["recommendations"] and all("disclaimer" in r for r in latest["recommendations"])
+    # CIO / CRO views come from the same simulation as the headline numbers
+    ins = res["insights"]
+    inv, rk = ins["investment"], ins["risk"]
+    assert inv["memo"] and rk["memo"] and len(inv["positions"]) == len(res["assets"]) == 3
+    assert abs(sum(p["risk_share"] for p in inv["positions"]) - 1) < 1e-6
+    assert abs(sum(e["weight"] for e in inv["exposure"]["currency"]) - 1) < 1e-6
+    assert rk["metrics"]["cvar95"] == pytest.approx(res["risk"]["0.95"]["cvar_pct"])
+    assert rk["metrics"]["limit"] == res["risk_limit"]
+    assert {k["key"] for k in rk["kri"]} >= {"limit_use", "vol_regime", "top_weight", "stress", "liquidity"}
+    assert all(k["status"] in ("green", "amber", "red", "none") for k in rk["kri"])
+    assert 0 < inv["metrics"]["diversification_benefit"] < 1
     # privacy: no diagnostics in client payloads
     keys = set(_walk_keys(latest))
     assert not keys & FORBIDDEN_CLIENT_KEYS, keys & FORBIDDEN_CLIENT_KEYS

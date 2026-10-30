@@ -209,7 +209,8 @@ export default function PortfolioLayout() {
 
       <nav className="tabs" aria-label="Portfel bölmələri">
         <NavLink to={`/portfolios/${pid}`} end><Icon name="list" size={16} /> Tərkib</NavLink>
-        <NavLink to={`/portfolios/${pid}/results`}><Icon name="chart" size={16} /> {t("results")}</NavLink>
+        <NavLink to={`/portfolios/${pid}/results`}><Icon name="chart" size={16} /> İnvestisiya</NavLink>
+        <NavLink to={`/portfolios/${pid}/risk`}><Icon name="shield" size={16} /> Risk</NavLink>
         <NavLink to={`/portfolios/${pid}/recommendations`}><Icon name="bulb" size={16} /> {t("recommendations")}</NavLink>
       </nav>
 

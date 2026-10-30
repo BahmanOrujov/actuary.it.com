@@ -23,6 +23,7 @@ from portfolio.snapshot import build_portfolio_data
 from recommend.monitor import monitor_all
 from recommend.risk_based import build_recommendations
 from risk.engine import AnalysisError, _market_returns, drift_index, prepare_returns, run_generate
+from risk.insights import build_insights
 from validation.backtest import VALIDATION_VERSION, DriftInputs, evaluate, run_backtest
 from validation.report import _clean, write_report
 
@@ -109,6 +110,7 @@ def _compute(db, run: AnalysisRun, frozen, cfg: dict, md: MarketData, progress, 
     rec_ctx["limit"] = risk_limit_for(db, frozen)
     recs = build_recommendations(rec_ctx, cfg, "checking")
     client["risk_limit"] = rec_ctx["limit"]
+    client["insights"] = build_insights(rec_ctx["insight"], rec_ctx["limit"], cfg)
     admin.update({"as_of": client["as_of"], "model_version": run.model_version, "seed": run.seed,
                   "fingerprint": pdata.snapshot["fingerprint"]})
     return pdata, client, admin, recs

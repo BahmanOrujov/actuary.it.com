@@ -1,15 +1,14 @@
 import type { EChartsOption } from "echarts";
-import { useEffect, useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { AssetResult, RunResult, RunView } from "../api";
-import { ReliabilityBadge } from "../components/Badges";
-import { axisStyle, baseOption, ChartCard, Palette } from "../components/Chart";
-import { dateAz, frequency, int, money, pct, price, prob } from "../format";
+import { ReliabilityBadge } from "./Badges";
+import { axisStyle, baseOption, ChartCard, Palette } from "./Chart";
+import { dateAz, int, money, pct, price, prob } from "../format";
 import { t } from "../i18n";
-import { NoResults, usePortfolio } from "./PortfolioLayout";
 
-type Unit = "money" | "pct";
+export type Unit = "money" | "pct";
 
-function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+export function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="kpi">
       <div className="label">{label}</div>
@@ -20,17 +19,17 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
 }
 
 /** Compact axis label for fractions: 0.1 -> "10%", 0.025 -> "2,5%". */
-function pctAxis(v: number): string {
+export function pctAxis(v: number): string {
   const x = Math.round(v * 1000) / 10;
   return `${x < 0 ? "−" : ""}${Number.isInteger(x) ? Math.abs(x) : Math.abs(x).toFixed(1).replace(".", ",")}%`;
 }
 
-function signClass(v: number) {
+export function signClass(v: number) {
   return v > 0 ? "pos" : v < 0 ? "neg" : "";
 }
 
 /** P(X >= x) from the 1..99 percentile grid (resolution ~1 percentage point). */
-function probAbove(q: number[], x: number): { p: number; bound: "lt" | "gt" | null } {
+export function probAbove(q: number[], x: number): { p: number; bound: "lt" | "gt" | null } {
   if (x <= q[0]) return { p: 0.99, bound: "gt" };
   if (x >= q[q.length - 1]) return { p: 0.01, bound: "lt" };
   for (let i = 1; i < q.length; i++) {
@@ -43,211 +42,10 @@ function probAbove(q: number[], x: number): { p: number; bound: "lt" | "gt" | nu
   return { p: 0.01, bound: "lt" };
 }
 
-const SECTIONS: [string, string][] = [
-  ["summary", "Xülasə"], ["fan", "Proqnoz"], ["pnl", "Mənfəət/zərər"], ["dist", "Risk"], ["stocks", "Səhmlər"],
-  ["stress", "Stress"], ["trust", "Etibarlılıq"], ["glossary", "Lüğət"],
-];
-
-export default function Dashboard() {
-  const { run, runLoaded } = usePortfolio();
-  const [cp, setCp] = useState(0);
-  const [level, setLevel] = useState<"0.95" | "0.99">("0.95");
-  const [unit, setUnit] = useState<Unit>("money");
-  const [asset, setAsset] = useState<string>("__portfolio");
-  const [showPaths, setShowPaths] = useState(true);
-
-  const res = run?.status === "done" ? run.result : undefined;
-  const nCp = res?.checkpoints.length ?? 0;
-  useEffect(() => {
-    if (nCp) setCp(nCp - 1);
-  }, [run?.id, nCp]);
-
-  if (!run || !res) return <NoResults run={run} runLoaded={runLoaded} />;
-
-  const ccy = res.base_currency;
-  const risk = res.risk[level] ?? res.risk["0.95"];
-  const levelShown = res.risk[level] ? level : "0.95";
-  const end = res.checkpoints[res.checkpoints.length - 1];
-  const r95 = res.risk["0.95"];
-  const fmtV = (v: number) => (unit === "money" ? money(v, ccy) : pct(v / res.V0 - 1, { sign: true }));
-  const fmtPnl = (v: number) => (unit === "money" ? money(v, ccy, { sign: true }) : pct(v / res.cost_total, { sign: true }));
-
-  return (
-    <>
-      {res.warnings.map((w) => (
-        <div key={w} className="banner warn"><span className="ic">⚠</span> {w}</div>
-      ))}
-
-      {/* 0. Header and filters */}
-      <div className="toolbar" id="summary" role="group" aria-label="Filtrlər">
-        <div className="wide small muted">
-          <div><b style={{ color: "var(--fg)" }}>Məlumat tarixi:</b> {dateAz(res.as_of)}</div>
-          <div><b style={{ color: "var(--fg)" }}>Dövrün sonu:</b> {dateAz(res.horizon_end)} ({res.horizon_days} ticarət günü) · {ccy}</div>
-        </div>
-        <label>
-          Aralıq tarix
-          <select value={cp} onChange={(e) => setCp(Number(e.target.value))}>
-            {res.checkpoint_dates.map((d, i) => (
-              <option key={d} value={i}>{dateAz(d)}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          VaR səviyyəsi
-          <select value={level} onChange={(e) => setLevel(e.target.value as "0.95" | "0.99")}>
-            <option value="0.95">95%</option>
-            <option value="0.99" disabled={!res.risk["0.99"]}>99%{!res.risk["0.99"] ? " (gizlədilib)" : ""}</option>
-          </select>
-        </label>
-        <div>
-          <div className="small muted" style={{ marginBottom: 4, fontWeight: 500 }}>Göstərmə</div>
-          <div className="toggle" role="group" aria-label="Vahid">
-            <button aria-pressed={unit === "money"} onClick={() => setUnit("money")}>Məbləğ</button>
-            <button aria-pressed={unit === "pct"} onClick={() => setUnit("pct")}>%</button>
-          </div>
-        </div>
-        <label className="wide">
-          Səhm
-          <select value={asset} onChange={(e) => setAsset(e.target.value)}>
-            <option value="__portfolio">Bütün portfel</option>
-            {res.assets.map((a) => (
-              <option key={a.symbol} value={a.symbol}>{a.investing_symbol} — {a.name}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <nav className="section-nav" aria-label="Nəticələrin bölmələri">
-        {SECTIONS.map(([id, label]) => <a key={id} href={`#${id}`} onClick={(e) => {
-          e.preventDefault();
-          document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}>{label}</a>)}
-      </nav>
-
-      <div className="hero">
-        <div className="eyebrow" style={{ marginBottom: 6 }}>Qısa cavab</div>
-        <p className="big">
-          {dateAz(res.horizon_end)} tarixinə portfelin dəyəri ssenarilərin 90%-ində{" "}
-          <b>{money(end.p05, ccy)} – {money(end.p95, ccy)}</b> aralığında qalır; ortadakı ssenari (median) <b>{money(end.median, ccy)}</b>.
-          Ən pis 5% ssenaridə orta itki <b>{money(r95.cvar_money, ccy)}</b> ({pct(r95.cvar_pct)}).
-          Maya dəyərindən yuxarıda bitmə ehtimalı <b>{prob(res.pnl_end.prob_profit)}</b>.
-        </p>
-        <div className="row-actions small">
-          <span className="muted">Bu rəqəmlərin etibarlılığı:</span> <ReliabilityBadge level={run.reliability} />
-          <a href="#trust" onClick={(e) => {
-            e.preventDefault();
-            document.getElementById("trust")?.scrollIntoView({ behavior: "smooth" });
-          }}>nə qədər güvənmək olar →</a>
-        </div>
-      </div>
-
-      {/* 1. KPI cards, grouped: today -> end of period -> risk */}
-      <div className="kpi-groups">
-        <div className="kpi-group">
-          <div className="eyebrow">Bu gün</div>
-          <div className="kpi-row">
-            <Kpi label="Cari dəyər" value={money(res.V0, ccy)} sub={`maya dəyəri ${money(res.cost_total, ccy)}`} />
-            <Kpi label="Cari mənfəət/zərər" value={money(res.current.total.unrealized, ccy, { sign: true })}
-              sub={`${pct(res.current.total.unrealized_pct, { sign: true })} açıq mövqelər · reallaşmış ${money(res.current.total.realized, ccy, { sign: true })}` +
-                ` · dividend ${money(res.current.total.dividends ?? 0, ccy)}`} />
-          </div>
-        </div>
-        <div className="kpi-group">
-          <div className="eyebrow">Dövrün sonunda · {dateAz(res.horizon_end)}</div>
-          <div className="kpi-row">
-            <Kpi label="Median dəyər" value={money(end.median, ccy)} sub={`m/z medianı ${money(end.pnl_median, ccy, { sign: true })}`} />
-            <Kpi label="90% aralıq" value={`${money(end.p05, ccy)} – ${money(end.p95, ccy)}`} sub="10 haldan 9-da nəticə bu aralıqda olur" />
-            <Kpi label="Mənfəətdə olma ehtimalı" value={prob(res.pnl_end.prob_profit)} sub="maya dəyərindən yuxarı" />
-          </div>
-        </div>
-        <div className="kpi-group">
-          <div className="eyebrow">Risk · 3 ay</div>
-          <div className="kpi-row">
-            <Kpi label={`VaR ${Number(levelShown) * 100}%`} value={money(risk.var_money, ccy)}
-              sub={`${pct(risk.var_pct)} · ${frequency(1 - Number(levelShown))} itki bundan çox olur`} />
-            <Kpi label={`CVaR ${Number(levelShown) * 100}%`} value={money(risk.cvar_money, ccy)}
-              sub={`${pct(risk.cvar_pct)} · ən pis ${Math.round((1 - Number(levelShown)) * 100)}% ssenarinin orta itkisi`} />
-          </div>
-        </div>
-      </div>
-      {res.hidden_99 && (
-        <div className="banner warn"><span className="ic">⚠</span> Model bəzi yoxlamalardan keçmədiyi üçün 99% göstəriciləri gizlədilib.</div>
-      )}
-
-      {/* 2. Fan chart */}
-      <FanChart res={res} unit={unit} asset={asset} showPaths={showPaths} setShowPaths={setShowPaths} />
-
-      {/* 3. Checkpoints table */}
-      <section className="card" id="checkpoints">
-        <div className="card-head">
-          <div>
-            <h2>Aralıq tarixlər</h2>
-            <div className="sub">Seçilmiş tarix vurğulanıb. Ehtimallar maya dəyərinə nisbətən hesablanır.</div>
-          </div>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Tarix</th><th className="num">Median</th><th className="num">50% aralıq</th><th className="num">90% aralıq</th>
-                <th className="num">M/z (median)</th><th className="num">Mənfəətdə olma</th>
-                <th className="num">5%+ itki</th><th className="num">10%+ itki</th><th className="num">20%+ itki</th>
-              </tr>
-            </thead>
-            <tbody>
-              {res.checkpoints.map((c, i) => (
-                <tr key={c.h} className={i === cp ? "current" : undefined}>
-                  <td>{dateAz(res.checkpoint_dates[i])}</td>
-                  <td className="num">{fmtV(c.median)}</td>
-                  <td className="num">{fmtV(c.p25)} – {fmtV(c.p75)}</td>
-                  <td className="num">{fmtV(c.p05)} – {fmtV(c.p95)}</td>
-                  <td className={`num ${signClass(c.pnl_median)}`}>{fmtPnl(c.pnl_median)}</td>
-                  <td className="num">{prob(c.prob_profit_vs_cost)}</td>
-                  {["0.05", "0.1", "0.2"].map((k) => (
-                    <td className="num" key={k}>{prob(c.prob_loss_over[k])}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* 4. P&L by position */}
-      <PnlSection res={res} cp={cp} unit={unit} />
-
-      {/* 5. End distribution */}
-      <Distribution res={res} level={levelShown} />
-
-      {/* 6. Drawdown */}
-      <Drawdown res={res} />
-
-      {/* 7. Stocks */}
-      <StocksSection res={res} />
-
-      {/* 8. Risk contribution */}
-      {res.assets.length > 1 && <RiskContribution res={res} />}
-
-      {/* 9. Correlation */}
-      {res.correlation && <Correlation res={res} />}
-
-      {/* 10. Stress */}
-      <Stress res={res} unit={unit} />
-
-      {/* 11. Reliability */}
-      <TrustPanel run={run} />
-
-      {/* 12. Assumptions and glossary */}
-      <Glossary res={res} />
-      <p className="disclaimer">{run.disclaimer}</p>
-    </>
-  );
-}
-
 const LEVEL_WORD: Record<string, string> = { high: "Yüksək", medium: "Orta", low: "Aşağı", checking: "Yoxlanılır" };
 
 /** Expected vs observed as two bars on one scale. */
-function VsBars({ expected, observed, fmt }: { expected: number; observed: number; fmt: (v: number) => string }) {
+export function VsBars({ expected, observed, fmt }: { expected: number; observed: number; fmt: (v: number) => string }) {
   const max = Math.max(expected, observed, 1e-9);
   return (
     <div className="vs" aria-hidden="true">
@@ -271,7 +69,7 @@ const NUMBER_TRUST: { item: string; level: string; why: string }[] = [
     why: "Qiymətin istiqamətini heç bir model etibarlı proqnozlaşdıra bilmir. Median ortadakı ssenaridir, proqnoz qiymət deyil." },
 ];
 
-function TrustPanel({ run }: { run: RunView }) {
+export function TrustPanel({ run }: { run: RunView }) {
   const tr = run.trust;
   const lvl = run.reliability;
   const times = (v: number) => `${Number.isInteger(v) ? v : v.toFixed(1).replace(".", ",")}`;
@@ -394,7 +192,7 @@ function TrustPanel({ run }: { run: RunView }) {
   );
 }
 
-function FanChart({ res, unit, asset, showPaths, setShowPaths }: {
+export function FanChart({ res, unit, asset, showPaths, setShowPaths }: {
   res: RunResult; unit: Unit; asset: string; showPaths: boolean; setShowPaths: (b: boolean) => void;
 }) {
   const a = res.assets.find((x) => x.symbol === asset);
@@ -499,7 +297,7 @@ function FanChart({ res, unit, asset, showPaths, setShowPaths }: {
   );
 }
 
-function PnlSection({ res, cp, unit }: { res: RunResult; cp: number; unit: Unit }) {
+export function PnlSection({ res, cp, unit }: { res: RunResult; cp: number; unit: Unit }) {
   const ccy = res.base_currency;
   const c = res.checkpoints[cp];
   const f = (v: number, base: number) => (unit === "money" ? money(v, ccy, { sign: true }) : pct(base ? v / base : 0, { sign: true }));
@@ -554,7 +352,7 @@ function PnlSection({ res, cp, unit }: { res: RunResult; cp: number; unit: Unit 
   );
 }
 
-function Distribution({ res, level }: { res: RunResult; level: string }) {
+export function Distribution({ res, level }: { res: RunResult; level: string }) {
   const { edges, counts } = res.histogram;
   const centers = counts.map((_, i) => (edges[i] + edges[i + 1]) / 2);
   const varPct = -res.risk[level].var_pct;
@@ -610,7 +408,7 @@ function Distribution({ res, level }: { res: RunResult; level: string }) {
   );
 }
 
-function Drawdown({ res }: { res: RunResult }) {
+export function Drawdown({ res }: { res: RunResult }) {
   const all = res.drawdown.exceedance.filter((e) => e.x > 0);
   const cut = all.findIndex((e) => e.x >= 0.15 && e.p_touch < 0.005);
   const ex = cut > 0 ? all.slice(0, cut + 1) : all;
@@ -653,7 +451,7 @@ function Drawdown({ res }: { res: RunResult }) {
   );
 }
 
-function StocksSection({ res }: { res: RunResult }) {
+export function StocksSection({ res }: { res: RunResult }) {
   const [sortKey, setSortKey] = useState<"weight" | "median" | "width" | "prob_up" | "cvar_share">("weight");
   const [calcSym, setCalcSym] = useState(res.assets[0]?.symbol ?? "");
   const [target, setTarget] = useState("");
@@ -786,7 +584,7 @@ function StocksSection({ res }: { res: RunResult }) {
   );
 }
 
-function RiskContribution({ res }: { res: RunResult }) {
+export function RiskContribution({ res }: { res: RunResult }) {
   const rows = [...res.assets].sort((a, b) => a.cvar_share - b.cvar_share);
   const build = (p: Palette): EChartsOption => ({
     ...baseOption(p),
@@ -831,7 +629,7 @@ function RiskContribution({ res }: { res: RunResult }) {
   );
 }
 
-function Correlation({ res }: { res: RunResult }) {
+export function Correlation({ res }: { res: RunResult }) {
   const c = res.correlation!;
   const syms = c.symbols.map((s) => res.assets.find((a) => a.symbol === s)?.investing_symbol ?? s);
   const data: [number, number, number][] = [];
@@ -876,7 +674,9 @@ function Correlation({ res }: { res: RunResult }) {
   );
 }
 
-function Stress({ res, unit }: { res: RunResult; unit: Unit }) {
+/** Stress scenarios; with showLimit the risk limit is drawn as a reference line (the CRO's question:
+ *  "which past crises would break our risk appetite?"). */
+export function Stress({ res, unit, showLimit }: { res: RunResult; unit: Unit; showLimit?: boolean }) {
   const ccy = res.base_currency;
   const rows = [...res.stress].sort((a, b) => a.loss_money - b.loss_money);
   const val = (s: (typeof rows)[number]) => (unit === "money" ? s.pnl_money : -s.loss_pct * 100);
@@ -887,15 +687,22 @@ function Stress({ res, unit }: { res: RunResult; unit: Unit }) {
     xAxis: { type: "value", ...axisStyle(p), axisLabel: { color: p.muted, formatter: (v: number) => (unit === "money" ? money(v, ccy) : pct(v / 100)) } },
     tooltip: { ...baseOption(p).tooltip, trigger: "axis", axisPointer: { type: "shadow" },
       valueFormatter: (v) => (unit === "money" ? money(Number(v), ccy, { sign: true }) : pct(Number(v) / 100, { sign: true })) },
-    series: [{ type: "bar", barWidth: "55%", data: rows.map((s) => ({ value: val(s), itemStyle: { color: val(s) < 0 ? p.neg : p.pos } })) }],
+    series: [{
+      type: "bar", barWidth: "55%", data: rows.map((s) => ({ value: val(s), itemStyle: { color: val(s) < 0 ? p.neg : p.pos } })),
+      ...(showLimit ? {
+        markLine: { symbol: "none", silent: true, lineStyle: { color: p.warn, type: "dashed" as const, width: 1.5 },
+          label: { formatter: "risk limiti", color: p.warn, fontSize: 11, position: "insideEndTop" as const },
+          data: [{ xAxis: unit === "money" ? -res.risk_limit * res.V0 : -res.risk_limit * 100 }] },
+      } : {}),
+    }],
   });
   return (
     <ChartCard
       id="stress"
       title="Stress testləri"
-      subtitle="Ssenaridir, ehtimal deyil: bu hadisələr təkrarlansa, portfel təxminən bu qədər dəyişərdi."
+      subtitle={"Ssenaridir, ehtimal deyil: bu hadisələr təkrarlansa, portfel təxminən bu qədər dəyişərdi." + (showLimit ? " Qırıq xətt — risk limitiniz." : "")}
       build={build}
-      deps={[res, unit]}
+      deps={[res, unit, showLimit]}
       ariaLabel="Stress ssenariləri üzrə itkilər"
       height="short"
       table={
@@ -917,7 +724,7 @@ function Stress({ res, unit }: { res: RunResult; unit: Unit }) {
   );
 }
 
-function Glossary({ res }: { res: RunResult }) {
+export function Glossary({ res, children }: { res: RunResult; children?: ReactNode }) {
   const s = res.sensitivity_zero_drift;
   return (
     <section className="card" id="glossary">
@@ -930,6 +737,7 @@ function Glossary({ res }: { res: RunResult }) {
         <li>Diversifikasiya: effektiv səhm sayı ≈ {res.concentration.effective_n.toFixed(1).replace(".", ",")}.</li>
       </ul>
       <dl className="glossary small">
+        {children}
         <dt>Model necə qurulur</dt>
         <dd>
           Hər Generate-də model ən son məlumatla yenidən qiymətləndirilir. Hər səhm üçün son illərin gündəlik gəlirləri götürülür;

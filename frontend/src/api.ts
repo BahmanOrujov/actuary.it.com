@@ -281,7 +281,8 @@ export interface RunResult {
   warnings: string[];
   scenarios: number;
   risk_limit: number;
-  targets: { symbol: string; target_price: number | null; stop_loss: number | null; prob_target?: number; prob_touch_target?: number; prob_touch_stop?: number }[];
+  insights?: Insights;
+  targets:{ symbol: string; target_price: number | null; stop_loss: number | null; prob_target?: number; prob_touch_target?: number; prob_touch_stop?: number }[];
 }
 
 export interface RunView {
@@ -301,6 +302,88 @@ export interface RunView {
   section_reliability?: { item: string; label: string }[];
   trust?: Trust | null;
   disclaimer?: string;
+}
+
+export type Tone = "good" | "warn" | "bad" | "info";
+export type Rag = "green" | "amber" | "red" | "none";
+
+export interface MemoItem {
+  tone: Tone;
+  text: string;
+}
+
+export interface Kri {
+  key: string;
+  label: string;
+  value: number | null;
+  kind: "pct" | "prob" | "times" | "ratio" | "days";
+  status: Rag;
+  hint: string;
+}
+
+/** CIO / CRO views of a run (backend risk/insights.py). */
+export interface Insights {
+  investment: {
+    memo: MemoItem[];
+    metrics: {
+      expected_return: number;
+      expected_money: number;
+      median_return: number;
+      range90: [number, number];
+      prob_gain: number;
+      excess_return: number;
+      rf_period: number;
+      sharpe: number | null;
+      sortino: number | null;
+      return_to_cvar: number | null;
+      gain_loss_ratio: number | null;
+      upside_downside: number | null;
+      vol_annual: number;
+      market_sensitivity: number;
+      systematic_share: number;
+      specific_share: number;
+      diversification_benefit: number;
+      standalone_cvar_sum: number;
+      effective_n: number;
+      top_weight: number;
+      cash_share: number;
+    };
+    positions: {
+      symbol: string;
+      name: string;
+      weight: number;
+      expected_return: number;
+      return_share: number | null;
+      risk_share: number;
+      efficiency: number | null;
+      class: "efficient" | "balanced" | "costly" | "hedge";
+      market_sensitivity: number;
+      specific_risk_share: number;
+      vol_now: number;
+      standalone_cvar_pct: number;
+    }[];
+    exposure: { currency: { key: string; weight: number }[]; exchange: { key: string; weight: number }[] };
+  };
+  risk: {
+    memo: MemoItem[];
+    kri: Kri[];
+    metrics: {
+      cvar95: number;
+      var95: number;
+      limit: number;
+      limit_use: number | null;
+      headroom_money: number | null;
+      beyond_limit: number | null;
+      vol_now: number;
+      vol_long: number;
+      vol_regime: number | null;
+      corr_now: number | null;
+      corr_long: number | null;
+      corr_pair: { a: string; b: string; value: number } | null;
+      top3_risk: number;
+    };
+    assets: { symbol: string; now: number; long: number; ratio: number | null; liquidity_days: number | null }[];
+  };
 }
 
 /** Plain track record of the model on past data (observed vs expected); no test statistics. */

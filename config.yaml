@@ -172,6 +172,29 @@ recommend:
   cluster_corr_threshold: 0.5
   disclaimer: "Bu, investisiya məsləhəti deyil; qərar verməyə kömək edən təhlildir. Nəticələr zəmanət deyil, ehtimaldır."
 
+insights:                     # CIO / CRO views of a run; status thresholds as fractions (green below amber)
+  limit_use_amber: 0.80       # CVaR95 / risk limit (red above 1)
+  stress_limit_red: 2.0       # worst stress loss / risk limit (amber above 1)
+  vol_regime_amber: 1.20      # current / long-run volatility of the portfolio
+  vol_regime_red: 1.50
+  corr_amber: 0.50            # average pairwise correlation today
+  corr_red: 0.70
+  top3_risk_amber: 0.60       # share of CVaR95 carried by the three largest contributors
+  top3_risk_red: 0.80
+  idio_share_amber: 0.50      # share of variance the market does not explain (not paid for under CAPM)
+  idio_share_red: 0.70
+  drawdown_level: 0.10        # KRI: probability of touching this loss at some point in the period
+  drawdown_touch_amber: 0.25
+  drawdown_touch_red: 0.40
+  liquidity_participation: 0.20   # share of average daily volume that can be sold per day
+  liquidity_adv_days: 20
+  liquidity_days_amber: 1.0
+  liquidity_days_red: 5.0
+  efficiency_low: 0.67        # expected-return share / risk share of a position
+  efficiency_high: 1.50
+  hedge_min_share: 0.02        # a position is a hedge only if it lowers CVaR95 by at least this share
+  # top position weight: amber above recommend.max_position_weight, red above recommend.max_cluster_weight
+
 features:
   csv_import: true          # forced off in commercial mode
   signal_model: false       # stage B, gated

@@ -5,13 +5,13 @@ import { Icon } from "./components/Icons";
 import NewPortfolioDialog from "./components/NewPortfolioDialog";
 import Sidebar from "./components/Sidebar";
 import AdminPage from "./pages/Admin";
-import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/Login";
 import NotificationsPage from "./pages/Notifications";
 import PortfolioEditor from "./pages/PortfolioEditor";
 import PortfolioLayout from "./pages/PortfolioLayout";
 import PortfoliosPage from "./pages/Portfolios";
 import RecommendationsPage from "./pages/Recommendations";
+import { InvestmentView, RiskView } from "./pages/Results";
 import ResetPage from "./pages/Reset";
 import SettingsPage from "./pages/Settings";
 import { t } from "./i18n";
@@ -122,7 +122,8 @@ export default function App() {
               <Route path="/" element={<PortfoliosPage />} />
               <Route path="/portfolios/:id" element={<PortfolioLayout />}>
                 <Route index element={<PortfolioEditor />} />
-                <Route path="results" element={<Dashboard />} />
+                <Route path="results" element={<InvestmentView />} />
+                <Route path="risk" element={<RiskView />} />
                 <Route path="recommendations" element={<RecommendationsPage />} />
               </Route>
               <Route path="/settings" element={<SettingsPage />} />
