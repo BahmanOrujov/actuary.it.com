@@ -120,6 +120,11 @@ def test_full_generate_flow(alice, bob, admin):
     assert {k["key"] for k in rk["kri"]} >= {"limit_use", "vol_regime", "top_weight", "stress", "liquidity"}
     assert all(k["status"] in ("green", "amber", "red", "none") for k in rk["kri"])
     assert 0 < inv["metrics"]["diversification_benefit"] < 1
+    # the quantile grid behind user-chosen VaR levels agrees with the headline VaR
+    q = rk["quantiles"]
+    assert len(q) == 999 and all(a <= b for a, b in zip(q, q[1:]))
+    assert -q[49] == pytest.approx(res["risk"]["0.95"]["var_pct"], abs=2e-3)
+    assert 0 <= inv["metrics"]["prob_beat_rf"] <= 1 and rk["metrics"]["semidev_annual"] > 0
     # privacy: no diagnostics in client payloads
     keys = set(_walk_keys(latest))
     assert not keys & FORBIDDEN_CLIENT_KEYS, keys & FORBIDDEN_CLIENT_KEYS

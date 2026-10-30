@@ -11,12 +11,15 @@ if (-not (Test-Path (Join-Path $Root "frontend\dist\index.html"))) {
 $Backend = Join-Path $Root "backend"
 $api = Start-Process -FilePath $Py -ArgumentList "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000" `
     -WorkingDirectory $Backend -PassThru -NoNewWindow
-$worker = Start-Process -FilePath $Py -ArgumentList "-m", "jobs.worker" -WorkingDirectory $Backend -PassThru -NoNewWindow
+# two workers: Generate (seconds) never waits behind a validation (minutes)
+$worker = Start-Process -FilePath $Py -ArgumentList "-m", "jobs.worker", "--kinds", "generate" -WorkingDirectory $Backend -PassThru -NoNewWindow
+$validator = Start-Process -FilePath $Py -ArgumentList "-m", "jobs.worker", "--kinds", "validate" -WorkingDirectory $Backend -PassThru -NoNewWindow
 Write-Host ""
 Write-Host "Portfel Analizi işləyir:  http://localhost:8000"
 Write-Host "Dayandırmaq üçün Ctrl+C"
 try {
-    while (-not $api.HasExited -and -not $worker.HasExited) { Start-Sleep -Seconds 2 }
+    while (-not $api.HasExited -and -not $worker.HasExited -and -not $validator.HasExited) { Start-Sleep -Seconds 2 }
 } finally {
-    foreach ($p in @($api, $worker)) { if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } }
+    # /T: also the workers' process-pool children, which would otherwise be left running (and holding memory)
+    foreach ($p in @($api, $worker, $validator)) { if (-not $p.HasExited) { taskkill /PID $p.Id /T /F 2>$null | Out-Null } }
 }

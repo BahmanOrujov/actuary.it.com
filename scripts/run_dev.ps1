@@ -10,7 +10,8 @@ $Backend = Join-Path $Root "backend"
 $procs = @()
 $procs += Start-Process -FilePath $Py -ArgumentList "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000" `
     -WorkingDirectory $Backend -PassThru -NoNewWindow
-$procs += Start-Process -FilePath $Py -ArgumentList "-m", "jobs.worker" -WorkingDirectory $Backend -PassThru -NoNewWindow
+$procs += Start-Process -FilePath $Py -ArgumentList "-m", "jobs.worker", "--kinds", "generate" -WorkingDirectory $Backend -PassThru -NoNewWindow
+$procs += Start-Process -FilePath $Py -ArgumentList "-m", "jobs.worker", "--kinds", "validate" -WorkingDirectory $Backend -PassThru -NoNewWindow
 $procs += Start-Process -FilePath "npm.cmd" -ArgumentList "run", "dev" -WorkingDirectory (Join-Path $Root "frontend") -PassThru -NoNewWindow
 
 Write-Host ""
@@ -22,7 +23,8 @@ try {
         foreach ($p in $procs) { if ($p.HasExited) { throw "Proses dayandı (PID $($p.Id))" } }
     }
 } finally {
-    foreach ($p in $procs) { if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } }
+    # /T: also the workers' process-pool children, which would otherwise be left running (and holding memory)
+    foreach ($p in $procs) { if (-not $p.HasExited) { taskkill /PID $p.Id /T /F 2>$null | Out-Null } }
     Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like "*vite*" -and $_.CommandLine -like "*Portfoilo*" } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 }

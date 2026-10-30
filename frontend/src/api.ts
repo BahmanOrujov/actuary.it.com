@@ -347,6 +347,12 @@ export interface Insights {
       effective_n: number;
       top_weight: number;
       cash_share: number;
+      treynor: number | null;
+      rachev: number | null;
+      prob_beat_rf: number;
+      calmar: number | null;
+      best_case: number;
+      best_case_money: number;
     };
     positions: {
       symbol: string;
@@ -381,7 +387,14 @@ export interface Insights {
       corr_long: number | null;
       corr_pair: { a: string; b: string; value: number } | null;
       top3_risk: number;
+      skewness: number | null;
+      excess_kurtosis: number | null;
+      semidev_annual: number;
+      prob_loss: number;
+      worst_case: number | null;
     };
+    /** Horizon-return quantiles at p = 0.001 ... 0.999; null below the hidden tail when the model is unreliable. */
+    quantiles?: (number | null)[];
     assets: { symbol: string; now: number; long: number; ratio: number | null; liquidity_days: number | null }[];
   };
 }

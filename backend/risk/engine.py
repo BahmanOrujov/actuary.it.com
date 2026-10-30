@@ -22,7 +22,7 @@ from risk.factors import capm_beta, clusters, hhi, multifactor
 from risk.garch import AssetModel, fit_ewma, garch_break_test, select_garch
 from risk.insights import collect as collect_insights
 from risk.measures import compute_measures, var_cvar
-from risk.simulate import build_pool, simulate_paths
+from risk.simulate import SimOutput, build_pool, simulate_paths
 from validation.stat_tests import engle_sheppard, hosking_portmanteau
 
 log = logging.getLogger(__name__)
@@ -61,6 +61,22 @@ def _break_job(args: tuple) -> tuple[dict[str, Any], int | None]:
     m, trim, spec = args
     t, k = garch_break_test(m, trim, spec)
     return t.to_dict(), k
+
+
+def _warm_job(_: int) -> bool:
+    import arch.univariate  # noqa: F401  the heavy import of a model fit, done before the first Generate
+    return True
+
+
+def warm_pool() -> None:
+    """Start the process pool and import the model libraries in every worker process now, so the first
+    Generate after a restart does not pay ~15-30 s of process start-up."""
+    pool = _pool()
+    if pool is not None:
+        try:
+            list(pool.map(_warm_job, range(pool._max_workers)))  # noqa: SLF001
+        except Exception as exc:  # noqa: BLE001
+            log.warning("pool warm-up failed: %s", exc)
 
 
 def _map(fn, jobs: list, parallel: bool) -> list:
@@ -413,7 +429,7 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
     mem_cap = int(float(cfg["model"].get("memory_budget_bytes", 1.2e9)) / (H * len(symbols) * 16))
     S_cap = min(S_max, mem_cap)
     # The batch-means SE is itself noisy (~16% relative with 20 batches), hence the safety margin and the loop.
-    for _ in range(3):
+    for k in range(3):
         e95 = meas["mc_error"]["0.95"]
         rel = max(e95.get("var_rel", 1), e95.get("cvar_rel", 1))
         if rel <= target or S >= S_cap:
@@ -422,8 +438,12 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
         if S_new <= S:
             break
         progress("simulation", 0.65)
-        rng = np.random.default_rng(int(snap["seed"]))
-        sim = simulate_paths(models, fs.corr, fs.pool_u, mu_daily, H, S_new, cfg["model"]["param_sets"], rng)
+        # only the missing scenarios are simulated (independent draws, own reproducible stream) and appended:
+        # re-simulating all S_new paths repeated most of the work and made Generate 2-3x slower
+        rng = np.random.default_rng([int(snap["seed"]), k + 1])
+        extra = simulate_paths(models, fs.corr, fs.pool_u, mu_daily, H, S_new - S, cfg["model"]["param_sets"], rng)
+        sim = SimOutput(np.concatenate([sim.log_returns, extra.log_returns]), np.concatenate([sim.param_set, extra.param_set]))
+        del extra
         meas = compute_measures(sim.log_returns, mv0, cost, qty, snap["cash"], cps, cfg, cfg["model"]["sample_paths"])
         S = S_new
     admin["mc"] = {"scenarios": S, "errors": meas["mc_error"], "target_rel": target,

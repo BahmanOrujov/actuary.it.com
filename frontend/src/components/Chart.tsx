@@ -48,10 +48,10 @@ export function baseOption(p: Palette): echarts.EChartsOption {
   return {
     animation: false,
     aria: { enabled: true },
-    textStyle: { color: p.muted, fontFamily: "Segoe UI, system-ui, sans-serif" },
+    textStyle: { color: p.muted, fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: 13 },
     grid: { left: 64, right: 24, top: 24, bottom: 40, containLabel: false },
     tooltip: {
-      backgroundColor: p.surface, borderColor: p.line, textStyle: { color: p.fg, fontSize: 12 },
+      backgroundColor: p.surface, borderColor: p.line, textStyle: { color: p.fg, fontSize: 13.5 },
       confine: true,
     },
   };
@@ -61,7 +61,7 @@ export function axisStyle(p: Palette) {
   return {
     axisLine: { lineStyle: { color: p.line } },
     axisTick: { show: false },
-    axisLabel: { color: p.muted, fontSize: 11, hideOverlap: true },
+    axisLabel: { color: p.muted, fontSize: 12.5, hideOverlap: true },
     splitLine: { lineStyle: { color: p.grid, type: "solid" as const, width: 1 } },
   };
 }

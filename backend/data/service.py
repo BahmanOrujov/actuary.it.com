@@ -55,6 +55,7 @@ class MarketData:
         self.cfg = get_settings()
         self.messages: list[str] = []  # client-safe messages about degraded data
         self.admin_notes: list[str] = []
+        self._frames: dict[tuple[str, str | None], pd.DataFrame] = {}
 
     @property
     def provider(self) -> MarketDataProvider:
@@ -108,30 +109,36 @@ class MarketData:
         return inst
 
     # -- bars ---------------------------------------------------------------
+    def _forget(self, symbol: str) -> None:
+        for key in [k for k in self._frames if k[0] == symbol]:
+            del self._frames[key]
+
     def _load_cached(self, symbol: str, source: str | None = None) -> pd.DataFrame:
-        stmt = select(PriceBar).where(PriceBar.symbol == symbol)
+        # one Generate reads the same symbol several times (snapshot, FX, index, stress, liquidity): keep the frame
+        # for the lifetime of this MarketData; store_bars drops it when the symbol's data changes
+        key = (symbol, source)
+        if key in self._frames:
+            return self._frames[key].copy()
+        cols = [PriceBar.date, PriceBar.open, PriceBar.high, PriceBar.low, PriceBar.close, PriceBar.adj_close,
+                PriceBar.volume, PriceBar.dividends, PriceBar.splits, PriceBar.source]
+        stmt = select(*cols).where(PriceBar.symbol == symbol)
         if source:
             stmt = stmt.where(PriceBar.source == source)
-        rows = self.db.scalars(stmt.order_by(PriceBar.date)).all()
+        # plain column tuples, not ORM objects: ~10x faster for 25+ years of daily bars
+        rows = self.db.execute(stmt.order_by(PriceBar.date)).all()
         if not rows:
             return pd.DataFrame(columns=BAR_COLUMNS + ["source"])
-        df = pd.DataFrame(
-            [
-                {
-                    "date": r.date, "open": r.open, "high": r.high, "low": r.low, "close": r.close,
-                    "adj_close": r.adj_close, "volume": r.volume, "dividends": r.dividends, "splits": r.splits,
-                    "source": r.source,
-                }
-                for r in rows
-            ]
-        )
+        df = pd.DataFrame.from_records(rows, columns=[c.key for c in cols])
         df["date"] = pd.to_datetime(df["date"])
         # prefer provider data over CSV on overlapping days
         df["prio"] = df["source"].map(lambda s: 0 if s.startswith("csv") else 1)
         df = df.sort_values(["date", "prio"]).drop_duplicates("date", keep="last").set_index("date")
-        return df.drop(columns="prio")
+        df = df.drop(columns="prio")
+        self._frames[key] = df
+        return df.copy()
 
     def store_bars(self, symbol: str, bars: pd.DataFrame, source: str) -> int:
+        self._forget(symbol)
         if bars.empty:
             return 0
         dates = [d.date() for d in bars.index]
@@ -212,6 +219,7 @@ class MarketData:
                 if start is not None and not new.empty and (new["splits"].fillna(0) > 0).any():
                     new = self.provider.get_daily_bars(symbol, None, None)
                     self.db.execute(delete(PriceBar).where(PriceBar.symbol == symbol, PriceBar.source == self.provider.name))
+                    self._forget(symbol)
                 self.store_bars(symbol, new, self.provider.name)
                 self._log_fetch(symbol, "ok")
                 cached = self._load_cached(symbol)

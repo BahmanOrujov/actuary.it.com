@@ -15,6 +15,7 @@ from risk.garch import AssetModel
 from risk.measures import var_cvar
 
 TRADING_DAYS = 252
+QUANTILE_GRID = np.arange(1, 1000) / 1000
 
 
 def _pct(x: float, sign: bool = False) -> str:
@@ -131,6 +132,8 @@ def build_insights(ctx: dict[str, Any], limit: float, cfg: dict[str, Any]) -> di
             agg["nağd"] = agg.get("nağd", 0.0) + ctx["cash"] / V0
         return [{"key": k, "weight": v} for k, v in sorted(agg.items(), key=lambda kv: -kv[1])]
 
+    tail_n = max(1, int(round(len(ret) * 0.05)))
+    mdd_med = float(ctx["drawdown"]["mdd_percentiles"]["50"])
     invest_metrics = {
         "expected_return": exp_ret, "expected_money": exp_ret * V0, "median_return": med,
         "range90": [p05, p95], "prob_gain": float(np.mean(ret > 0)),
@@ -145,6 +148,12 @@ def build_insights(ctx: dict[str, Any], limit: float, cfg: dict[str, Any]) -> di
         "diversification_benefit": div_benefit, "standalone_cvar_sum": float(standalone.sum()),
         "effective_n": ctx["effective_n"], "top_weight": float(w.max()) if N else 0.0,
         "cash_share": ctx["cash"] / V0,
+        # tail-aware and benchmark-free extras
+        "treynor": (exp_ret - rf_H) * TRADING_DAYS / H / float(w @ ctx["betas"]) if float(w @ ctx["betas"]) > 0 else None,
+        "rachev": float(np.mean(np.sort(ret)[-tail_n:])) / cvar95 if cvar95 > 0 else None,
+        "prob_beat_rf": float(np.mean(ret > rf_H)),
+        "calmar": exp_ret / abs(mdd_med) if mdd_med < 0 else None,
+        "best_case": p95, "best_case_money": p95 * V0,
     }
 
     memo_inv = [{
@@ -281,6 +290,13 @@ def build_insights(ctx: dict[str, Any], limit: float, cfg: dict[str, Any]) -> di
                  "metrics": {"cvar95": cvar95, "var95": var95, "limit": limit, "limit_use": use,
                              "headroom_money": (limit - cvar95) * V0 if limit else None, "beyond_limit": beyond,
                              "vol_now": ctx["port_vol_now"], "vol_long": ctx["port_vol_long"], "vol_regime": regime,
-                             "corr_now": c_now, "corr_long": c_long, "corr_pair": pair, "top3_risk": top3},
+                             "corr_now": c_now, "corr_long": c_long, "corr_pair": pair, "top3_risk": top3,
+                             "skewness": float(((ret - ret.mean()) ** 3).mean() / ret.std() ** 3) if ret.std() > 0 else None,
+                             "excess_kurtosis": float(((ret - ret.mean()) ** 4).mean() / ret.std() ** 4 - 3) if ret.std() > 0 else None,
+                             "semidev_annual": float(np.sqrt(np.mean(np.minimum(ret, 0) ** 2)) * ann),
+                             "prob_loss": float(np.mean(ret < 0)), "worst_case": float(np.quantile(ret, 0.001))},
+                 # horizon-return quantiles at p = 0.001 ... 0.999: the UI computes VaR/CVaR at any confidence level and
+                 # the probability of any loss threshold from these (no re-run needed)
+                 "quantiles": np.round(np.quantile(ret, QUANTILE_GRID), 6).tolist(),
                  "assets": vol_rows},
     }

@@ -243,6 +243,13 @@ def client_run_view(db: Session, run: AnalysisRun, portfolio: Portfolio, audit_u
     payload = dict(rr.payload) if rr else {}
     if run.reliability == "low" and "risk" in payload:
         payload = {**payload, "risk": {k: v for k, v in payload["risk"].items() if k != "0.99"}, "hidden_99": True}
+        ins = payload.get("insights")
+        q = (ins or {}).get("risk", {}).get("quantiles")
+        if q:
+            # the same rule for the quantile grid: nothing beyond the 98% level when the model is unreliable
+            cut = int(len(q) * (1 - get_settings()["insights"]["hidden_tail_level"]))
+            payload["insights"] = {**ins, "risk": {**ins["risk"], "quantiles": [None] * cut + q[cut:],
+                                                   "metrics": {**ins["risk"]["metrics"], "worst_case": None}}}
     recs = db.scalars(select(Recommendation).where(Recommendation.run_id == run.id)).all()
     rec_list = []
     for r in recs:

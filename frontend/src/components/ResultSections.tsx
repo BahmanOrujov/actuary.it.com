@@ -352,11 +352,13 @@ export function PnlSection({ res, cp, unit }: { res: RunResult; cp: number; unit
   );
 }
 
-export function Distribution({ res, level }: { res: RunResult; level: string }) {
+/** level: confidence as a fraction string ("0.95", "0.975"); risk: VaR/CVaR at that level (positive = loss),
+ *  from the run's quantile grid for user-chosen levels, otherwise the run's own 95/99 measures. */
+export function Distribution({ res, level, risk }: { res: RunResult; level: string; risk?: { var: number; cvar: number } }) {
   const { edges, counts } = res.histogram;
   const centers = counts.map((_, i) => (edges[i] + edges[i + 1]) / 2);
-  const varPct = -res.risk[level].var_pct;
-  const cvarPct = -res.risk[level].cvar_pct;
+  const varPct = -(risk ? risk.var : res.risk[level].var_pct);
+  const cvarPct = -(risk ? risk.cvar : res.risk[level].cvar_pct);
   const idxOf = (x: number) => Math.max(0, Math.min(centers.length - 1, centers.findIndex((c, i) => x < edges[i + 1])));
   const build = (p: Palette): EChartsOption => ({
     ...baseOption(p),
@@ -376,7 +378,7 @@ export function Distribution({ res, level }: { res: RunResult; level: string }) 
         symbol: "none", silent: true, label: { color: p.fg, fontSize: 11 },
         data: [
           { xAxis: idxOf(varPct), lineStyle: { color: p.neg, type: "solid" },
-            label: { formatter: `VaR ${Number(level) * 100}%: ${pct(varPct)}`, position: "end", distance: 4 } },
+            label: { formatter: `VaR ${pct(Number(level))}: ${pct(varPct)}`, position: "end", distance: 4 } },
           { xAxis: idxOf(cvarPct), lineStyle: { color: p.neg, type: "dashed" },
             label: { formatter: `CVaR: ${pct(cvarPct)}`, position: "end", distance: 20 } },
         ],
@@ -392,7 +394,7 @@ export function Distribution({ res, level }: { res: RunResult; level: string }) 
           ? ` Ən ekstremal ${int((res.histogram.below ?? 0) + (res.histogram.above ?? 0))} ssenari (hər tərəfdə 0,1%) qrafikdən kənardadır, ölçülərə daxildir.`
           : "")}
       build={build}
-      deps={[res, level]}
+      deps={[res, level, risk?.var, risk?.cvar]}
       ariaLabel="Dövrün sonunda gəlirin histogramı"
       table={
         <table>

@@ -22,7 +22,7 @@ from data.service import MarketData
 from portfolio.snapshot import build_portfolio_data
 from recommend.monitor import monitor_all
 from recommend.risk_based import build_recommendations
-from risk.engine import AnalysisError, _market_returns, drift_index, prepare_returns, run_generate
+from risk.engine import AnalysisError, _market_returns, drift_index, prepare_returns, run_generate, warm_pool
 from risk.insights import build_insights
 from validation.backtest import VALIDATION_VERSION, DriftInputs, evaluate, run_backtest
 from validation.report import _clean, write_report
@@ -34,10 +34,15 @@ def _now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def claim_job() -> int | None:
+JOB_KINDS = ("generate", "validate")
+
+
+def claim_job(kinds: tuple[str, ...] = JOB_KINDS) -> int | None:
+    """Oldest queued job of the given kinds; generate first, so a client never waits behind a validation."""
     def _claim() -> int | None:
         with SessionLocal() as db:
-            job = db.scalar(select(Job).where(Job.status == "queued").order_by(Job.id).limit(1))
+            job = db.scalar(select(Job).where(Job.status == "queued", Job.kind.in_(kinds))
+                            .order_by((Job.kind != "generate"), Job.id).limit(1))
             if job is None:
                 return None
             res = db.execute(update(Job).where(Job.id == job.id, Job.status == "queued")
@@ -306,28 +311,38 @@ def process(job_id: int) -> None:
             retry_locked(db.commit)
 
 
-def reset_stuck() -> None:
-    """Jobs left 'running' by a crashed worker go back to the queue."""
+def reset_stuck(kinds: tuple[str, ...] = JOB_KINDS) -> None:
+    """Jobs of this worker's kinds left 'running' by a crashed worker go back to the queue (a worker for other
+    kinds may be running its own job right now)."""
     with SessionLocal() as db:
-        db.execute(update(Job).where(Job.status == "running").values(status="queued"))
+        db.execute(update(Job).where(Job.status == "running", Job.kind.in_(kinds)).values(status="queued"))
         db.commit()
 
 
 def main() -> None:
+    """python -m jobs.worker [--kinds generate|validate|generate,validate]
+
+    scripts/run.ps1 starts one worker per kind: a validation (minutes) then never delays a Generate (seconds)."""
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--kinds", default=",".join(JOB_KINDS))
+    kinds = tuple(k for k in ap.parse_args().kinds.split(",") if k in JOB_KINDS) or JOB_KINDS
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     init_db()
-    reset_stuck()
+    reset_stuck(kinds)
     interval = get_settings()["jobs"]["poll_interval_seconds"]
     monitor_every = 60 * get_settings()["jobs"]["monitor_interval_minutes"]
     last_monitor = 0.0
-    log.info("worker started (mode=%s)", get_settings().mode)
+    log.info("worker started (mode=%s, jobs=%s)", get_settings().mode, ",".join(kinds))
+    warm_pool()
     while True:
-        job_id = claim_job()
+        job_id = claim_job(kinds)
         if job_id is not None:
             log.info("processing job %s", job_id)
             process(job_id)
             continue
-        if time.monotonic() - last_monitor > monitor_every:
+        if "generate" in kinds and time.monotonic() - last_monitor > monitor_every:
             last_monitor = time.monotonic()
             run_monitor()
         time.sleep(interval)
