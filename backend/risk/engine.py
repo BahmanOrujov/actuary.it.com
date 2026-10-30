@@ -147,7 +147,10 @@ def fit_system(R: pd.DataFrame, cfg: dict[str, Any], full: bool, parallel: bool 
     the shock pool use the common dates on which every instrument has data."""
     short = cfg["model"]["short_history_years"]
     series = {c: R[c].dropna() for c in R.columns}
-    use_garch = {c: _years(s.index) >= short for c, s in series.items()}
+    # share of days with an exactly unchanged price: ~1% for a traded stock, most days for an illiquid listing
+    zero_share = {c: float((s == 0).mean()) if len(s) else 0.0 for c, s in series.items()}
+    illiquid = [c for c, z in zero_share.items() if z > cfg["model"]["max_zero_return_share"]]
+    use_garch = {c: _years(s.index) >= short and c not in illiquid for c, s in series.items()}
     jobs = [(c, series[c], cfg, use_garch[c], full) for c in R.columns]
     models = _map(_fit_asset_job, jobs, parallel)
     models, breaks = apply_break_policy(models, series, cfg, full, parallel)
@@ -160,7 +163,9 @@ def fit_system(R: pd.DataFrame, cfg: dict[str, Any], full: bool, parallel: bool 
     common_years = _years(common)
     info: dict[str, Any] = {
         "window_years": round(_years(R.index), 2), "common_years": round(common_years, 2),
-        "use_garch": use_garch, "short_history_assets": [c for c, g in use_garch.items() if not g],
+        "use_garch": use_garch,
+        "short_history_assets": [c for c, g in use_garch.items() if not g and c not in illiquid],
+        "illiquid_assets": {c: round(zero_share[c], 3) for c in illiquid},
         "breaks": breaks,
     }
     Z = np.column_stack([pd.Series(m.z, index=m.index).reindex(common).to_numpy() for m in models])
@@ -388,6 +393,8 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
     cap_reasons = [f"{s}: tarixçə {cfg['model']['short_history_years']:g} ildən qısadır (EWMA)"
                    for s in fs.info["short_history_assets"]]
     cap_reasons += [f"{p['symbol']}: tarixçə 6 aydan qısadır (indeks proksisi)" for p in admin.get("proxies", [])]
+    cap_reasons += [f"{s}: günlərin {z:.0%}-ində qiymət dəyişməyib (az ticarət) → EWMA"
+                    for s, z in fs.info["illiquid_assets"].items()]
     admin["reliability_cap"] = "low" if cap_reasons else None
     admin["reliability_cap_reasons"] = cap_reasons
     admin["assets"] = {
@@ -446,6 +453,12 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
         del extra
         meas = compute_measures(sim.log_returns, mv0, cost, qty, snap["cash"], cps, cfg, cfg["model"]["sample_paths"])
         S = S_new
+    # last line of defence: the bounds in simulate_paths should make this impossible; if it happens, name the
+    # instrument instead of failing later with an opaque error
+    bad = [names[i] for i in range(len(symbols)) if not np.isfinite(meas["_pnl_assets_end"][:, i]).all()]
+    if bad or not np.isfinite(meas["_ret_H"]).all():
+        raise AnalysisError(f"{', '.join(bad) or 'Portfel'}: model bu alətin qiymət tarixçəsi ilə sabit nəticə vermədi "
+                            "(çox az ticarət və ya xətalı məlumat ola bilər). Alətin əsas birjadakı səhmini seçin və ya onu çıxarın.")
     admin["mc"] = {"scenarios": S, "errors": meas["mc_error"], "target_rel": target,
                    "euler_sum": meas["euler_sum"], "cvar95_money": meas["risk"]["0.95"]["cvar_money"]}
 

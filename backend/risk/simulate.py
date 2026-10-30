@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from app.config import get_settings
 from risk.dcc import CorrModel, _q_to_r, sym_sqrt
 from risk.garch import SQRT_2_PI, AssetModel, draw_param_sets
 
@@ -46,6 +47,8 @@ def simulate_paths(
 
     s2 = np.tile(np.array([m.next_sigma2 for m in models]), (S, 1))  # S x N  (scaled^2)
     scale = np.array([m.scale for m in models])
+    cap = float(get_settings()["model"]["max_daily_log_return"])
+    s2_cap = (cap * scale) ** 2  # daily volatility never above the one-day bound
     use_dcc = corr.kind == "DCC" and N > 1
     if use_dcc:
         Q = np.broadcast_to(corr.Q_next, (S, N, N)).copy()
@@ -64,7 +67,9 @@ def simulate_paths(
             z = u @ Rhalf.T
         else:
             z = u
-        e = np.sqrt(s2) * z
+        # physical bound on a simulated day: a draw beyond it comes from a mis-specified fit, not from the
+        # market, and unbounded it compounds to inf/NaN over 63 days
+        e = np.clip(np.sqrt(s2) * z, -cap * scale, cap * scale)
         out[:, h, :] = mu_daily + e / scale
         # variance update
         nxt = w + (a + g * (e < 0)) * e ** 2 + b * s2
@@ -73,7 +78,7 @@ def simulate_paths(
             nxt = np.where(is_eg, np.exp(np.clip(lg, -50, 50)), nxt)
         if is_ewma.any():
             nxt = np.where(is_ewma, lam * s2 + (1 - lam) * e ** 2, nxt)
-        s2 = np.maximum(nxt, 1e-12)
+        s2 = np.clip(nxt, 1e-12, s2_cap)
         if use_dcc:
             Q = c + corr.A * np.einsum("si,sj->sij", z, z) + corr.B * Q
     return SimOutput(out, set_idx)

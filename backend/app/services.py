@@ -16,6 +16,7 @@ from app.models import (
     Transaction,
 )
 from data.calendars import previous_session
+from data.quality import check_bars
 from data.provider import ProviderError
 from data.service import MarketData
 from portfolio.inputs import InputError, resolve_input
@@ -59,17 +60,21 @@ def add_transaction(db: Session, md: MarketData, portfolio: Portfolio, *, provid
         )
     except (InputError, ValueError) as exc:
         raise HTTPException(422, str(exc)) from exc
+    # tell the client at once when the chosen listing is rarely traded or too young (e.g. a small ETP on
+    # another exchange picked instead of the company's main listing)
+    warnings = resolved.warnings + [w for w in check_bars(inst.provider_symbol, bars).client_warnings()
+                                    if w not in resolved.warnings]
 
     tx = Transaction(
         portfolio_id=portfolio.id, instrument_id=inst.id, side=side, quantity=quantity,
         trade_date=resolved.trade_date, price=resolved.price, fees=fees or 0.0, currency=inst.currency,
-        input_flags={**resolved.flags, "warnings": resolved.warnings},
+        input_flags={**resolved.flags, "warnings": warnings},
     )
     check_sells(portfolio, extra=tx, instrument=inst)
     db.add(tx)
     bump(portfolio)
     db.flush()
-    return tx, resolved.warnings
+    return tx, warnings
 
 
 def check_sells(portfolio: Portfolio, extra: Transaction | None = None, instrument: Instrument | None = None,

@@ -22,6 +22,9 @@ class QualityReport:
     outlier_returns: list[str] = field(default_factory=list)
     suspected_unadjusted_splits: list[str] = field(default_factory=list)
     longest_stale_run: int = 0
+    # share of business days in the last year with a real trade (a bar with volume > 0): low for illiquid
+    # listings such as small ETPs, whose daily series is mostly carried-forward prices
+    trading_share: float | None = None
     notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
@@ -34,6 +37,10 @@ class QualityReport:
             out.append("Bu səhmin tarixçəsi qısadır, nəticələr daha az etibarlıdır.")
         if self.longest_stale_run >= cfg["data"]["quality"]["stale_run_days"]:
             out.append("Bu səhmin qiyməti uzun müddət dəyişməyib (aşağı likvidlik ola bilər).")
+        if self.trading_share is not None and self.trading_share < cfg["data"]["quality"]["min_trading_share"]:
+            out.append(f"Bu alət az alınıb-satılır: son ildə iş günlərinin {self.trading_share * 100:.0f}%-ində ticarət olub. "
+                       "Risk sadə modellə hesablanır və nəticələr daha az etibarlıdır; eyni şirkətin əsas birjadakı "
+                       "səhmini seçmək daha yaxşıdır.")
         return out
 
 
@@ -90,7 +97,24 @@ def check_bars(symbol: str, bars: pd.DataFrame) -> QualityReport:
         outlier_returns=outliers[:50],
         suspected_unadjusted_splits=splits[:20],
         longest_stale_run=longest,
+        trading_share=trading_share(bars),
     )
+
+
+def trading_share(bars: pd.DataFrame, days: int = 365) -> float | None:
+    """Share of business days in the last `days` calendar days with a bar and (when known) traded volume."""
+    if bars.empty:
+        return None
+    end = bars.index.max()
+    start = end - pd.Timedelta(days=days)
+    recent = bars.loc[start:]
+    # the whole window counts: a listing with a dense recent stretch after years of gaps is still illiquid
+    bdays = len(pd.bdate_range(start, end))
+    if not bdays:
+        return None
+    vol = recent["volume"] if "volume" in recent else None
+    traded = int((vol.fillna(0) > 0).sum()) if vol is not None and vol.notna().any() else len(recent)
+    return min(1.0, traded / bdays)
 
 
 def compare_sources(a: pd.DataFrame, b: pd.DataFrame, tol: float = 0.01) -> dict:

@@ -78,6 +78,7 @@ data:
     mad_z_threshold: 12.0
     stale_run_days: 10
     split_jump_ratio: 0.45
+    min_trading_share: 0.80   # below: "rarely traded" warning (share of business days with volume in the last year)
 
 portfolio:
   fractional_decimals: 4
@@ -111,6 +112,12 @@ model:
     trim: 0.15                # candidate break dates within [15%, 85%] of the window
     test_spec: [GJR, t]       # specification used for the LR when the selection fell back to EWMA
   short_history_years: 2.0
+  # a series that is mostly carried-forward prices (illiquid listing) breaks GARCH estimation: the rare
+  # trading days look like huge shocks and the fit can explode in simulation; such instruments get EWMA
+  max_zero_return_share: 0.20
+  # physical bound on one simulated day (log return; 0.7 = -50% / +100%) and on daily volatility:
+  # a model that would go beyond it is mis-specified, not informative, and must never yield inf/NaN
+  max_daily_log_return: 0.7
   proxy_history_months: 6
   dcc:
     use_engle_sheppard: true

@@ -85,6 +85,58 @@ def test_fhs_drift_controlled_by_mu_only():
     assert abs(total.mean()) < 0.01  # an uncentred pool would give ~ 63 * 0.01 * 0.3 = 0.19
 
 
+def test_simulation_stays_finite_for_an_explosive_fit():
+    """A mis-specified fit (here ARCH-dominated with huge shocks, as on an illiquid listing) must give bounded,
+    finite paths: one simulated day never exceeds model.max_daily_log_return."""
+    import pandas as pd
+
+    from app.config import get_settings
+    from risk.dcc import CorrModel
+    from risk.garch import AssetModel
+    from risk.simulate import build_pool, simulate_paths
+
+    cap = get_settings()["model"]["max_daily_log_return"]
+    rng = np.random.default_rng(3)
+    T = 800
+    z = np.where(rng.random(T) < 0.05, rng.standard_normal(T) * 15, 0.0)  # mostly zero, rare huge jumps
+    p = {"omega": 0.005, "alpha": 0.73, "gamma": -0.12, "beta": 0.28}
+    m = AssetModel("ETP", "GJR", "skewt", 100.0, 0.0, p, None, np.ones(T), z, z.copy(),
+                   pd.bdate_range("2021-01-01", periods=T), 50.0, 1.0)
+    corr = CorrModel("UNIVARIATE", np.eye(1))
+    sim = simulate_paths([m], corr, build_pool([m], corr), np.array([0.0]), 63, 3000, 1, rng, param_uncertainty=False)
+    r = sim.log_returns[:, :, 0]
+    assert np.isfinite(r).all() and np.abs(r).max() <= cap + 1e-6
+    assert np.isfinite(np.exp(r.sum(axis=1).astype(np.float64))).all()
+
+
+def test_illiquid_listing_gets_ewma_and_a_warning():
+    """Mostly carried-forward prices: no GARCH fit (it explodes on such data), and the client is told why."""
+    import pandas as pd
+
+    from app.config import get_settings
+    from data.quality import check_bars, trading_share
+    from risk.engine import fit_system
+
+    cfg = get_settings().raw
+    rng = np.random.default_rng(5)
+    idx = pd.bdate_range("2021-01-01", periods=1300)
+    liquid = rng.standard_normal(len(idx)) * 0.015
+    sparse = np.where(rng.random(len(idx)) < 0.25, rng.standard_normal(len(idx)) * 0.03, 0.0)
+    fs = fit_system(pd.DataFrame({"LIQ": liquid, "ETP": sparse}, index=idx), cfg, full=False, parallel=False)
+    kinds = {m.symbol: m.kind for m in fs.models}
+    assert kinds["ETP"] == "EWMA" and kinds["LIQ"] != "EWMA"
+    assert "ETP" in fs.info["illiquid_assets"] and "ETP" not in fs.info["short_history_assets"]
+
+    # bars on only a third of the business days of the last year -> "rarely traded" warning
+    days = pd.bdate_range("2025-01-01", "2026-01-01")
+    traded = days[rng.random(len(days)) < 0.33]
+    bars = pd.DataFrame({"close": 10.0, "adj_close": 10.0, "volume": 100.0, "splits": 0.0}, index=traded)
+    assert trading_share(bars) < cfg["data"]["quality"]["min_trading_share"]
+    assert any("az alınıb-satılır" in w for w in check_bars("ETP", bars).client_warnings())
+    full = pd.DataFrame({"close": 10.0, "adj_close": 10.0, "volume": 100.0, "splits": 0.0}, index=days)
+    assert not any("az alınıb-satılır" in w for w in check_bars("LIQ", full).client_warnings())
+
+
 def test_egarch_long_run_variance_uses_sample():
     from risk.garch import long_run_variance
 

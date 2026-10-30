@@ -19,6 +19,8 @@ QUANTILE_GRID = np.arange(1, 1000) / 1000
 
 
 def _pct(x: float, sign: bool = False) -> str:
+    if x is None or not np.isfinite(x):
+        return "—"
     s = f"{abs(x) * 100:.1f}%".replace(".", ",")
     return ("−" if x < 0 else "+" if sign and x > 0 else "") + s
 
@@ -26,6 +28,8 @@ def _pct(x: float, sign: bool = False) -> str:
 def _money(x: float, ccy: str) -> str:
     """Rounded to 3 significant digits like the UI: 1 017 000 $ (no false precision)."""
     sym = {"USD": "$", "EUR": "€", "GBP": "£", "AZN": "₼"}.get(ccy, ccy)
+    if x is None or not np.isfinite(x):
+        return "—"
     if abs(x) >= 1000:
         mag = 10 ** (int(np.floor(np.log10(abs(x)))) - 2)
         x = round(x / mag) * mag
