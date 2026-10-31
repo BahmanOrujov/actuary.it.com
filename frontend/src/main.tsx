@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, HashRouter } from "react-router-dom";
+import { DEMO } from "./api";
 import App from "./App";
 import "./styles.css";
 
@@ -11,10 +12,13 @@ try {
   /* storage unavailable */
 }
 
+// the demo is served as static files from a sub-path: hash routes need no server-side fallback
+const Router = DEMO ? HashRouter : BrowserRouter;
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <Router>
       <App />
-    </BrowserRouter>
+    </Router>
   </React.StrictMode>,
 );

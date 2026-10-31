@@ -74,6 +74,19 @@ def test_fx_azn_fixed(db):
     assert any("sabit" in n for n in md.admin_notes)
 
 
+def test_store_bars_skips_days_without_close(db):
+    from app.models import PriceBar
+    from data.service import MarketData
+
+    cols = ["open", "high", "low", "close", "adj_close", "volume", "dividends", "splits"]
+    bars = pd.DataFrame(
+        [[10, 11, 9, 10.5, 10.5, 100, 0, 0], [10.5, 11, 10, np.nan, np.nan, np.nan, 0, 0]],
+        index=pd.to_datetime(["2025-01-02", "2025-01-03"]), columns=cols,
+    )
+    assert MarketData(db).store_bars("TEST.DE", bars, "yahoo") == 1
+    assert [b.close for b in db.query(PriceBar).filter_by(symbol="TEST.DE")] == [10.5]
+
+
 def test_calendars():
     s = future_sessions("NYSE", date(2026, 10, 23), 63)
     assert len(s) == 63 and s[0] == date(2026, 10, 26)

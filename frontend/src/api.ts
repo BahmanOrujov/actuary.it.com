@@ -13,7 +13,40 @@ export class ApiError extends Error {
   }
 }
 
+/** Read-only demo build (VITE_DEMO=1): answers come from a pre-computed sample run, nothing is written. */
+export const DEMO = import.meta.env.VITE_DEMO === "1";
+export const DEMO_MESSAGE = "Bu, demo versiyadır: dəyişiklik və yeni hesablama mümkün deyil. Tam versiya kompüterdə lokal işləyir.";
+
+interface DemoData {
+  user: User;
+  config: PublicConfig;
+  portfolios: PortfolioSummary[];
+  details: Record<string, PortfolioDetail>;
+  runs: Record<string, RunView>;
+}
+
+let demoData: Promise<DemoData> | null = null;
+
+async function demoRequest<T>(method: string, url: string): Promise<T> {
+  if (method !== "GET") throw new ApiError(403, DEMO_MESSAGE);
+  demoData ??= fetch(`${import.meta.env.BASE_URL}demo/data.json`).then((r) => r.json());
+  const d = await demoData;
+  const path = url.split("?")[0];
+  const m = path.match(/^\/api\/portfolios\/(\d+)(\/runs\/latest)?$/);
+  const answer =
+    path === "/api/auth/me" ? d.user
+      : path === "/api/config/public" ? d.config
+        : path === "/api/notifications" ? { unread: 0, items: [] }
+          : path === "/api/portfolios" ? d.portfolios
+            : path.startsWith("/api/instruments/suggest") ? []
+              : m ? (m[2] ? d.runs[m[1]] : d.details[m[1]]) ?? null
+                : undefined;
+  if (answer === undefined) throw new ApiError(404, DEMO_MESSAGE);
+  return answer as T;
+}
+
 async function request<T>(method: string, url: string, body?: unknown, form?: FormData): Promise<T> {
+  if (DEMO) return demoRequest<T>(method, url);
   const headers: Record<string, string> = {};
   if (method !== "GET") headers["x-csrf-token"] = csrfToken();
   if (body !== undefined) headers["content-type"] = "application/json";

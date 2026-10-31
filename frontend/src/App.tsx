@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { api, PortfolioSummary, PublicConfig, User } from "./api";
+import { api, DEMO, PortfolioSummary, PublicConfig, User } from "./api";
 import { Icon } from "./components/Icons";
 import NewPortfolioDialog from "./components/NewPortfolioDialog";
 import Sidebar from "./components/Sidebar";
@@ -116,6 +116,13 @@ export default function App() {
             </button>
           </div>
           <main className="page">
+            {DEMO && (
+              <div className="banner info demo-banner">
+                <span className="ic">ℹ</span>
+                <span><b>Demo.</b> Nümunə portfelin hazır nəticələri göstərilir; dəyişiklik və yeni hesablama yoxdur.
+                  Tam versiya (öz portfelləriniz, Generate, PDF) kompüterdə lokal işləyir.</span>
+              </div>
+            )}
             <Routes>
               <Route path="/login" element={<Navigate to="/" />} />
               <Route path="/reset" element={<ResetPage />} />

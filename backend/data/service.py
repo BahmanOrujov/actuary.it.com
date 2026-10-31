@@ -139,6 +139,8 @@ class MarketData:
 
     def store_bars(self, symbol: str, bars: pd.DataFrame, source: str) -> int:
         self._forget(symbol)
+        # providers occasionally return a day without a close (e.g. a partial European session): not a price
+        bars = bars[pd.to_numeric(bars["close"], errors="coerce").notna()] if not bars.empty else bars
         if bars.empty:
             return 0
         dates = [d.date() for d in bars.index]

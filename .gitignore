@@ -12,6 +12,7 @@ __pycache__/
 .pytest_cache/
 .hypothesis/
 frontend/dist/
+frontend/dist-demo/
 frontend/test-results/
 frontend/playwright-report/
 backend/tests/recorded/
