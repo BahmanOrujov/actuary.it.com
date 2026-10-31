@@ -6,10 +6,10 @@ Bir Ubuntu serverində (Oracle Cloud Always Free) bütün sayt:
 |---|---|
 | `https://www.actuary.it.com` | statik sayt (`frontend/`), `/api` və `/admin` → Django (`backend/`, gunicorn) |
 | `https://actuary.it.com` | `www`-yə yönləndirmə |
-| `https://portfolio.actuary.it.com` | Portfel Analizinin tam versiyası (`portfolio/`) |
+| `https://www.actuary.it.com/portfolio/` | Portfel Analizinin tam versiyası (`portfolio/`); demo `/portfolio/demo/` |
 
-DNS dəyişənə qədər eyni server test ünvanlarında cavab verir: `https://<ip-tirelərlə>.sslip.io` və
-`https://portfolio.<ip-tirelərlə>.sslip.io`. Vercel və Render bu müddətdə olduğu kimi işləməyə davam edir.
+DNS dəyişənə qədər eyni server test ünvanında cavab verir: `https://<ip-tirelərlə>.sslip.io` (portfel:
+`/portfolio/`). Vercel və Render bu müddətdə olduğu kimi işləməyə davam edir.
 
 ## 1. Server
 
@@ -30,7 +30,6 @@ Domenin DNS-i GoDaddy-dədir (`ns13/ns14.domaincontrol.com`). **My Products → 
 |---|---|---|---|
 | A | `@` | serverin IP-si | Vercel-in köhnə A qeydini (`216.198.79.1`) bununla əvəz edin |
 | A (və ya CNAME → `@`) | `www` | serverin IP-si | Vercel-ə gedən köhnə `www` qeydini silin/əvəz edin |
-| A | `portfolio` | serverin IP-si | yeni |
 
 DNS yayılandan sonra (adətən 5–60 dəqiqə) skripti yenidən işə salın — real ünvanları Caddy-yə əlavə edib
 sertifikat alır:

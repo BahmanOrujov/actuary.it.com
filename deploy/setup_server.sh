@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # The whole actuary.it.com on one Ubuntu server (e.g. Oracle Cloud Always Free):
 #   - static site (frontend/) served by Caddy, /api and /admin proxied to Django (backend/, gunicorn)
-#   - Portfel Analizi full version on portfolio.<domain> (portfolio/, FastAPI + workers)
+#   - Portfel Analizi full version at /portfolio/ (portfolio/, FastAPI + workers); its demo at /portfolio/demo/
 #   - HTTPS certificates from Let's Encrypt via Caddy
 #
 #   curl -fsSL https://raw.githubusercontent.com/BahmanOrujov/actuary.it.com/main/deploy/setup_server.sh \
 #     | sudo bash -s -- [domain]
 #
 # domain (default actuary.it.com): its hosts are added to Caddy only once their DNS points to this server, so the
-# script can run before the DNS switch. Until then the site answers on https://<ip-with-dashes>.sslip.io and the
-# portfolio app on https://portfolio.<ip-with-dashes>.sslip.io. Rerun the script after changing DNS.
+# script can run before the DNS switch. Until then the site answers on https://<ip-with-dashes>.sslip.io.
+# Rerun the script after changing DNS.
 set -euo pipefail
 
 DOMAIN="${1:-actuary.it.com}"
@@ -28,7 +28,7 @@ command -v git >/dev/null || { apt-get update -q && apt-get install -y -q git; }
 if [ -d "$SRC/.git" ]; then git -C "$SRC" pull --ff-only; else git clone --depth 1 "$REPO" "$SRC"; fi
 
 echo "==> Portfel Analizi (packages, swap, firewall, its services)"
-PA_SKIP_CADDY=1 bash "$SRC/portfolio/deploy/setup_server.sh"
+PA_SKIP_CADDY=1 PA_BASE_PATH=/portfolio/ bash "$SRC/portfolio/deploy/setup_server.sh"
 
 echo "==> site backend (Django)"
 id $SVC_USER >/dev/null 2>&1 || useradd --system --home "$DATA" --shell /usr/sbin/nologin $SVC_USER
@@ -40,11 +40,10 @@ mkdir -p "$DATA/backups" && chown -R $SVC_USER:$SVC_USER "$DATA"
 IP=$(curl -fsS https://api.ipify.org)
 SSLIP="${IP//./-}.sslip.io"
 # public hosts: the sslip.io test names always, the real names once DNS points here
-SITE_HOSTS="$SSLIP"; PF_HOSTS="portfolio.$SSLIP"; APEX=""
+SITE_HOSTS="$SSLIP"; APEX=""
 resolves_here() { [ "$(getent ahostsv4 "$1" | awk 'NR==1{print $1}')" = "$IP" ]; }
 if resolves_here "www.$DOMAIN"; then SITE_HOSTS="$SITE_HOSTS, www.$DOMAIN"; fi
 if resolves_here "$DOMAIN"; then APEX="$DOMAIN"; fi
-if resolves_here "portfolio.$DOMAIN"; then PF_HOSTS="$PF_HOSTS, portfolio.$DOMAIN"; fi
 
 DJANGO_HOSTS="$(echo "$SITE_HOSTS" | tr -d ' '),127.0.0.1,localhost"
 umask 077
@@ -89,6 +88,19 @@ echo "==> https (Caddy)"
 		header Cache-Control no-cache
 		respond "window.API_BASE = '';"
 	}
+	# Portfel Analizi: the demo is static, everything else under /portfolio/ is the full app (prefix stripped)
+	redir /portfolio /portfolio/ permanent
+	redir /portfolio/demo /portfolio/demo/ permanent
+	handle /portfolio/demo/* {
+		root * /opt/actuary/frontend
+		file_server
+	}
+	handle /portfolio/* {
+		uri strip_prefix /portfolio
+		reverse_proxy 127.0.0.1:8000 {
+			header_up X-Forwarded-Prefix /portfolio
+		}
+	}
 	handle {
 		root * /opt/actuary/frontend
 		try_files {path} {path}/index.html
@@ -96,9 +108,6 @@ echo "==> https (Caddy)"
 	}
 }
 EOF
-  echo
-  echo "$PF_HOSTS {"
-  printf '\tencode gzip\n\treverse_proxy 127.0.0.1:8000\n}\n'
   if [ -n "$APEX" ]; then
     echo
     echo "$APEX {"
@@ -115,5 +124,5 @@ curl -fsS -o /dev/null -w "site api   %{http_code}\n" -H "Host: $SSLIP" http://1
 curl -fsS -o /dev/null -w "portfolio  %{http_code}\n" http://127.0.0.1:8000/api/config/public || true
 echo
 echo "Sayt:        https://$SSLIP$( [[ $SITE_HOSTS == *www.* ]] && echo "  və  https://www.$DOMAIN")"
-echo "Portfel:     https://portfolio.$SSLIP$( [[ $PF_HOSTS == *portfolio.$DOMAIN* ]] && echo "  və  https://portfolio.$DOMAIN")"
-echo "DNS hələ dəyişməyibsə: A qeydləri  @, www, portfolio  ->  $IP ; sonra bu skripti yenidən işə salın."
+echo "Portfel:     https://$SSLIP/portfolio/   (demo: /portfolio/demo/)"
+echo "DNS hələ dəyişməyibsə: A qeydləri  @ və www  ->  $IP ; sonra bu skripti yenidən işə salın."

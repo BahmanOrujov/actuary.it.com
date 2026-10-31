@@ -907,7 +907,7 @@ const { useState, useEffect } = React;
                       : 'GARCH/DCC simulation, VaR and CVaR, 56 stress scenarios, P&L by purchase date and a PDF report. The demo shows precomputed results for a sample portfolio.'}
                   </p>
                 </div>
-                <a className="btn-primary" href="/portfolio/" style={{ padding: '1rem 2rem', fontSize: '1.1rem', textDecoration: 'none' }}>
+                <a className="btn-primary" href="/portfolio/demo/" style={{ padding: '1rem 2rem', fontSize: '1.1rem', textDecoration: 'none' }}>
                   {lang === 'AZ' ? 'Demoya bax' : 'Open the demo'} <span style={{ marginLeft: '8px' }}>→</span>
                 </a>
               </div>
