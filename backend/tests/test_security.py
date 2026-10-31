@@ -80,3 +80,13 @@ def test_password_change_policy_and_other_sessions_revoked():
     assert ok.status_code == 200
     assert a.get("/api/auth/me").status_code == 200   # this device stays signed in
     assert b.get("/api/auth/me").status_code == 401   # the other device is signed out
+
+
+def test_closed_registration_allows_only_the_first_account(monkeypatch):
+    from app.config import get_settings
+
+    c = TestClient(app)
+    c.post("/api/auth/register", json={"email": "first-open@example.com", "password": "plum-river-orbit-8"})
+    monkeypatch.setattr(get_settings(), "open_registration", False)
+    r = TestClient(app).post("/api/auth/register", json={"email": "late@example.com", "password": "plum-river-orbit-8"})
+    assert r.status_code == 403 and "bağlıdır" in r.json()["detail"]

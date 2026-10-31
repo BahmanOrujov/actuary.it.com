@@ -276,6 +276,7 @@ features:
   rl: false                 # stage C, gated
 
 security:
+  open_registration: true    # false on an internet-facing server: only the first account (admin) registers
   rate_limit_per_minute: 120
   login_rate_limit_per_minute: 10
   session_days: 7

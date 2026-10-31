@@ -54,11 +54,13 @@ def register(body: Credentials, request: Request, response: Response, db: Sessio
     if not rate_limiter.allow(f"auth:{request.client.host if request.client else '-'}",
                               get_settings()["security"]["login_rate_limit_per_minute"]):
         raise HTTPException(429, "Çox cəhd. Bir dəqiqə sonra yenidən yoxlayın.")
+    first = db.scalar(select(func.count(User.id))) == 0
+    if not first and not get_settings().open_registration:
+        raise HTTPException(403, "Qeydiyyat bağlıdır. Hesabı administrator açır.")
     email = body.email.lower()
     validate_new_password(body.password, email)
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(409, "Bu e-poçt artıq qeydiyyatdan keçib.")
-    first = db.scalar(select(func.count(User.id))) == 0
     user = User(email=email, password_hash=hash_password(body.password), role="admin" if first else "client")
     db.add(user)
     db.flush()
