@@ -13,8 +13,9 @@ const trailingSlash: Plugin = {
 };
 
 export default defineConfig(({ mode }) => ({
-  // the demo build is served from a sub-path of a static site (e.g. /portfolio/): relative asset URLs
-  base: mode === "demo" ? "./" : "/",
+  // the demo build is served from a sub-path of a static site (e.g. /portfolio/demo/): relative asset URLs.
+  // PA_BASE_PATH=/portfolio/ builds the full app for a sub-path of a larger site (actuary.it.com)
+  base: mode === "demo" ? "./" : process.env.PA_BASE_PATH || "/",
   plugins: mode === "demo" ? [react(), trailingSlash] : [react()],
   server: {
     port: 5173,

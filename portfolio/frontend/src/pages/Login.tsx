@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, User } from "../api";
+import { api, ROOT, User } from "../api";
 import { useApp } from "../App";
 import { t } from "../i18n";
 
@@ -75,8 +75,15 @@ export default function LoginPage() {
           <li><span className="tick">✓</span><span>Hər rəqəmin yanında ona nə qədər güvənmək olacağı göstərilir.</span></li>
         </ul>
         <p className="fine">
-          Nəticələr investisiya tövsiyəsi deyil.{config?.mode === "personal" && " Məlumatlar yalnız bu kompüterdə saxlanılır."}
+          Nəticələr investisiya tövsiyəsi deyil.
+          {config?.mode === "personal" && !ROOT && " Məlumatlar yalnız bu kompüterdə saxlanılır."}
         </p>
+        {ROOT && (
+          <p className="fine">
+            Hesabınız yoxdur? <a href={`${ROOT}/demo/`} style={{ color: "inherit", fontWeight: 700 }}>Demoya baxın</a> —
+            nümunə portfelin hazır nəticələri.
+          </p>
+        )}
       </div>
       <div className="auth-form">
       <div className="card">

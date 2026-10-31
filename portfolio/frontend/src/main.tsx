@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, HashRouter } from "react-router-dom";
-import { DEMO } from "./api";
+import { DEMO, ROOT } from "./api";
 import App from "./App";
 import "./styles.css";
 
@@ -17,7 +17,7 @@ const Router = DEMO ? HashRouter : BrowserRouter;
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <Router>
+    <Router basename={ROOT || undefined}>
       <App />
     </Router>
   </React.StrictMode>,

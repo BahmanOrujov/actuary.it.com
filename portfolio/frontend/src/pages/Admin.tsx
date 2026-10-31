@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { NavLink, Route, Routes, useParams } from "react-router-dom";
-import { api } from "../api";
+import { api, apiUrl } from "../api";
 import { ReliabilityBadge, StatusBadge } from "../components/Badges";
 import { dateAz, dateTimeAz } from "../format";
 
@@ -70,8 +70,8 @@ function RunDetail() {
         <div className="card-head">
           <h2>Run {id}</h2>
           <div className="row-actions">
-            <a href={`/api/admin/runs/${id}/report.html`} target="_blank" rel="noreferrer">HTML hesabat</a>
-            <a href={`/api/admin/runs/${id}/report.json`}>JSON yüklə</a>
+            <a href={apiUrl(`/api/admin/runs/${id}/report.html`)} target="_blank" rel="noreferrer">HTML hesabat</a>
+            <a href={apiUrl(`/api/admin/runs/${id}/report.json`)}>JSON yüklə</a>
             <button onClick={async () => { await api.post(`/api/admin/runs/${id}/revalidate`); setMsg("Validasiya növbəyə əlavə olundu"); load(); }}>
               Yenidən validasiya
             </button>
@@ -101,7 +101,7 @@ function RunDetail() {
       </section>
       <section className="card">
         <h2>Tam hesabat</h2>
-        <iframe title="Admin hesabatı" src={`/api/admin/runs/${id}/report.html`} style={{ width: "100%", height: "70vh", border: "1px solid var(--line)", borderRadius: 8, background: "#fff" }} />
+        <iframe title="Admin hesabatı" src={apiUrl(`/api/admin/runs/${id}/report.html`)} style={{ width: "100%", height: "70vh", border: "1px solid var(--line)", borderRadius: 8, background: "#fff" }} />
       </section>
     </>
   );
