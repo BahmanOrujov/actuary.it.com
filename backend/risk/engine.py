@@ -503,6 +503,16 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
 
     # assemble client payload (no test statistics, p-values or model parameters)
     pnl_now = current_pnl(snap)
+    # forecast P&L of every open purchase lot at the horizon: same scenarios, the lot's own cost basis
+    pnl_end_assets = meas["_pnl_assets_end"]
+    for i, row in enumerate(pnl_now["positions"]):
+        if not qty[i]:
+            continue
+        end_px = (pnl_end_assets[:, i] + mv0[i]) / qty[i]  # base currency per share at the horizon
+        for lot, src in zip(row["lots"], positions[i].get("lots", [])):
+            lp = lot["quantity"] * (end_px - src["unit_cost_base"])
+            q05, q50, q95 = (float(x) for x in np.quantile(lp, [0.05, 0.5, 0.95]))
+            lot["forecast"] = {"median": q50, "p05": q05, "p95": q95, "prob_profit": float(np.mean(lp > 0))}
     assets_out = []
     for i, s in enumerate(symbols):
         a = meas["assets"][i]

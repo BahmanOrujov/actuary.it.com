@@ -146,6 +146,9 @@ def build_portfolio_data(db, portfolio: Portfolio, md: MarketData, seed: int | N
             "realized_base": st.realized_base,
             "dividends_base": div_by.get(s, 0.0),
             "first_open_date": st.first_open_date.isoformat() if st.first_open_date else None,
+            # open purchase lots (FIFO remainder), for P&L by purchase date
+            "lots": [{"trade_date": lot.trade_date.isoformat(), "quantity": round(lot.quantity, 6),
+                      "unit_cost_local": lot.unit_cost, "unit_cost_base": lot.unit_cost_base} for lot in st.lots],
         })
     closed = [
         {**meta[s], "realized_base": st.realized_base, "dividends_base": div_by.get(s, 0.0)}
@@ -185,6 +188,21 @@ def build_portfolio_data(db, portfolio: Portfolio, md: MarketData, seed: int | N
     return PortfolioData(snap, prices_df, close_local, states, {s: meta[s]["exchange"] for s in meta})
 
 
+def _lot_now(lot: dict[str, Any], p: dict[str, Any], today: date) -> dict[str, Any]:
+    """Current P&L of one open purchase lot, valued at the position's last close (base currency)."""
+    q = lot["quantity"]
+    cost = q * lot["unit_cost_base"]
+    value = q * p["last_close_local"] * p["fx_to_base"]
+    days = max((today - date.fromisoformat(lot["trade_date"])).days, 0)
+    ret = value / cost - 1 if cost else 0.0
+    # annualised only after a minimum holding: shorter periods would extrapolate noise
+    min_days = get_settings()["portfolio"]["annualize_min_days"]
+    annual = (1 + ret) ** (365.25 / days) - 1 if days >= min_days and ret > -1 else None
+    return {"trade_date": lot["trade_date"], "quantity": q, "unit_cost_local": lot["unit_cost_local"],
+            "cost_base": cost, "market_value_base": value, "unrealized": value - cost, "unrealized_pct": ret,
+            "holding_days": days, "annualized_return": annual}
+
+
 def current_pnl(snapshot: dict[str, Any]) -> dict[str, Any]:
     """Current P&L per position and in total (PROMPT.md 3.4, current state)."""
     pos = snapshot["positions"]
@@ -205,6 +223,7 @@ def current_pnl(snapshot: dict[str, Any]) -> dict[str, Any]:
             "total_return": unreal + p["realized_base"] + div,
             "holding_days": max(held, 0), "weight": p["market_value_base"] / total_mv if total_mv else 0.0,
             "currency": p["currency"], "last_close_local": p["last_close_local"],
+            "lots": [_lot_now(lot, p, today) for lot in p.get("lots", [])],
         })
     closed = snapshot.get("closed_positions", [])
     realized_closed = sum(c["realized_base"] for c in closed)

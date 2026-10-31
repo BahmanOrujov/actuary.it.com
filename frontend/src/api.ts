@@ -249,6 +249,19 @@ export interface RunResult {
       weight: number;
       currency: string;
       last_close_local: number;
+      /** Open purchase lots (FIFO remainder) with current and forecast P&L; absent on older runs. */
+      lots?: {
+        trade_date: string;
+        quantity: number;
+        unit_cost_local: number;
+        cost_base: number;
+        market_value_base: number;
+        unrealized: number;
+        unrealized_pct: number;
+        holding_days: number;
+        annualized_return: number | null;
+        forecast?: { median: number; p05: number; p95: number; prob_profit: number };
+      }[];
     }[];
     closed: { symbol: string; name: string; realized: number; dividends: number }[];
     total: {

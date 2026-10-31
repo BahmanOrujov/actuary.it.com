@@ -621,3 +621,9 @@ button, .btn { padding: 9px 16px; }
   .hero-value.long { font-size: 17px; }
   .hero-sub { font-size: 13.5px; }
 }
+
+/* P&L by purchase lot */
+table.lots tr.lot-group td { background: var(--surface-2); padding-top: 9px; padding-bottom: 9px; }
+table.lots td.lot-date { padding-left: 26px; color: var(--fg-2); }
+table.lots th, table.lots td { padding-left: 8px; padding-right: 8px; }
+table.lots th { white-space: normal; }

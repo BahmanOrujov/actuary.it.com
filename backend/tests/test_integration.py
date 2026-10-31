@@ -120,6 +120,18 @@ def test_full_generate_flow(alice, bob, admin):
     assert {k["key"] for k in rk["kri"]} >= {"limit_use", "vol_regime", "top_weight", "stress", "liquidity"}
     assert all(k["status"] in ("green", "amber", "red", "none") for k in rk["kri"])
     assert 0 < inv["metrics"]["diversification_benefit"] < 1
+    # P&L by purchase lot adds up to the position, with a forecast for each lot (FIFO: 10 bought, 2 sold -> 8 left)
+    for pos in res["current"]["positions"]:
+        assert pos["lots"] and abs(sum(l["quantity"] for l in pos["lots"]) - pos["quantity"]) < 1e-6
+        assert sum(l["unrealized"] for l in pos["lots"]) == pytest.approx(pos["unrealized"], abs=1e-6)
+        assert all(l["forecast"]["p05"] <= l["forecast"]["median"] <= l["forecast"]["p95"] for l in pos["lots"])
+    msft = next(p for p in res["current"]["positions"] if p["symbol"] == "MSFT")
+    assert msft["lots"][0]["quantity"] == pytest.approx(8) and msft["lots"][0]["trade_date"] == "2024-03-04"
+    # PDF report of the latest run: a real PDF, downloaded as an attachment, only for the owner
+    pdf = alice.get(f"/api/portfolios/{pid}/report.pdf")
+    assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF") and len(pdf.content) > 10_000
+    assert pdf.headers["content-type"] == "application/pdf" and "attachment" in pdf.headers["content-disposition"]
+    assert bob.get(f"/api/portfolios/{pid}/report.pdf").status_code == 404
     # the quantile grid behind user-chosen VaR levels agrees with the headline VaR
     q = rk["quantiles"]
     assert len(q) == 999 and all(a <= b for a, b in zip(q, q[1:]))

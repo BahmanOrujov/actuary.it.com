@@ -89,6 +89,7 @@ portfolio:
     moderate: 0.15
     aggressive: 0.25
   default_risk_profile: moderate
+  annualize_min_days: 91      # lots held shorter than this show no annualised return
 
 model:
   horizon_days: 63
@@ -202,6 +203,12 @@ insights:                     # CIO / CRO views of a run; status thresholds as f
   hedge_min_share: 0.02        # a position is a hedge only if it lowers CVaR95 by at least this share
   hidden_tail_level: 0.98     # unreliable model: the UI shows no VaR/CVaR or quantile beyond this level
   # top position weight: amber above recommend.max_position_weight, red above recommend.max_cluster_weight
+
+report:                       # client PDF report
+  history_days: 126           # past value shown before the forecast in the chart (~6 months)
+  # Unicode fonts (Azerbaijani letters), first file that exists is used
+  font_regular: ["C:/Windows/Fonts/arial.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/Library/Fonts/Arial.ttf"]
+  font_bold: ["C:/Windows/Fonts/arialbd.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/Library/Fonts/Arial Bold.ttf"]
 
 features:
   csv_import: true          # forced off in commercial mode

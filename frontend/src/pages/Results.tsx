@@ -1,5 +1,5 @@
 import type { EChartsOption } from "echarts";
-import { ReactNode, useEffect, useState } from "react";
+import { Fragment, ReactNode, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Insights, Kri, MemoItem, Rag, RunResult, RunView } from "../api";
 import { ReliabilityBadge } from "../components/Badges";
@@ -8,7 +8,7 @@ import {
   Correlation, Distribution, Drawdown, FanChart, Glossary, Kpi, PnlSection, RiskContribution, signClass, StocksSection,
   Stress, TrustPanel, Unit,
 } from "../components/ResultSections";
-import { dateAz, frequency, money, pct, prob } from "../format";
+import { dateAz, frequency, money, pct, price, prob } from "../format";
 import { Grid, maxLevel, probBelow, quantile, varCvar } from "../quantiles";
 import { NoResults, usePortfolio } from "./PortfolioLayout";
 
@@ -481,6 +481,83 @@ function TargetCalc({ res, grid }: { res: RunResult; grid: Grid }) {
   );
 }
 
+/** P&L by purchase lot: what each buy has earned so far and what it may earn by the horizon. */
+function LotsSection({ res }: { res: RunResult }) {
+  const ccy = res.base_currency;
+  const rows = res.current.positions.filter((p) => p.lots && p.lots.length);
+  if (!rows.length) return null;
+  const many = rows.some((p) => (p.lots?.length ?? 0) > 1);
+  return (
+    <section className="card" id="lots">
+      <div className="card-head">
+        <div>
+          <h2>Alış tarixinə görə mənfəət/zərər</h2>
+          <div className="sub">
+            Hər alış ayrıca: bu günə qədər nə qazandırıb və {dateAz(res.horizon_end)} tarixinə nə gözlənilir.
+            {many ? " Satışlar FIFO ilə ən köhnə alışdan çıxılıb." : ""}
+          </div>
+        </div>
+      </div>
+      <div className="table-wrap">
+        <table className="lots">
+          <thead>
+            <tr>
+              <th>Səhm / alış tarixi</th><th className="num">Say</th><th className="num">Alış qiyməti</th>
+              <th className="num">Maya → cari dəyər</th><th className="num">Cari m/z</th><th className="num">Saxlama / illik</th>
+              <th className="num">Təxmini m/z</th><th className="num">90% aralıq</th><th className="num">Mənfəət ehtimalı</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((p) => (
+              <Fragment key={p.symbol}>
+                <tr className="lot-group">
+                  <td colSpan={9}><span className="ticker">{p.investing_symbol}</span> <span className="muted small">{p.name}</span></td>
+                </tr>
+                {p.lots!.map((l) => (
+                  <tr key={`${p.symbol}-${l.trade_date}-${l.quantity}`}>
+                    <td className="lot-date">{dateAz(l.trade_date)}</td>
+                    <td className="num">{l.quantity}</td>
+                    <td className="num">{price(l.unit_cost_local, p.currency)}</td>
+                    <td className="num">{money(l.cost_base, ccy)}<div className="small muted">→ {money(l.market_value_base, ccy)}</div></td>
+                    <td className={`num ${signClass(l.unrealized)}`}>
+                      {money(l.unrealized, ccy, { sign: true })}<div className="small">{pct(l.unrealized_pct, { sign: true })}</div>
+                    </td>
+                    <td className="num">{holding(l.holding_days)}
+                      <div className={`small ${l.annualized_return != null ? signClass(l.annualized_return) : "muted"}`}>
+                        {l.annualized_return != null ? `${pct(l.annualized_return, { sign: true })} illik` : "illik — qısa müddət"}
+                      </div>
+                    </td>
+                    {l.forecast ? (
+                      <>
+                        <td className={`num ${signClass(l.forecast.median)}`}>{money(l.forecast.median, ccy, { sign: true })}</td>
+                        <td className="num">{money(l.forecast.p05, ccy, { sign: true })} …<div>{money(l.forecast.p95, ccy, { sign: true })}</div></td>
+                        <td className="num">{prob(l.forecast.prob_profit)}</td>
+                      </>
+                    ) : (
+                      <td colSpan={3} className="muted small">yenidən Generate basın</td>
+                    )}
+                  </tr>
+                ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="small muted" style={{ marginTop: 10 }}>
+        Təxmini m/z — alışın öz maya dəyərinə nisbətən dövrün sonundakı mənfəət/zərər. İllik gəlir yalnız kifayət qədər uzun saxlanmış
+        alışlar üçün göstərilir. Maya dəyəri keçmişdə ödənilib: satış qərarı onun əsasında yox, gələcək risk və gəlirə görə verilməlidir.
+      </p>
+    </section>
+  );
+}
+
+function holding(days: number): string {
+  if (days < 31) return `${days} gün`;
+  if (days < 365) return `${Math.round(days / 30.44)} ay`;
+  const y = days / 365.25;
+  return `${y.toFixed(1).replace(".", ",")} il`;
+}
+
 export function InvestmentView() {
   const r = useResult();
   const [cp, setCp] = useCheckpoint("res" in r ? r.res : undefined, "run" in r ? r.run.id : undefined);
@@ -541,7 +618,7 @@ export function InvestmentView() {
 
       <Toolbar res={res} cp={cp} setCp={setCp} unit={unit} setUnit={setUnit} asset={asset} setAsset={setAsset} />
       <SectionNav items={[["summary", "Brifinq"], ["calc", "Kalkulyator"], ["fan", "Proqnoz"], ["efficiency", "Risk-gəlir"], ["source", "Riskin mənbəyi"],
-        ["holdings", "Mövqelər"], ["pnl", "Mənfəət/zərər"], ["stocks", "Səhmlər"], ["glossary", "Lüğət"]]} />
+        ["holdings", "Mövqelər"], ["pnl", "Mənfəət/zərər"], ["lots", "Alışlar"], ["stocks", "Səhmlər"], ["glossary", "Lüğət"]]} />
       {ins?.risk.quantiles && <TargetCalc res={res} grid={ins.risk.quantiles} />}
       <FanChart res={res} unit={unit} asset={asset} showPaths={showPaths} setShowPaths={setShowPaths} />
       {ins && ins.investment.positions.length > 1 && <EfficiencyMap ins={ins} />}
@@ -554,6 +631,7 @@ export function InvestmentView() {
       {ins && <Holdings res={res} ins={ins} />}
       <Checkpoints res={res} cp={cp} unit={unit} />
       <PnlSection res={res} cp={cp} unit={unit} />
+      <LotsSection res={res} />
       <StocksSection res={res} />
       <Glossary res={res}>
         <dt>Gözlənilən gəlir</dt>

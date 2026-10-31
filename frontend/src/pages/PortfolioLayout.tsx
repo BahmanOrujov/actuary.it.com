@@ -166,6 +166,14 @@ export default function PortfolioLayout() {
             title={empty ? "Əvvəlcə ən azı bir səhm əlavə edin" : "3 aylıq təhlili hesabla"}>
             <Icon name="play" size={15} /> {t("generate")}
           </button>
+          {summary.headline ? (
+            <a className="btn" href={`/api/portfolios/${pid}/report.pdf`} download
+              title="Son nəticənin hesabatı: investisiya, risk, mövqelər, alışlar və tövsiyələr">
+              <Icon name="download" size={16} /> PDF yüklə
+            </a>
+          ) : (
+            <button disabled title="Hesabat üçün əvvəlcə Generate basın"><Icon name="download" size={16} /> PDF yüklə</button>
+          )}
           <details className="menu" ref={menuRef}>
             <summary className="btn" aria-label="Portfel əməliyyatları"><Icon name="more" /></summary>
             <div className="menu-list">

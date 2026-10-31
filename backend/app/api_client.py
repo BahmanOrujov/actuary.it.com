@@ -524,6 +524,31 @@ def get_run(run_id: int, db: Session = Depends(get_db), user: User = Depends(cur
     return view
 
 
+@router.get("/portfolios/{pid}/report.pdf")
+def report_pdf(pid: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """PDF of the latest finished run: the same client-safe content as the Investment and Risk views."""
+    from urllib.parse import quote
+
+    from app.report_pdf import build_pdf
+
+    p = owned_portfolio(db, user, pid)
+    run = db.scalar(select(AnalysisRun).where(AnalysisRun.portfolio_id == pid, AnalysisRun.status == "done")
+                    .order_by(AnalysisRun.id.desc()).limit(1))
+    if run is None:
+        raise HTTPException(404, "Hesabat üçün hələ hazır nəticə yoxdur. Əvvəlcə Generate basın.")
+    view = client_run_view(db, run, p)
+    try:
+        data = build_pdf(view, p.name)
+    except RuntimeError as exc:  # missing font etc.
+        raise HTTPException(500, str(exc)) from exc
+    audit(db, user.id, "report_pdf", {"portfolio_id": pid, "run_id": run.id})
+    commit(db)
+    name = f"Portfel_{p.name}_{view['result']['as_of']}.pdf"
+    ascii_name = "".join(c if c.isascii() and (c.isalnum() or c in "._-") else "_" for c in name)
+    return Response(data, media_type="application/pdf", headers={
+        "Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(name)}"})
+
+
 # ------------------------------------------------------------------ notifications (monitoring)
 @router.get("/notifications")
 def list_notifications(db: Session = Depends(get_db), user: User = Depends(current_user)):
