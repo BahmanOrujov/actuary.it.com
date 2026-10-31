@@ -865,6 +865,35 @@ const { useState, useEffect } = React;
 
 
 
+              {/* Platform capabilities */}
+              <section className="feature-section">
+                <div className="section-header">
+                  <h2 className="section-title text-gradient">{lang === 'AZ' ? 'Platformada nələr var' : 'What the platform does'}</h2>
+                  <p className="section-subtitle">{lang === 'AZ' ? 'Aktuar işinin əsas addımları bir yerdə: məlumatdan hesabata qədər.' : 'The core steps of actuarial work in one place, from data to report.'}</p>
+                </div>
+                <div className="feature-grid">
+                  {[
+                    { icon: <IconDollar />, az: ['Tarifləşdirmə', 'Yaş, cins, müddət və faiz dərəcəsinə görə xalis və brutto premium, kommutasiya cədvəlləri.'], en: ['Pricing', 'Net and gross premiums by age, gender, term and interest rate, with commutation tables.'], go: () => setActiveTab('create-report') },
+                    { icon: <IconLayers />, az: ['Ehtiyat mühərriki', 'Polis üzrə prospektiv ehtiyatlar, illik cədvəllər və qrafiklər.'], en: ['Reserve engine', 'Prospective policy reserves with yearly schedules and charts.'], go: () => setActiveTab('create-report') },
+                    { icon: <IconFileText />, az: ['Hesabatlar', 'Portfel göstəriciləri və avtomatlaşdırılmış, ixrac edilə bilən hesabatlar.'], en: ['Reports', 'Portfolio KPIs and automated, exportable reports.'], go: () => setActiveTab('create-report') },
+                    { icon: <IconTrendingUp />, az: ['Portfel Analizi', 'Səhm portfeli üçün 3 aylıq ehtimal proqnozu, VaR/CVaR və stress testləri.'], en: ['Portfolio Analysis', '3-month probabilistic outlook, VaR/CVaR and stress tests for an equity portfolio.'], href: '/portfolio/' },
+                  ].map((f, i) => {
+                    const [title, text] = f[lang === 'AZ' ? 'az' : 'en'];
+                    const body = (
+                      <React.Fragment>
+                        <div className="feature-icon">{f.icon}</div>
+                        <h3>{title}</h3>
+                        <p>{text}</p>
+                        <span className="feature-more">{lang === 'AZ' ? 'Aç' : 'Open'} <IconChevronRight /></span>
+                      </React.Fragment>
+                    );
+                    return f.href
+                      ? <a key={i} className="glass-card feature-card" href={f.href}>{body}</a>
+                      : <button key={i} type="button" className="glass-card feature-card" onClick={f.go}>{body}</button>;
+                  })}
+                </div>
+              </section>
+
               {/* Portfolio analysis demo */}
               <div className="glass-card" style={{ width: '100%', maxWidth: '1100px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem', padding: '3rem' }}>
                 <div style={{ maxWidth: '640px' }}>
@@ -2666,6 +2695,26 @@ const { useState, useEffect } = React;
                 </form>
               </div>
             </div>
+          )}
+
+          {activeTab !== 'create-report' && (
+            <footer className="site-footer">
+              <div className="site-footer-inner">
+                <div>
+                  <div className="site-footer-brand"><span className="logo-badge">α</span> <span className="text-gradient-primary">ARPP</span></div>
+                  <p>{lang === 'AZ' ? 'Aktuar hesablamaları və hesabatlılıq platforması.' : 'Actuarial calculation and reporting platform.'}</p>
+                </div>
+                <nav className="site-footer-links" aria-label={lang === 'AZ' ? 'Sayt keçidləri' : 'Site links'}>
+                  <button type="button" onClick={() => { setActiveTab('home'); window.scrollTo(0, 0); }}>{lang === 'AZ' ? 'Ana səhifə' : 'Home'}</button>
+                  <button type="button" onClick={() => { setActiveTab('create-report'); window.scrollTo(0, 0); }}>{t.createReport}</button>
+                  <a href="/portfolio/">{lang === 'AZ' ? 'Portfel Analizi' : 'Portfolio Analysis'}</a>
+                  <button type="button" onClick={() => { setActiveTab('blog'); window.scrollTo(0, 0); }}>{t.blog}</button>
+                  <button type="button" onClick={() => { setActiveTab('actuaries'); window.scrollTo(0, 0); }}>{t.actuaries}</button>
+                  <button type="button" onClick={() => { setActiveTab('feedback'); window.scrollTo(0, 0); }}>{lang === 'AZ' ? 'Rəy' : 'Feedback'}</button>
+                </nav>
+              </div>
+              <div className="site-footer-bottom">© {new Date().getFullYear()} ARPP · actuary.it.com</div>
+            </footer>
           )}
         </React.Fragment>
       );
