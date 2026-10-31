@@ -69,10 +69,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Read SECRET_KEY and DEBUG from environment for Render
+# Read SECRET_KEY and DEBUG from environment for Render, or for the own server (deploy/setup_server.sh)
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-minimal-key-for-dev')
-DEBUG = os.environ.get('RENDER', '') == ''
+DEBUG = os.environ.get('RENDER', '') == '' and os.environ.get('DJANGO_PRODUCTION', '') != '1'
 ALLOWED_HOSTS = ['*'] if DEBUG else [os.environ.get('RENDER_EXTERNAL_HOSTNAME', '*'), '*']
+
+if os.environ.get('DJANGO_PRODUCTION', '') == '1':
+    # behind Caddy on the same machine: Caddy terminates TLS and names the public hosts
+    ALLOWED_HOSTS = [h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h] or ['localhost']
+    CSRF_TRUSTED_ORIGINS = ['https://' + h for h in ALLOWED_HOSTS]
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = True
+    if os.environ.get('DJANGO_DB_PATH'):
+        DATABASES['default']['NAME'] = os.environ['DJANGO_DB_PATH']
 
 # Email Settings
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend' if not DEBUG else 'django.core.mail.backends.console.EmailBackend')
