@@ -1,0 +1,9 @@
+[Unit]
+Description=Portfel Analizi database backup (online SQLite copy, last 14 kept)
+
+[Service]
+Type=oneshot
+User=portfel
+Group=portfel
+EnvironmentFile=/etc/portfel.env
+ExecStart=/opt/portfel-venv/bin/python -c "import os, sqlite3, glob, datetime as d; b=os.path.join(os.environ['PA_DATA_DIR'], 'backups'); dst=os.path.join(b, 'app-' + d.date.today().isoformat() + '.db'); src=sqlite3.connect(os.path.join(os.environ['PA_DATA_DIR'], 'app.db')); out=sqlite3.connect(dst); src.backup(out); out.close(); src.close(); [os.remove(f) for f in sorted(glob.glob(os.path.join(b, 'app-*.db')))[:-14]]"

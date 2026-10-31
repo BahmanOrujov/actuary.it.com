@@ -1,0 +1,21 @@
+[Unit]
+Description=Portfel Analizi worker (%i jobs)
+After=portfel-api.service
+
+[Service]
+User=portfel
+Group=portfel
+EnvironmentFile=/etc/portfel.env
+WorkingDirectory=/opt/actuary/portfolio/backend
+# two instances (generate, validate): a Generate never waits behind a validation that takes minutes
+ExecStart=/opt/portfel-venv/bin/python -m jobs.worker --kinds %i
+Restart=always
+RestartSec=5
+# stop the whole process pool with the worker, not only the parent
+KillMode=control-group
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

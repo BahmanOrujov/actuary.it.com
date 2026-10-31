@@ -1,0 +1,20 @@
+[Unit]
+Description=Portfel Analizi API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=portfel
+Group=portfel
+EnvironmentFile=/etc/portfel.env
+WorkingDirectory=/opt/actuary/portfolio/backend
+# Caddy terminates TLS on the same machine: trust its X-Forwarded-Proto so session cookies are marked Secure
+ExecStart=/opt/portfel-venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

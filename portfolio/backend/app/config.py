@@ -39,6 +39,10 @@ class Settings:
         if self.mode not in ("personal", "commercial"):
             raise ValueError(f"Invalid APP_MODE: {self.mode}")
         self.secret_key: str = os.getenv("SECRET_KEY", "dev-insecure-secret-change-me")
+        # on a server reachable from the internet only the first account (the admin) may register
+        self.open_registration: bool = os.getenv(
+            "PA_OPEN_REGISTRATION", str(raw["security"].get("open_registration", True))).strip().lower() in (
+            "1", "true", "yes")
         # Personal data (accounts, portfolios, reports) lives outside the project folder by default: the project
         # sits in OneDrive, which would sync the database to the cloud. PA_DATA_DIR moves all three at once.
         self.data_dir: Path = _resolve(os.getenv("PA_DATA_DIR", str(DEFAULT_DATA_DIR)))
