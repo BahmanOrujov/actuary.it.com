@@ -797,6 +797,9 @@ const { useState, useEffect } = React;
                 <button className={`nav-link ${activeTab === 'blog' ? 'active' : ''}`} onClick={() => { setActiveTab('blog'); setMobileMenuOpen(false); }}>
                   <IconBook /> {t.blog}
                 </button>
+                <a className="nav-link" href="/portfolio/" style={{ textDecoration: 'none' }}>
+                  <IconTrendingUp /> {lang === 'AZ' ? 'Portfel Analizi' : 'Portfolio Analysis'}
+                </a>
                 <button className={`nav-link ${activeTab === 'create-report' ? 'active' : ''}`} onClick={() => { setActiveTab('create-report'); setMobileMenuOpen(false); }}>
                   <IconCpu /> {t.createReport}
                 </button>
@@ -861,6 +864,24 @@ const { useState, useEffect } = React;
               </section>
 
 
+
+              {/* Portfolio analysis demo */}
+              <div className="glass-card" style={{ width: '100%', maxWidth: '1100px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem', padding: '3rem' }}>
+                <div style={{ maxWidth: '640px' }}>
+                  <div className="hero-badge"><span>📈</span> {lang === 'AZ' ? 'Yeni: Portfel Analizi' : 'New: Portfolio Analysis'}</div>
+                  <h2 style={{ fontSize: '2rem', margin: '1rem 0', color: 'var(--text-primary)' }}>
+                    {lang === 'AZ' ? 'Səhm portfelinizin 3 aylıq risk və gəlir proqnozu' : '3-month risk and return outlook for your equity portfolio'}
+                  </h2>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>
+                    {lang === 'AZ'
+                      ? 'GARCH/DCC simulyasiyası, VaR və CVaR, 56 stress ssenarisi, alış tarixinə görə mənfəət/zərər və PDF hesabat. Demo nümunə portfelin hazır nəticələrini göstərir.'
+                      : 'GARCH/DCC simulation, VaR and CVaR, 56 stress scenarios, P&L by purchase date and a PDF report. The demo shows precomputed results for a sample portfolio.'}
+                  </p>
+                </div>
+                <a className="btn-primary" href="/portfolio/" style={{ padding: '1rem 2rem', fontSize: '1.1rem', textDecoration: 'none' }}>
+                  {lang === 'AZ' ? 'Demoya bax' : 'Open the demo'} <span style={{ marginLeft: '8px' }}>→</span>
+                </a>
+              </div>
 
               {/* CTA Section */}
               <div className="glass-card" style={{ width: '100%', maxWidth: '1100px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', padding: '3rem', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
