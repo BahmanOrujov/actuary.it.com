@@ -16,8 +16,8 @@ from app.admin_settings import effective, feature_enabled
 from app.config import get_settings
 from app.db import get_db, retry_locked
 from app.models import (
-    Alert, AnalysisRun, Instrument, Notification, PasswordReset, Portfolio, PositionTarget, Transaction, User,
-    UserSession,
+    Alert, AnalysisRun, Instrument, Notification, PasswordReset, Portfolio, PositionTarget, RunResult, Transaction,
+    User, UserSession,
 )
 from app.security import (
     LOCKED_MESSAGE, SESSION_COOKIE, create_session, current_user, destroy_session, hash_password, is_locked,
@@ -236,6 +236,23 @@ def _latest_run(db: Session, pid: int) -> AnalysisRun | None:
     return db.scalar(select(AnalysisRun).where(AnalysisRun.portfolio_id == pid).order_by(AnalysisRun.id.desc()).limit(1))
 
 
+def _headline(db: Session, pid: int) -> dict | None:
+    """The few numbers the overview card shows, from the latest finished run (client-safe fields only)."""
+    run = db.scalar(select(AnalysisRun).where(AnalysisRun.portfolio_id == pid, AnalysisRun.status == "done")
+                    .order_by(AnalysisRun.id.desc()).limit(1))
+    rr = db.get(RunResult, run.id) if run else None
+    if rr is None:
+        return None
+    r = rr.payload
+    total = (r.get("current") or {}).get("total") or {}
+    inv = ((r.get("insights") or {}).get("investment") or {}).get("metrics") or {}
+    cvar = (r.get("risk") or {}).get("0.95", {}).get("cvar_pct")
+    return {"run_id": run.id, "value": r.get("V0"), "unrealized": total.get("unrealized"),
+            "unrealized_pct": total.get("unrealized_pct"), "cvar95": cvar, "risk_limit": r.get("risk_limit"),
+            "expected_return": inv.get("expected_return"), "range90": inv.get("range90"),
+            "prob_profit": (r.get("pnl_end") or {}).get("prob_profit"), "horizon_end": r.get("horizon_end")}
+
+
 def _portfolio_summary(db: Session, p: Portfolio) -> dict:
     run = _latest_run(db, p.id)
     return {
@@ -247,6 +264,7 @@ def _portfolio_summary(db: Session, p: Portfolio) -> dict:
             "id": run.id, "status": run.status, "created_at": run.created_at.isoformat(),
             "stale": run.portfolio_version != p.version, "reliability": run.reliability,
         },
+        "headline": _headline(db, p.id),
     }
 
 

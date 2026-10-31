@@ -76,6 +76,19 @@ export interface PortfolioSummary {
   n_transactions: number;
   n_instruments: number;
   last_run: null | { id: number; status: string; created_at: string; stale: boolean; reliability: string };
+  /** Key numbers of the latest finished run, for the overview card. */
+  headline?: null | {
+    run_id: number;
+    value: number;
+    unrealized: number | null;
+    unrealized_pct: number | null;
+    cvar95: number | null;
+    risk_limit: number | null;
+    expected_return: number | null;
+    range90: [number, number] | null;
+    prob_profit: number | null;
+    horizon_end: string | null;
+  };
 }
 
 export interface Instrument {

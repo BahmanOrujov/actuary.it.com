@@ -38,7 +38,7 @@ function Memo({ eyebrow, title, items, children }: { eyebrow: string; title: str
   return (
     <section className="card memo" id="summary">
       <div className="eyebrow">{eyebrow}</div>
-      <h2 style={{ fontSize: 18, margin: "4px 0 12px" }}>{title}</h2>
+      <h2 style={{ fontSize: 20, margin: "4px 0 12px" }}>{title}</h2>
       <ul>
         {items.map((m, i) => (
           <li key={i} className={`tone-${m.tone}`}>
@@ -71,6 +71,62 @@ function OlderRun() {
       Bu nəticə əvvəlki versiyada hesablanıb: brifinq, göstəricilər və yeni bölmələr yoxdur. Onları görmək üçün yuxarıdakı
       Generate düyməsini basın (adətən 30–60 saniyə).
     </div>
+  );
+}
+
+/** The four numbers a reader needs first, large, before any text. */
+function Hero({ items }: {
+  items: { label: string; value: string; sub?: string; tone?: "pos" | "neg" | "warn"; subTone?: "pos" | "neg" }[];
+}) {
+  return (
+    <div className="hero-grid" id="summary">
+      {items.map((it) => (
+        <div key={it.label} className={`hero-tile ${it.tone ?? ""}`}>
+          <div className="hero-label">{it.label}</div>
+          <div className={`hero-value${it.value.length > 12 ? " long" : ""}`}>{it.value}</div>
+          {it.sub && <div className={`hero-sub ${it.subTone ?? ""}`}>{it.sub}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Secondary metrics in named groups; collapsed by default so the page opens with the essentials. */
+function KpiGroups({ groups }: { groups: { title: string; hint: string; items: ReactNode[] }[] }) {
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem("pa_kpi_open") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggle = () => {
+    setOpen((o) => {
+      try {
+        localStorage.setItem("pa_kpi_open", o ? "0" : "1");
+      } catch {
+        /* storage unavailable */
+      }
+      return !o;
+    });
+  };
+  const n = groups.reduce((k, g) => k + g.items.length, 0);
+  return (
+    <section className="card kpi-groups-card">
+      <button className="expander" onClick={toggle} aria-expanded={open}>
+        <span>
+          <b>Ətraflı göstəricilər</b>
+          <span className="muted"> · {n} göstərici: {groups.map((g) => g.title.toLocaleLowerCase("az")).join(", ")}</span>
+        </span>
+        <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
+      </button>
+      {open && groups.map((g) => (
+        <div key={g.title} className="kpi-sec">
+          <div className="kpi-sec-head"><h3>{g.title}</h3><span className="muted small">{g.hint}</span></div>
+          <div className="kpi-row">{g.items}</div>
+        </div>
+      ))}
+    </section>
   );
 }
 
@@ -249,10 +305,10 @@ function EfficiencyMap({ ins }: { ins: Insights }) {
         value: [r.risk_share, r.return_share as number],
         symbolSize: 10 + Math.sqrt(r.weight) * 46,
         itemStyle: { color: r.class === "costly" ? p.neg : r.class === "efficient" || r.class === "hedge" ? p.pos : p.neutral, opacity: 0.85 },
-        label: { show: true, formatter: r.symbol, position: "right", color: p.fg, fontSize: 11 },
+        label: { show: true, formatter: r.symbol, position: "right", color: p.fg, fontSize: 12 },
       })),
       markLine: { silent: true, symbol: "none", lineStyle: { color: p.muted, type: "dashed" as const },
-        label: { formatter: "ədalətli bölgü", color: p.muted, fontSize: 11, position: "insideEndTop" as const },
+        label: { formatter: "ədalətli bölgü", color: p.muted, fontSize: 12, position: "insideEndTop" as const },
         data: [[{ coord: [0, 0] }, { coord: [max, max] }]] },
     }],
   });
@@ -439,9 +495,17 @@ export function InvestmentView() {
   return (
     <>
       {res.warnings.map((w) => <div key={w} className="banner warn"><span className="ic">⚠</span> {w}</div>)}
-      <Toolbar res={res} cp={cp} setCp={setCp} unit={unit} setUnit={setUnit} asset={asset} setAsset={setAsset} />
-      <SectionNav items={[["summary", "Brifinq"], ["calc", "Kalkulyator"], ["fan", "Proqnoz"], ["efficiency", "Risk-gəlir"], ["source", "Riskin mənbəyi"],
-        ["holdings", "Mövqelər"], ["pnl", "Mənfəət/zərər"], ["stocks", "Səhmlər"], ["glossary", "Lüğət"]]} />
+
+      <Hero items={[
+        { label: "Portfelin dəyəri", value: money(res.V0, ccy),
+          sub: `${money(res.current.total.unrealized, ccy, { sign: true })} (${pct(res.current.total.unrealized_pct, { sign: true })}) cari mənfəət/zərər`,
+          subTone: res.current.total.unrealized >= 0 ? "pos" : "neg" },
+        { label: `Gözlənilən gəlir · ${dateAz(res.horizon_end)}`, value: m ? pct(m.expected_return, { sign: true }) : money(res.pnl_end.median, ccy, { sign: true }),
+          sub: m ? `${money(m.expected_money, ccy, { sign: true })} — bazar riskinin mükafatı` : "mənfəət/zərərin medianı" },
+        { label: "10 ssenaridən 9-u bu aralıqda", value: `${money(res.checkpoints[res.checkpoints.length - 1].p05, ccy)} – ${money(res.checkpoints[res.checkpoints.length - 1].p95, ccy)}`,
+          sub: m ? `${pct(m.range90[0], { sign: true })} … ${pct(m.range90[1], { sign: true })}` : "dövrün sonunda portfelin dəyəri" },
+        { label: "Mənfəətdə bitmə ehtimalı", value: prob(res.pnl_end.prob_profit), sub: "dövrün sonunda maya dəyərindən yuxarı" },
+      ]} />
 
       {!ins || !m ? <OlderRun /> : (<>
       <Memo eyebrow="İnvestisiya · CIO brifinqi" title="Bu portfel pulunuzu necə işlədir?" items={ins.investment.memo}>
@@ -451,29 +515,33 @@ export function InvestmentView() {
         </p>
       </Memo>
 
-      <div className="score-grid">
-        <Kpi label={`Gözlənilən gəlir · ${res.horizon_days} gün`} value={pct(m.expected_return, { sign: true })}
-          sub={`${money(m.expected_money, ccy, { sign: true })} · risksiz faiz ${pct(m.rf_period)}`} />
-        <Kpi label="Mənfəətdə bitmə ehtimalı" value={prob(res.pnl_end.prob_profit)} sub={`bu günə nisbətən qazanc: ${prob(m.prob_gain)}`} />
-        <Kpi label="90% nəticə aralığı" value={`${pct(m.range90[0], { sign: true })} … ${pct(m.range90[1], { sign: true })}`}
-          sub="10 ssenaridən 9-u bu aralıqdadır" />
-        <Kpi label="Sharpe (illik, gözlənilən)" value={ratio(m.sharpe)} sub={`Sortino ${ratio(m.sortino)} · volatillik ${pct(m.vol_annual)}`} />
-        <Kpi label="Gəlir / CVaR 95%" value={ratio(m.return_to_cvar)} sub="pis ssenari itkisinin hər vahidinə gəlir" />
-        <Kpi label="Qazanc / itki nisbəti" value={ratio(m.gain_loss_ratio)} sub="orta qazanc ÷ orta itki (Omega)" />
-        <Kpi label="Yuxarı / aşağı asimmetriya" value={ratio(m.upside_downside)} sub=">1: yuxarı potensial aşağı riskdən genişdir" />
-        <Kpi label="Bazar həssaslığı (β)" value={ratio(m.market_sensitivity)}
-          sub={`bazar 10% düşsə, portfel təxminən ${pct(-0.1 * m.market_sensitivity, { sign: true })}`} />
-        <Kpi label="Diversifikasiya faydası" value={pct(m.diversification_benefit)} sub={`effektiv səhm sayı ≈ ${ratio(m.effective_n, 1)}`} />
-        <Kpi label="Treynor (illik)" value={ratio(m.treynor)} sub="bazar riskinin hər vahidinə artıq gəlir" />
-        <Kpi label="Rachev nisbəti" value={ratio(m.rachev)} sub="ən yaxşı 5% ÷ ən pis 5% ssenari" />
-        <Kpi label="Risksiz faizi keçmə ehtimalı" value={prob(m.prob_beat_rf)} sub={`depozitdən (${pct(m.rf_period)}) çox qazanmaq`} />
-        <Kpi label="Calmar (gözlənilən)" value={ratio(m.calmar)} sub="gözlənilən gəlir ÷ tipik drawdown" />
-        <Kpi label="Yaxşı ssenari (95%)" value={money(m.best_case_money, ccy, { sign: true })} sub={`20 ssenaridən 1-də ${pct(m.best_case, { sign: true })}-dən yaxşı`} />
-        <Kpi label="Cari mənfəət/zərər" value={money(res.current.total.unrealized, ccy, { sign: true })}
-          sub={`${pct(res.current.total.unrealized_pct, { sign: true })} · dividend ${money(res.current.total.dividends ?? 0, ccy)}`} />
-      </div>
+      <KpiGroups groups={[
+        { title: "Gəlir potensialı", hint: "nə qədər qazana bilərəm", items: [
+          <Kpi key="beat" label="Depozitdən çox qazanma ehtimalı" value={prob(m.prob_beat_rf)} sub={`risksiz gəlir ${pct(m.rf_period)} (3 ay)`} />,
+          <Kpi key="best" label="Yaxşı ssenari (95%)" value={money(m.best_case_money, ccy, { sign: true })} sub={`20 ssenaridən 1-də ${pct(m.best_case, { sign: true })}-dən yaxşı`} />,
+          <Kpi key="ud" label="Yuxarı / aşağı asimmetriya" value={ratio(m.upside_downside)} sub=">1: yuxarı potensial aşağı riskdən genişdir" />,
+          <Kpi key="gl" label="Qazanc / itki nisbəti (Omega)" value={ratio(m.gain_loss_ratio)} sub="orta qazanc ÷ orta itki" />,
+        ] },
+        { title: "Risk-gəlir səmərəliliyi", hint: "riskə görə nə qədər ödənilir", items: [
+          <Kpi key="sh" label="Sharpe (illik)" value={ratio(m.sharpe)} sub={`Sortino ${ratio(m.sortino)} · volatillik ${pct(m.vol_annual)}`} />,
+          <Kpi key="rc" label="Gəlir / CVaR 95%" value={ratio(m.return_to_cvar)} sub="pis ssenari itkisinin hər vahidinə gəlir" />,
+          <Kpi key="tr" label="Treynor (illik)" value={ratio(m.treynor)} sub="bazar riskinin hər vahidinə artıq gəlir" />,
+          <Kpi key="rv" label="Rachev nisbəti" value={ratio(m.rachev)} sub="ən yaxşı 5% ÷ ən pis 5% ssenari" />,
+          <Kpi key="cm" label="Calmar (gözlənilən)" value={ratio(m.calmar)} sub="gözlənilən gəlir ÷ tipik drawdown" />,
+        ] },
+        { title: "Portfelin quruluşu", hint: "pul necə yerləşdirilib", items: [
+          <Kpi key="b" label="Bazar həssaslığı (β)" value={ratio(m.market_sensitivity)}
+            sub={`bazar 10% düşsə, portfel təxminən ${pct(-0.1 * m.market_sensitivity, { sign: true })}`} />,
+          <Kpi key="dv" label="Diversifikasiya faydası" value={pct(m.diversification_benefit)} sub={`effektiv səhm sayı ≈ ${ratio(m.effective_n, 1)}`} />,
+          <Kpi key="tw" label="Ən böyük mövqe" value={pct(m.top_weight)} sub="portfelin payı" />,
+          <Kpi key="dd" label="Dividend (alınmış)" value={money(res.current.total.dividends ?? 0, ccy)} sub={`reallaşmış m/z ${money(res.current.total.realized, ccy, { sign: true })}`} />,
+        ] },
+      ]} />
       </>)}
 
+      <Toolbar res={res} cp={cp} setCp={setCp} unit={unit} setUnit={setUnit} asset={asset} setAsset={setAsset} />
+      <SectionNav items={[["summary", "Brifinq"], ["calc", "Kalkulyator"], ["fan", "Proqnoz"], ["efficiency", "Risk-gəlir"], ["source", "Riskin mənbəyi"],
+        ["holdings", "Mövqelər"], ["pnl", "Mənfəət/zərər"], ["stocks", "Səhmlər"], ["glossary", "Lüğət"]]} />
       {ins?.risk.quantiles && <TargetCalc res={res} grid={ins.risk.quantiles} />}
       <FanChart res={res} unit={unit} asset={asset} showPaths={showPaths} setShowPaths={setShowPaths} />
       {ins && ins.investment.positions.length > 1 && <EfficiencyMap ins={ins} />}
@@ -741,9 +809,17 @@ export function RiskView() {
   return (
     <>
       {res.warnings.map((w) => <div key={w} className="banner warn"><span className="ic">⚠</span> {w}</div>)}
-      <Toolbar res={res} cp={cp} setCp={setCp} unit={unit} setUnit={setUnit} level={lv} setLevel={setLevel} levelMax={top} />
-      <SectionNav items={[["summary", "Brifinq"], ["calc", "Kalkulyator"], ["kri", "KRI"], ["dist", "Quyruq"], ["drawdown", "Drawdown"],
-        ["regime", "Rejim"], ["contrib", "Konsentrasiya"], ["stress", "Stress"], ["trust", "Model riski"], ["glossary", "Lüğət"]]} />
+
+      <Hero items={[
+        { label: `VaR ${lvText} · 3 ay`, value: money(risk.var * res.V0, ccy),
+          sub: `${pct(risk.var)} · ${frequency(1 - lv)} itki bundan çox olur`, tone: "neg" },
+        { label: `CVaR ${lvText} · 3 ay`, value: money(risk.cvar * res.V0, ccy),
+          sub: `${pct(risk.cvar)} · ən pis ${levelPct(1 - lv)} ssenarinin orta itkisi`, tone: "neg" },
+        { label: "Dövr ərzində tipik ən dərin düşmə", value: pct(res.drawdown.mdd_percentiles["50"]),
+          sub: `20 rübdən 1-də ${pct(res.drawdown.mdd_percentiles["5"])}-dən pis` },
+        { label: "3 ayın sonunda itkidə olma", value: m ? prob(m.prob_loss) : prob(res.checkpoints[res.checkpoints.length - 1].prob_loss_vs_today),
+          sub: "bugünkü dəyərdən aşağı bitmə ehtimalı" },
+      ]} />
 
       {ins ? (
         <div className="cro-top">
@@ -752,25 +828,27 @@ export function RiskView() {
         </div>
       ) : <OlderRun />}
 
-      <div className="score-grid">
-        <Kpi label={`VaR ${lvText} · 3 ay`} value={money(risk.var * res.V0, ccy)}
-          sub={`${pct(risk.var)} · ${frequency(1 - lv)} itki bundan çox olur`} />
-        <Kpi label={`CVaR ${lvText} · 3 ay`} value={money(risk.cvar * res.V0, ccy)}
-          sub={`${pct(risk.cvar)} · ən pis ${levelPct(1 - lv)} ssenarinin orta itkisi`} />
-        <Kpi label="Maksimal drawdown (median)" value={pct(res.drawdown.mdd_percentiles["50"])}
-          sub={`20 rübdən 1-də ${pct(res.drawdown.mdd_percentiles["5"])}-dən pis`} />
-        {m && <Kpi label="İtki ehtimalı (3 ay)" value={prob(m.prob_loss)} sub="dövrün sonunda bugünkü dəyərdən aşağı" />}
-        {m && <Kpi label="Volatillik (illik, indi)" value={pct(m.vol_now)} sub={`norma ${pct(m.vol_long)} · ${ratio(m.vol_regime)}×`} />}
-        {m && <Kpi label="Aşağı yarımsapma (illik)" value={pct(m.semidev_annual)} sub="yalnız itkiləri sayan dəyişkənlik" />}
-        {m && <Kpi label="Orta korrelyasiya" value={ratio(m.corr_now)}
-          sub={m.corr_pair ? `ən güclü cüt ${m.corr_pair.a}–${m.corr_pair.b} ${ratio(m.corr_pair.value)}` : "tək mövqe"} />}
-        {m && <Kpi label="Asimmetriya (skewness)" value={ratio(m.skewness)} sub="<0: pis sürprizlər yaxşılardan böyükdür" />}
-        {m && <Kpi label="Quyruq qalınlığı (artıq kurtoz)" value={ratio(m.excess_kurtosis)} sub=">0: ekstremal hallar normaldan tez-tez" />}
-        {m?.worst_case != null && <Kpi label="Ən pis ssenari (0,1%)" value={pct(m.worst_case, { sign: true })}
-          sub={`${money(m.worst_case * res.V0, ccy, { sign: true })} · 1000 ssenaridən 1-i`} />}
-      </div>
+      {m && (
+        <KpiGroups groups={[
+          { title: "Dəyişkənlik", hint: "qiymət nə qədər tərpənir", items: [
+            <Kpi key="v" label="Volatillik (illik, indi)" value={pct(m.vol_now)} sub={`norma ${pct(m.vol_long)} · ${ratio(m.vol_regime)}×`} />,
+            <Kpi key="sd" label="Aşağı yarımsapma (illik)" value={pct(m.semidev_annual)} sub="yalnız itkiləri sayan dəyişkənlik" />,
+            <Kpi key="c" label="Orta korrelyasiya" value={ratio(m.corr_now)}
+              sub={m.corr_pair ? `ən güclü cüt ${m.corr_pair.a}–${m.corr_pair.b} ${ratio(m.corr_pair.value)}` : "tək mövqe"} />,
+          ] },
+          { title: "Quyruq riski", hint: "nadir, amma ağır hallar", items: [
+            ...(m.worst_case != null ? [<Kpi key="w" label="Ən pis ssenari (0,1%)" value={pct(m.worst_case, { sign: true })}
+              sub={`${money(m.worst_case * res.V0, ccy, { sign: true })} · 1000 ssenaridən 1-i`} />] : []),
+            <Kpi key="sk" label="Asimmetriya (skewness)" value={ratio(m.skewness)} sub="<0: pis sürprizlər yaxşılardan böyükdür" />,
+            <Kpi key="ku" label="Quyruq qalınlığı (artıq kurtoz)" value={ratio(m.excess_kurtosis)} sub=">0: ekstremal hallar normaldan tez-tez" />,
+          ] },
+        ]} />
+      )}
       {res.hidden_99 && <div className="banner warn"><span className="ic">⚠</span> Model bəzi yoxlamalardan keçmədiyi üçün ekstremal (98%-dən yuxarı) göstəricilər gizlədilib.</div>}
 
+      <Toolbar res={res} cp={cp} setCp={setCp} unit={unit} setUnit={setUnit} level={lv} setLevel={setLevel} levelMax={top} />
+      <SectionNav items={[["summary", "Brifinq"], ["calc", "Kalkulyator"], ["kri", "KRI"], ["dist", "Quyruq"], ["drawdown", "Drawdown"],
+        ["regime", "Rejim"], ["contrib", "Konsentrasiya"], ["stress", "Stress"], ["trust", "Model riski"], ["glossary", "Lüğət"]]} />
       {grid && <RiskCalc res={res} ins={ins} grid={grid} />}
       {ins && <KriBoard run={run} ins={ins} />}
       <Distribution res={res} level={String(lv)} risk={risk} />

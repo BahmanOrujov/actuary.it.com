@@ -1,9 +1,10 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { api, Candidate, PortfolioDetail, Suggestion } from "../api";
+import { api, Candidate, PortfolioDetail, RunResult, Suggestion } from "../api";
 import { useApp } from "../App";
 import { Icon } from "../components/Icons";
-import { dateAz, pct, price } from "../format";
+import { dateAz, money, pct, price } from "../format";
+import { usePortfolio } from "./PortfolioLayout";
 import { Key, t } from "../i18n";
 
 function AddTransaction({ pid, onAdded, csvEnabled }: { pid: number; onAdded: () => void; csvEnabled: boolean }) {
@@ -228,6 +229,7 @@ export default function PortfolioEditor() {
   const { id } = useParams();
   const pid = Number(id);
   const { config, reloadPortfolios } = useApp();
+  const { run } = usePortfolio();
   const [p, setP] = useState<PortfolioDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [settingsMsg, setSettingsMsg] = useState<string | null>(null);
@@ -264,16 +266,18 @@ export default function PortfolioEditor() {
             <table>
               <thead>
                 <tr>
-                  <th>Səhm</th><th>Birja</th><th className="num">{t("quantity")}</th>
+                  <th>Səhm</th><th className="num">{t("quantity")}</th>
+                  <th className="num">Bazar dəyəri</th><th className="num">Mənfəət/zərər</th>
                   <th>{t("target")}</th><th>{t("stopLoss")}</th><th />
                 </tr>
               </thead>
               <tbody>
                 {p.positions.map((pos) => (
-                  <PositionRow key={pos.instrument_id} pid={pid} pos={pos} onSaved={changed} />
+                  <PositionRow key={pos.instrument_id} pid={pid} pos={pos} onSaved={changed} ccy={p.base_currency}
+                    live={run?.status === "done" ? run.result?.current.positions.find((x) => x.investing_symbol === pos.investing_symbol) : undefined} />
                 ))}
                 {p.positions.length === 0 && (
-                  <tr><td colSpan={6} className="muted">Açıq mövqe yoxdur. Yuxarıdan səhm əlavə edin.</td></tr>
+                  <tr><td colSpan={7} className="muted">Açıq mövqe yoxdur. Yuxarıdan səhm əlavə edin.</td></tr>
                 )}
               </tbody>
             </table>
@@ -399,23 +403,37 @@ export default function PortfolioEditor() {
   );
 }
 
-function PositionRow({ pid, pos, onSaved }: {
+function PositionRow({ pid, pos, onSaved, live, ccy }: {
   pid: number;
   pos: PortfolioDetail["positions"][number];
   onSaved: () => void;
+  /** This position in the latest finished run (market value, P&L), if any. */
+  live?: RunResult["current"]["positions"][number];
+  ccy: string;
 }) {
-  const [tp, setTp] = useState(pos.target_price ? String(pos.target_price) : "");
-  const [sl, setSl] = useState(pos.stop_loss ? String(pos.stop_loss) : "");
+  const init = { tp: pos.target_price ? String(pos.target_price) : "", sl: pos.stop_loss ? String(pos.stop_loss) : "" };
+  const [tp, setTp] = useState(init.tp);
+  const [sl, setSl] = useState(init.sl);
   const [msg, setMsg] = useState("");
+  const dirty = tp !== init.tp || sl !== init.sl;
   return (
     <tr>
-      <td><span className="ticker">{pos.investing_symbol}</span><div className="small muted">{pos.name}</div></td>
-      <td className="small">{pos.exchange}<div className="muted">{pos.currency}</div></td>
+      <td>
+        <span className="ticker">{pos.investing_symbol}</span>
+        <div className="small muted">{pos.name} · {pos.exchange} · {pos.currency}</div>
+      </td>
       <td className="num">{pos.quantity}</td>
+      <td className="num">{live ? <>{money(live.market_value_base, ccy)}<div className="small muted">{pct(live.weight)} portfelin</div></> : "—"}</td>
+      <td className={`num ${live ? (live.unrealized >= 0 ? "pos" : "neg") : ""}`}>
+        {live ? <>{money(live.unrealized, ccy, { sign: true })}<div className="small">{pct(live.unrealized_pct, { sign: true })}</div></> : "—"}
+      </td>
       <td><input aria-label={t("target")} inputMode="decimal" value={tp} onChange={(e) => setTp(e.target.value)} style={{ width: 96 }} placeholder="—" /></td>
       <td><input aria-label={t("stopLoss")} inputMode="decimal" value={sl} onChange={(e) => setSl(e.target.value)} style={{ width: 96 }} placeholder="—" /></td>
       <td>
         <button
+          className={dirty ? "primary" : undefined}
+          disabled={!dirty}
+          title={dirty ? undefined : "Hədəf və ya stop-loss dəyişəndə aktiv olur"}
           onClick={async () => {
             try {
               await api.put(`/api/portfolios/${pid}/targets`, {
@@ -430,7 +448,7 @@ function PositionRow({ pid, pos, onSaved }: {
             }
           }}
         >
-          {t("save")}
+          Saxla
         </button>{" "}
         <span className="small">{msg}</span>
       </td>

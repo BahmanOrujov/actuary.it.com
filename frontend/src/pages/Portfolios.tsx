@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useApp } from "../App";
 import { portfolioState, ReliabilityBadge } from "../components/Badges";
 import { Icon } from "../components/Icons";
-import { dateTimeAz, pct } from "../format";
+import { dateTimeAz, money, pct, prob } from "../format";
 import { Key, t } from "../i18n";
 
 export default function PortfoliosPage() {
@@ -41,17 +41,44 @@ export default function PortfoliosPage() {
           const st = portfolioState(p);
           const r = p.last_run;
           const limit = p.risk_limit ?? config?.risk_profiles[p.risk_profile];
+          const h = p.headline;
+          const use = h?.cvar95 != null && h.risk_limit ? h.cvar95 / h.risk_limit : null;
           return (
-            <Link key={p.id} to={`/portfolios/${p.id}${r?.status === "done" ? "/results" : ""}`} className="p-card">
-              <div className="row-actions" style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
+            <Link key={p.id} to={`/portfolios/${p.id}${h ? "/results" : ""}`} className="p-card">
+              <div className="p-head">
                 <span className="p-title">{p.name}</span>
                 <span className="badge checking">{p.base_currency}</span>
               </div>
-              <div className="p-stats">
-                <div>Səhm<b>{p.n_instruments}</b></div>
-                <div>Risk profili<b>{t(p.risk_profile as Key)}{limit != null ? ` · ${pct(limit)}` : ""}</b></div>
-                <div style={{ gridColumn: "1 / -1" }}>{t("lastGenerate")}<b>{r ? dateTimeAz(r.created_at) : t("never")}</b></div>
-              </div>
+              {h ? (
+                <>
+                  <div className="p-value">
+                    <span className="big">{money(h.value, p.base_currency)}</span>
+                    {h.unrealized != null && (
+                      <span className={h.unrealized >= 0 ? "pos" : "neg"}>
+                        {money(h.unrealized, p.base_currency, { sign: true })} ({pct(h.unrealized_pct, { sign: true })})
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-stats">
+                    <div>3 ay sonra (90%)<b>{h.range90 ? `${pct(h.range90[0], { sign: true })} … ${pct(h.range90[1], { sign: true })}` : "—"}</b></div>
+                    <div>Mənfəət ehtimalı<b>{h.prob_profit != null ? prob(h.prob_profit) : "—"}</b></div>
+                  </div>
+                  {use != null && (
+                    <div className="p-risk" title="Ən pis 5% ssenaridə 3 aylıq orta itki (CVaR 95%) risk limitinizə nisbətən">
+                      <div className="row-actions" style={{ justifyContent: "space-between" }}>
+                        <span>Risk limitindən istifadə</span>
+                        <b className={use > 1 ? "neg" : undefined}>{pct(use)}</b>
+                      </div>
+                      <div className="mini-bar"><div className={use > 1 ? "over" : use > 0.8 ? "near" : ""} style={{ width: `${Math.min(100, use * 80)}%` }} /><span style={{ left: "80%" }} /></div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="p-stats">
+                  <div>Səhm<b>{p.n_instruments}</b></div>
+                  <div>Risk profili<b>{t(p.risk_profile as Key)}{limit != null ? ` · ${pct(limit)}` : ""}</b></div>
+                </div>
+              )}
               <div className="p-foot">
                 {r?.status === "done" && !r.stale ? (
                   <ReliabilityBadge level={r.reliability} />
@@ -60,8 +87,9 @@ export default function PortfoliosPage() {
                     <span className={`dot ${st.cls}`} aria-hidden="true" /> {st.label}
                   </span>
                 )}
+                <span className="small muted">{p.n_instruments} səhm · {r ? dateTimeAz(r.created_at) : t("never")}</span>
                 <span className="spacer" />
-                <span className="small" style={{ color: "var(--q)" }}>{r?.status === "done" ? "Nəticələr →" : "Aç →"}</span>
+                <span className="go">{h ? "Nəticələr →" : "Aç →"}</span>
               </div>
             </Link>
           );

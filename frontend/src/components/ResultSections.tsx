@@ -218,9 +218,9 @@ export function FanChart({ res, unit, asset, showPaths, setShowPaths }: {
     ...baseOption(p),
     grid: { left: 80, right: 24, top: 24, bottom: 40 },
     xAxis: { type: "category", data: dates, ...axisStyle(p), splitLine: { show: false },
-      axisLabel: { color: p.muted, fontSize: 11, formatter: (v: string) => dateAz(v).slice(0, 5) } },
+      axisLabel: { color: p.muted, fontSize: 12, formatter: (v: string) => dateAz(v).slice(0, 5) } },
     yAxis: { type: "value", min: lo - padY, max: hi + padY, ...axisStyle(p),
-      axisLabel: { color: p.muted, fontSize: 11, formatter: (v: number) => fmt(v), showMinLabel: false, showMaxLabel: false } },
+      axisLabel: { color: p.muted, fontSize: 12, formatter: (v: number) => fmt(v), showMinLabel: false, showMaxLabel: false } },
     tooltip: {
       ...baseOption(p).tooltip,
       trigger: "axis",
@@ -254,7 +254,7 @@ export function FanChart({ res, unit, asset, showPaths, setShowPaths }: {
         lineStyle: { color: p.q, width: 1.5, type: "dashed" } },
       { name: "Keçmiş dəyər", type: "line", data: histSeries, symbol: "none", lineStyle: { color: p.fg, width: 1.3 },
         markLine: {
-          silent: true, symbol: "none", label: { color: p.muted, fontSize: 11 },
+          silent: true, symbol: "none", label: { color: p.muted, fontSize: 12 },
           data: [
             ...(hist.values.length ? [{ xAxis: hist.values.length - 1, lineStyle: { color: p.muted, type: "solid" as const }, label: { formatter: "bu gün" } }] : []),
             ...(cost != null ? [{ yAxis: conv(cost), lineStyle: { color: p.warn, type: "dotted" as const, width: 1.2 }, label: { formatter: "maya dəyəri", position: "insideEndTop" as const } }] : []),
@@ -375,7 +375,7 @@ export function Distribution({ res, level, risk }: { res: RunResult; level: stri
       type: "bar", barCategoryGap: "8%",
       data: counts.map((c, i) => ({ value: c, itemStyle: { color: centers[i] <= varPct ? p.neg : p.neutral } })),
       markLine: {
-        symbol: "none", silent: true, label: { color: p.fg, fontSize: 11 },
+        symbol: "none", silent: true, label: { color: p.fg, fontSize: 12 },
         data: [
           { xAxis: idxOf(varPct), lineStyle: { color: p.neg, type: "solid" },
             label: { formatter: `VaR ${pct(Number(level))}: ${pct(varPct)}`, position: "end", distance: 4 } },
@@ -650,7 +650,7 @@ export function Correlation({ res }: { res: RunResult }) {
       const v = (x as { value: [number, number, number] }).value;
       return `${syms[v[1]]} / ${syms[v[0]]}: ${v[2].toFixed(2).replace(".", ",")}`;
     } },
-    series: [{ type: "heatmap", data, label: { show: syms.length <= 10, color: p.fg, fontSize: 10,
+    series: [{ type: "heatmap", data, label: { show: syms.length <= 10, color: p.fg, fontSize: 12,
       formatter: (x: { value: unknown }) => (x.value as number[])[2].toFixed(2).replace(".", ",") } }],
   });
   return (
@@ -693,7 +693,7 @@ export function Stress({ res, unit, showLimit }: { res: RunResult; unit: Unit; s
       type: "bar", barWidth: "55%", data: rows.map((s) => ({ value: val(s), itemStyle: { color: val(s) < 0 ? p.neg : p.pos } })),
       ...(showLimit ? {
         markLine: { symbol: "none", silent: true, lineStyle: { color: p.warn, type: "dashed" as const, width: 1.5 },
-          label: { formatter: "risk limiti", color: p.warn, fontSize: 11, position: "insideEndTop" as const },
+          label: { formatter: "risk limiti", color: p.warn, fontSize: 12, position: "insideEndTop" as const },
           data: [{ xAxis: unit === "money" ? -res.risk_limit * res.V0 : -res.risk_limit * 100 }] },
       } : {}),
     }],

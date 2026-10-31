@@ -75,4 +75,6 @@ if DIST.exists():
         f = (DIST / path).resolve()
         if path and f.is_file() and DIST.resolve() in f.parents:
             return FileResponse(f)
-        return FileResponse(DIST / "index.html")
+        # index.html names the current hashed bundle: never cache it, or browsers keep showing the old UI after
+        # an update (assets/ files are content-hashed and safe to cache)
+        return FileResponse(DIST / "index.html", headers={"Cache-Control": "no-cache"})
