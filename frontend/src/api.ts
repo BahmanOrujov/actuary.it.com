@@ -45,12 +45,16 @@ async function demoRequest<T>(method: string, url: string): Promise<T> {
   return answer as T;
 }
 
+/** Where the app is served: "" at the root (local), "/portfolio" inside actuary.it.com. API and file links follow it. */
+export const ROOT = DEMO ? "" : import.meta.env.BASE_URL.replace(/\/$/, "");
+export const apiUrl = (path: string) => ROOT + path;
+
 async function request<T>(method: string, url: string, body?: unknown, form?: FormData): Promise<T> {
   if (DEMO) return demoRequest<T>(method, url);
   const headers: Record<string, string> = {};
   if (method !== "GET") headers["x-csrf-token"] = csrfToken();
   if (body !== undefined) headers["content-type"] = "application/json";
-  const res = await fetch(url, {
+  const res = await fetch(apiUrl(url), {
     method,
     headers,
     credentials: "same-origin",

@@ -161,6 +161,7 @@ def password_reset_request(body: ResetRequest, request: Request, db: Session = D
         db.add(PasswordReset(user_id=user.id, token_hash=hashlib.sha256(token.encode()).hexdigest(),
                              expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=minutes)))
         base = request.headers.get("origin") or str(request.base_url).rstrip("/")  # dev: Vite origin
+        base += request.headers.get("x-forwarded-prefix", "").rstrip("/")  # served under /portfolio by Caddy
         logging.getLogger("password-reset").warning(
             "PAROL BƏRPASI %s üçün link (%s dəqiqə etibarlıdır): %s/reset?token=%s", user.email, minutes, base, token)
         db.add(Alert(level="info", kind="auth", message=f"Parol bərpası istəndi: {user.email}", user_id=user.id))

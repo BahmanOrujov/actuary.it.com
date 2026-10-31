@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate, useOutletContext, useParams } from "react-router-dom";
-import { api, DEMO, PortfolioSummary, RunView } from "../api";
+import { api, apiUrl, DEMO, PortfolioSummary, RunView } from "../api";
 import { useApp } from "../App";
 import { ReliabilityBadge } from "../components/Badges";
 import { Icon } from "../components/Icons";
@@ -167,7 +167,7 @@ export default function PortfolioLayout() {
             <Icon name="play" size={15} /> {t("generate")}
           </button>
           {summary.headline ? (
-            <a className="btn" href={DEMO ? `${import.meta.env.BASE_URL}demo/report.pdf` : `/api/portfolios/${pid}/report.pdf`} download
+            <a className="btn" href={DEMO ? `${import.meta.env.BASE_URL}demo/report.pdf` : apiUrl(`/api/portfolios/${pid}/report.pdf`)} download
               title="Son nəticənin hesabatı: investisiya, risk, mövqelər, alışlar və tövsiyələr">
               <Icon name="download" size={16} /> PDF yüklə
             </a>
