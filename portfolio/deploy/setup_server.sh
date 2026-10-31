@@ -39,8 +39,12 @@ fi
 
 echo "==> firewall: Oracle Ubuntu images reject everything except SSH in iptables"
 for p in 80 443; do
-  iptables -C INPUT -p tcp --dport $p -m state --state NEW -j ACCEPT 2>/dev/null \
-    || iptables -I INPUT 5 -p tcp --dport $p -m state --state NEW -j ACCEPT
+  if ! iptables -C INPUT -p tcp --dport $p -m state --state NEW -j ACCEPT 2>/dev/null; then
+    # before the catch-all REJECT rule if there is one, otherwise at the end
+    pos=$(iptables -L INPUT --line-numbers -n | awk '$2=="REJECT"{print $1; exit}')
+    if [ -n "$pos" ]; then iptables -I INPUT "$pos" -p tcp --dport $p -m state --state NEW -j ACCEPT
+    else iptables -A INPUT -p tcp --dport $p -m state --state NEW -j ACCEPT; fi
+  fi
 done
 netfilter-persistent save >/dev/null 2>&1 || true
 
@@ -76,6 +80,12 @@ install -m 644 "$APP/deploy/portfel-backup.service" "$APP/deploy/portfel-backup.
 systemctl daemon-reload
 systemctl enable --now portfel-api portfel-worker@generate portfel-worker@validate portfel-backup.timer
 systemctl restart portfel-api portfel-worker@generate portfel-worker@validate
+
+if [ -n "${PA_SKIP_CADDY:-}" ]; then
+  # the whole-site setup (actuary.it.com deploy/setup_server.sh) writes one Caddyfile for every host
+  echo "==> portfolio services ready (Caddy configured by the caller)"
+  exit 0
+fi
 
 echo "==> https"
 if [ -z "$DOMAIN" ]; then
