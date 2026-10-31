@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://actuary-it-com.onrender.com/api/$1"
-    },
-    {
       "source": "/(.*)",
       "destination": "/frontend/$1"
     }

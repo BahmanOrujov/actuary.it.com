@@ -305,7 +305,7 @@ const { useState, useEffect } = React;
         // Fire-and-forget fetch in the background
         const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
           ? 'http://localhost:8000'
-          : '';
+          : (window.API_BASE ?? 'https://actuary-it-com.onrender.com');
           
         fetch(`${API_BASE_URL}/api/feedback/`, {
           method: 'POST',
@@ -348,7 +348,7 @@ const { useState, useEffect } = React;
 
           const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
             ? 'http://localhost:8000'
-            : '';
+            : (window.API_BASE ?? 'https://actuary-it-com.onrender.com');
           
           const response = await fetch(`${API_BASE_URL}/api/valuation/`, {
             method: 'POST',
@@ -461,7 +461,7 @@ const { useState, useEffect } = React;
       useEffect(() => {
         const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
           ? 'http://localhost:8000'
-          : '';
+          : (window.API_BASE ?? 'https://actuary-it-com.onrender.com');
 
         // Setup a slow server detection timeout
         const wakeupTimeout = setTimeout(() => {
@@ -630,7 +630,7 @@ const { useState, useEffect } = React;
 
           const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
             ? 'http://localhost:8000'
-            : '';
+            : (window.API_BASE ?? 'https://actuary-it-com.onrender.com');
           const response = await fetch(`${API_BASE_URL}/api/valuation/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -715,7 +715,7 @@ const { useState, useEffect } = React;
           setLoadingBlog(true);
           const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
             ? 'http://localhost:8000'
-            : '';
+            : (window.API_BASE ?? 'https://actuary-it-com.onrender.com');
             
           fetch(`${API_BASE_URL}/api/blog/`)
             .then(res => res.json())
@@ -740,7 +740,7 @@ const { useState, useEffect } = React;
         try {
           const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
             ? 'http://localhost:8000'
-            : '';
+            : (window.API_BASE ?? 'https://actuary-it-com.onrender.com');
             
           const response = await fetch(`${API_BASE_URL}/api/blog/${articleId}/`);
           const json = await response.json();

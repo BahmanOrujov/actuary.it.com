@@ -83,6 +83,12 @@ echo "==> https (Caddy)"
 	handle @backend {
 		reverse_proxy 127.0.0.1:8001
 	}
+	# the frontend reads its API location from this file; here the API is on the same origin
+	handle /assets/runtime.js {
+		header Content-Type "text/javascript; charset=utf-8"
+		header Cache-Control no-cache
+		respond "window.API_BASE = '';"
+	}
 	handle {
 		root * /opt/actuary/frontend
 		try_files {path} {path}/index.html
