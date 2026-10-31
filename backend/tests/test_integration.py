@@ -127,6 +127,16 @@ def test_full_generate_flow(alice, bob, admin):
         assert all(l["forecast"]["p05"] <= l["forecast"]["median"] <= l["forecast"]["p95"] for l in pos["lots"])
     msft = next(p for p in res["current"]["positions"] if p["symbol"] == "MSFT")
     assert msft["lots"][0]["quantity"] == pytest.approx(8) and msft["lots"][0]["trade_date"] == "2024-03-04"
+    # a broad stress catalogue: historical episodes with their window, hypothetical factor shocks, worst first
+    st = res["stress"]
+    hist = [s for s in st if s["type"] == "historical"]
+    hypo = [s for s in st if s["type"] == "hypothetical"]
+    # the fixture history is short, so episodes before it are skipped (all of them need data to be shown)
+    assert len(st) >= 25 and len(hist) >= 10 and len(hypo) >= 10, (len(hist), len(hypo))
+    assert all(s["period"] and 0 <= s["coverage"] <= 1 for s in hist) and all(s["shocks"] for s in hypo)
+    assert [s["loss_money"] for s in st] == sorted((s["loss_money"] for s in st), reverse=True)
+    bear = next(s for s in hypo if s["shocks"] == {"market": -0.2})
+    assert bear["loss_pct"] > 0  # a portfolio of stocks loses when the market falls 20%
     # PDF report of the latest run: a real PDF, downloaded as an attachment, only for the owner
     pdf = alice.get(f"/api/portfolios/{pid}/report.pdf")
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF") and len(pdf.content) > 10_000

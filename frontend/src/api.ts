@@ -199,10 +199,16 @@ export interface AssetResult {
 export interface StressItem {
   name: string;
   type: "historical" | "hypothetical";
+  group?: string;
   pnl_money: number;
   loss_money: number;
   loss_pct: number;
   by_asset: { symbol: string; name: string; return: number; loss_money: number }[];
+  /** historical: "YYYY-MM-DD – YYYY-MM-DD" and the share of value with actual (not beta-proxied) data */
+  period?: string;
+  coverage?: number;
+  /** hypothetical: factor shocks (rates in percentage points, others as simple returns) */
+  shocks?: Record<string, number>;
 }
 
 export interface Recommendation {

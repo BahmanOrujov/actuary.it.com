@@ -1,6 +1,6 @@
 import type { EChartsOption } from "echarts";
 import { ReactNode, useMemo, useState } from "react";
-import { AssetResult, RunResult, RunView } from "../api";
+import { AssetResult, RunResult, RunView, StressItem } from "../api";
 import { ReliabilityBadge } from "./Badges";
 import { axisStyle, baseOption, ChartCard, Palette } from "./Chart";
 import { dateAz, int, money, pct, price, prob } from "../format";
@@ -676,45 +676,87 @@ export function Correlation({ res }: { res: RunResult }) {
   );
 }
 
+const FACTOR_WORD: Record<string, string> = { market: "bazar", rates: "faiz", oil: "neft", usd: "dollar", gold: "qızıl", vix: "VIX" };
+
+/** "bazar −20%, faiz +100 bp" for a hypothetical scenario; the period for a historical one. */
+function stressWhat(s: StressItem): string {
+  if (s.type === "historical") {
+    const [a, b] = (s.period ?? "").split(" – ");
+    return a && b ? `${dateAz(a)} – ${dateAz(b)}` : "";
+  }
+  return Object.entries(s.shocks ?? {})
+    .map(([f, v]) => `${FACTOR_WORD[f] ?? f} ${f === "rates" ? `${v > 0 ? "+" : "−"}${Math.round(Math.abs(v) * 100)} bp` : pct(v, { sign: true })}`)
+    .join(", ");
+}
+
+type StressView = "worst" | "historical" | "hypothetical" | "all";
+
 /** Stress scenarios; with showLimit the risk limit is drawn as a reference line (the CRO's question:
- *  "which past crises would break our risk appetite?"). */
+ *  "which past crises would break our risk appetite?"). Many scenarios: the worst ones first, filterable. */
 export function Stress({ res, unit, showLimit }: { res: RunResult; unit: Unit; showLimit?: boolean }) {
   const ccy = res.base_currency;
-  const rows = [...res.stress].sort((a, b) => a.loss_money - b.loss_money);
-  const val = (s: (typeof rows)[number]) => (unit === "money" ? s.pnl_money : -s.loss_pct * 100);
+  const [view, setView] = useState<StressView>("worst");
+  const all = [...res.stress].sort((a, b) => b.loss_money - a.loss_money);
+  const worstN = 12;
+  const shown = view === "worst" ? all.slice(0, worstN) : view === "all" ? all : all.filter((s) => s.type === view);
+  const rows = [...shown].reverse(); // the chart draws bottom-up: worst at the top
+  const beyond = res.risk_limit ? all.filter((s) => s.loss_pct > res.risk_limit).length : 0;
+  const val = (s: StressItem) => (unit === "money" ? s.pnl_money : -s.loss_pct * 100);
   const build = (p: Palette): EChartsOption => ({
     ...baseOption(p),
-    grid: { left: 110, right: 40, top: 16, bottom: 36 },
-    yAxis: { type: "category", data: rows.map((s) => s.name), ...axisStyle(p), splitLine: { show: false } },
+    grid: { left: 210, right: 40, top: 16, bottom: 36 },
+    yAxis: { type: "category", data: rows.map((s) => s.name), ...axisStyle(p), splitLine: { show: false },
+      axisLabel: { color: p.muted, fontSize: 12, width: 200, overflow: "truncate" } },
     xAxis: { type: "value", ...axisStyle(p), axisLabel: { color: p.muted, formatter: (v: number) => (unit === "money" ? money(v, ccy) : pct(v / 100)) } },
     tooltip: { ...baseOption(p).tooltip, trigger: "axis", axisPointer: { type: "shadow" },
-      valueFormatter: (v) => (unit === "money" ? money(Number(v), ccy, { sign: true }) : pct(Number(v) / 100, { sign: true })) },
+      formatter: (ps: unknown) => {
+        const s = rows[(ps as { dataIndex: number }[])[0].dataIndex];
+        return `<b>${s.name}</b><br/>${stressWhat(s)}<br/>Portfel: ${money(s.pnl_money, ccy, { sign: true })} (${pct(-s.loss_pct, { sign: true })})`;
+      } },
     series: [{
-      type: "bar", barWidth: "55%", data: rows.map((s) => ({ value: val(s), itemStyle: { color: val(s) < 0 ? p.neg : p.pos } })),
-      ...(showLimit ? {
+      type: "bar", barWidth: "60%", data: rows.map((s) => ({ value: val(s), itemStyle: { color: val(s) < 0 ? p.neg : p.pos } })),
+      ...(showLimit && res.risk_limit ? {
         markLine: { symbol: "none", silent: true, lineStyle: { color: p.warn, type: "dashed" as const, width: 1.5 },
           label: { formatter: "risk limiti", color: p.warn, fontSize: 12, position: "insideEndTop" as const },
           data: [{ xAxis: unit === "money" ? -res.risk_limit * res.V0 : -res.risk_limit * 100 }] },
       } : {}),
     }],
   });
+  const filters: [StressView, string][] = [
+    ["worst", `Ən pis ${worstN}`],
+    ["historical", `Tarixi (${all.filter((s) => s.type === "historical").length})`],
+    ["hypothetical", `Hipotetik (${all.filter((s) => s.type === "hypothetical").length})`],
+    ["all", `Hamısı (${all.length})`],
+  ];
   return (
     <ChartCard
       id="stress"
-      title="Stress testləri"
-      subtitle={"Ssenaridir, ehtimal deyil: bu hadisələr təkrarlansa, portfel təxminən bu qədər dəyişərdi." + (showLimit ? " Qırıq xətt — risk limitiniz." : "")}
+      title={`Stress testləri · ${all.length} ssenari`}
+      subtitle={`Ssenaridir, ehtimal deyil: bu hadisə təkrarlansa portfel təxminən bu qədər dəyişərdi. Tarixi epizodlarda hər səhmin həmin dövrdəki faktiki gəliri (o vaxt bazarda yoxdursa — bazar betası ilə), hipotetiklərdə faktor şoklarına həssaslığı istifadə olunur.`
+        + (showLimit && res.risk_limit ? ` Qırıq xətt — risk limitiniz; ${beyond} ssenari onu aşır.` : "")}
       build={build}
-      deps={[res, unit, showLimit]}
-      ariaLabel="Stress ssenariləri üzrə itkilər"
-      height="short"
+      deps={[res, unit, showLimit, view]}
+      ariaLabel="Stress ssenariləri üzrə portfel dəyişikliyi"
+      height={rows.length > 8 ? "tall" : "short"}
+      chartHeight={Math.max(260, rows.length * 26 + 70)}
+      extra={
+        <div className="toggle" role="group" aria-label="Ssenari filtri">
+          {filters.map(([k, label]) => <button key={k} aria-pressed={view === k} onClick={() => setView(k)}>{label}</button>)}
+        </div>
+      }
       table={
         <table>
-          <thead><tr><th>Ssenari</th><th>Növ</th><th className="num">Portfel</th><th>Ən çox təsirlənən</th></tr></thead>
+          <thead><tr><th>Ssenari</th><th>Dövr / şok</th><th className="num">Portfel</th><th>Ən çox təsirlənən</th></tr></thead>
           <tbody>
-            {[...rows].reverse().map((s) => (
+            {shown.map((s) => (
               <tr key={s.name}>
-                <td>{s.name}</td><td>{s.type === "historical" ? "tarixi" : "hipotetik"}</td>
-                <td className={`num ${signClass(s.pnl_money)}`}>{money(s.pnl_money, ccy, { sign: true })} ({pct(-s.loss_pct, { sign: true })})</td>
+                <td>{s.name}<div className="small muted">{s.type === "historical" ? "tarixi" : "hipotetik"}{s.group ? ` · ${s.group}` : ""}</div></td>
+                <td className="small">{stressWhat(s)}
+                  {s.type === "historical" && s.coverage != null && s.coverage < 0.999 && (
+                    <div className="muted">{s.coverage > 0 ? `${pct(s.coverage)} faktiki, qalanı bazar betası ilə` : "bazar betası ilə (o vaxt səhmlər yox idi)"}</div>
+                  )}
+                </td>
+                <td className={`num ${signClass(s.pnl_money)}`}>{money(s.pnl_money, ccy, { sign: true })}<div className="small">{pct(-s.loss_pct, { sign: true })}</div></td>
                 <td className="small">{[...s.by_asset].sort((a, b) => b.loss_money - a.loss_money).slice(0, 3)
                   .map((a) => `${a.name} ${isFinite(a.return) ? pct(a.return, { sign: true }) : "—"}`).join(", ")}</td>
               </tr>

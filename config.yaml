@@ -61,9 +61,13 @@ data:
     LSE: "^FTSE"
     XETRA: "^GDAXI"
     EPA: "^FCHI"
-  factor_tickers:
-    rates: "^TNX"
-    oil: "BZ=F"
+  factor_tickers:             # stress-test factors (the market factor is the portfolio's own index)
+    rates: "^TNX"             # US 10y yield; a level factor: shocks are in percentage points (1.0 = +100 bp)
+    oil: "BZ=F"               # Brent
+    usd: "DX-Y.NYB"           # US dollar index
+    gold: "GC=F"
+    vix: "^VIX"               # implied volatility (fear gauge)
+  level_factors: [rates]      # factors modelled in changes; all others in log returns
   fx_fallback:              # used when Yahoo has no FX ticker
     USDAZN: 1.70
   rate_limit:
@@ -140,14 +144,69 @@ model:
       USD: "^IRX"
 
 stress:
+  # Historical: each holding's actual return over the window (total-return prices, base currency); a holding
+  # without data then gets beta x the market index move. Windows are peak-to-trough of the S&P 500 unless noted.
   historical:
-    - {name: "2008 Q4", start: "2008-09-30", end: "2008-12-31"}
-    - {name: "COVID 2020", start: "2020-02-19", end: "2020-03-23"}
-    - {name: "2022", start: "2022-01-03", end: "2022-12-30"}
+    - {name: "1929 krax", start: "1929-10-23", end: "1929-11-13", group: "böhran"}
+    - {name: "1973–74 neft böhranı", start: "1973-01-11", end: "1974-10-03", group: "böhran"}
+    - {name: "1987 Qara Bazar ertəsi", start: "1987-10-13", end: "1987-10-19", group: "krax"}
+    - {name: "1990 Körfəz böhranı", start: "1990-07-16", end: "1990-10-11", group: "geosiyasi"}
+    - {name: "1997 Asiya böhranı", start: "1997-10-07", end: "1997-10-27", group: "böhran"}
+    - {name: "1998 Rusiya defoltu / LTCM", start: "1998-07-17", end: "1998-08-31", group: "böhran"}
+    - {name: "Dot-com köpüyünün partlaması", start: "2000-03-24", end: "2002-10-09", group: "böhran"}
+    - {name: "11 sentyabr 2001", start: "2001-09-10", end: "2001-09-21", group: "geosiyasi"}
+    - {name: "2002 mühasibat skandalları", start: "2002-03-19", end: "2002-07-23", group: "böhran"}
+    - {name: "2007–09 qlobal maliyyə böhranı", start: "2007-10-09", end: "2009-03-09", group: "böhran"}
+    - {name: "Lehman Brothers iflası", start: "2008-09-12", end: "2008-11-20", group: "krax"}
+    - {name: "2008 Q4", start: "2008-09-30", end: "2008-12-31", group: "böhran"}
+    - {name: "2010 Avro borc böhranı / flash crash", start: "2010-04-23", end: "2010-07-02", group: "böhran"}
+    - {name: "2011 ABŞ reytinqinin endirilməsi", start: "2011-07-22", end: "2011-10-03", group: "böhran"}
+    - {name: "2013 taper tantrum", start: "2013-05-21", end: "2013-06-24", group: "faiz"}
+    - {name: "2015 Çin devalvasiyası", start: "2015-08-17", end: "2015-08-25", group: "krax"}
+    - {name: "2016 neft və Çin narahatlığı", start: "2015-12-29", end: "2016-02-11", group: "böhran"}
+    - {name: "Brexit referendumu", start: "2016-06-23", end: "2016-06-27", group: "geosiyasi"}
+    - {name: "2018 fevral — volatillik şoku", start: "2018-01-26", end: "2018-02-08", group: "krax"}
+    - {name: "2018 Q4 satışı", start: "2018-09-20", end: "2018-12-24", group: "faiz"}
+    - {name: "COVID 2020", start: "2020-02-19", end: "2020-03-23", group: "krax"}
+    - {name: "2020 sentyabr texnologiya satışı", start: "2020-09-02", end: "2020-09-23", group: "sektor"}
+    - {name: "2022 faiz şoku (ayı bazarı)", start: "2022-01-03", end: "2022-10-12", group: "faiz"}
+    - {name: "2023 regional banklar (SVB)", start: "2023-03-08", end: "2023-03-13", group: "sektor"}
+    - {name: "2023 yüksək faizlər", start: "2023-07-31", end: "2023-10-27", group: "faiz"}
+    - {name: "2024 yen carry-trade çözülməsi", start: "2024-07-16", end: "2024-08-05", group: "krax"}
+    - {name: "2025 aprel tarifləri", start: "2025-04-02", end: "2025-04-08", group: "geosiyasi"}
+    # rebounds: positions that lose when the market rallies (hedges, shorts of risk) show up here
+    - {name: "2009 bərpası", start: "2009-03-09", end: "2009-09-30", group: "ralli"}
+    - {name: "2020 bərpası", start: "2020-03-23", end: "2020-06-08", group: "ralli"}
+    - {name: "2025 tarif fasiləsi", start: "2025-04-08", end: "2025-04-09", group: "ralli"}
+  # Hypothetical: shocks to factors (market = the portfolio's index; rates in percentage points; others as
+  # simple returns). Each holding moves by its multi-factor betas (estimation window, HAC OLS), compounded.
   hypothetical:
-    - {name: "Bazar -20%", factor: market, shock: -0.20}
-    - {name: "Faiz +100 bp", factor: rates, shock: 1.0}
-    - {name: "Neft -30%", factor: oil, shock: -0.30}
+    - {name: "Bazar −10%", shocks: {market: -0.10}, group: "bazar"}
+    - {name: "Bazar −20%", shocks: {market: -0.20}, group: "bazar"}
+    - {name: "Bazar −30%", shocks: {market: -0.30}, group: "bazar"}
+    - {name: "Bazar −40%", shocks: {market: -0.40}, group: "bazar"}
+    - {name: "Bazar +10%", shocks: {market: 0.10}, group: "bazar"}
+    - {name: "Bazar +20%", shocks: {market: 0.20}, group: "bazar"}
+    - {name: "Faiz +50 bp", shocks: {rates: 0.5}, group: "faiz"}
+    - {name: "Faiz +100 bp", shocks: {rates: 1.0}, group: "faiz"}
+    - {name: "Faiz +200 bp", shocks: {rates: 2.0}, group: "faiz"}
+    - {name: "Faiz −100 bp", shocks: {rates: -1.0}, group: "faiz"}
+    - {name: "Neft −30%", shocks: {oil: -0.30}, group: "əmtəə"}
+    - {name: "Neft −50%", shocks: {oil: -0.50}, group: "əmtəə"}
+    - {name: "Neft +30%", shocks: {oil: 0.30}, group: "əmtəə"}
+    - {name: "Neft +50%", shocks: {oil: 0.50}, group: "əmtəə"}
+    - {name: "Dollar +10%", shocks: {usd: 0.10}, group: "valyuta"}
+    - {name: "Dollar −10%", shocks: {usd: -0.10}, group: "valyuta"}
+    - {name: "Qızıl +20%", shocks: {gold: 0.20}, group: "əmtəə"}
+    - {name: "Qorxu indeksi (VIX) ikiqat", shocks: {vix: 1.0}, group: "bazar"}
+    - {name: "Stagflyasiya", shocks: {market: -0.15, rates: 1.5, oil: 0.40, usd: 0.05}, group: "makro"}
+    - {name: "Resessiya", shocks: {market: -0.25, rates: -1.0, oil: -0.35, vix: 1.0}, group: "makro"}
+    - {name: "Maliyyə böhranı", shocks: {market: -0.35, rates: -1.0, oil: -0.40, usd: 0.10, vix: 1.5}, group: "makro"}
+    - {name: "Faiz şoku (2022 tipli)", shocks: {market: -0.20, rates: 2.0, usd: 0.10}, group: "makro"}
+    - {name: "Geosiyasi neft şoku", shocks: {market: -0.10, oil: 0.60, gold: 0.15, vix: 0.6}, group: "makro"}
+    - {name: "Texnologiya köpüyünün partlaması", shocks: {market: -0.30, rates: -0.5, vix: 0.8}, group: "makro"}
+    - {name: "Dollar böhranı", shocks: {usd: -0.15, gold: 0.20, rates: 0.5}, group: "makro"}
+    - {name: "Yumşaq eniş ralli", shocks: {market: 0.15, rates: -0.5, vix: -0.30}, group: "makro"}
 
 validation:
   alpha: 0.05
@@ -206,6 +265,7 @@ insights:                     # CIO / CRO views of a run; status thresholds as f
 
 report:                       # client PDF report
   history_days: 126           # past value shown before the forecast in the chart (~6 months)
+  stress_rows: 25             # worst stress scenarios listed in the PDF (all are in the app)
   # Unicode fonts (Azerbaijani letters), first file that exists is used
   font_regular: ["C:/Windows/Fonts/arial.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/Library/Fonts/Arial.ttf"]
   font_bold: ["C:/Windows/Fonts/arialbd.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/Library/Fonts/Arial Bold.ttf"]

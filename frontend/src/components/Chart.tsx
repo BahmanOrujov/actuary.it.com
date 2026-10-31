@@ -73,13 +73,15 @@ interface Props {
   build: (p: Palette) => echarts.EChartsOption;
   table: ReactNode;
   height?: "short" | "tall";
+  /** exact chart height in px (e.g. one row per scenario), overrides `height` */
+  chartHeight?: number;
   ariaLabel: string;
   extra?: ReactNode;
   deps: unknown[];
 }
 
 /** A chart card with a mandatory table view and keyboard focus. */
-export function ChartCard({ id, title, subtitle, build, table, height, ariaLabel, extra, deps }: Props) {
+export function ChartCard({ id, title, subtitle, build, table, height, chartHeight, ariaLabel, extra, deps }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const instRef = useRef<echarts.ECharts | null>(null);
   const cursor = useRef(-1);
@@ -145,6 +147,7 @@ export function ChartCard({ id, title, subtitle, build, table, height, ariaLabel
           key="chart"
           ref={ref}
           className={`chart ${height ?? ""}`}
+          style={chartHeight ? { height: chartHeight } : undefined}
           role="img"
           aria-label={ariaLabel}
           tabIndex={0}

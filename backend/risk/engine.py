@@ -605,55 +605,79 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
 
 def run_stress(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any], symbols: list[str], names: list[str],
                mv0: np.ndarray, R: pd.DataFrame, mret: pd.Series | None, admin: dict[str, Any]) -> list[dict[str, Any]]:
+    """Historical episodes and hypothetical factor shocks (PROMPT.md 5.5). Scenarios, not probabilities."""
     out = []
     V0 = float(mv0.sum() + pdata.snapshot["cash"])
     px_all = pdata.prices_base
-    # historical scenarios
+    betas_mkt = {s: capm_beta(R[s], mret)[0] for s in symbols} if mret is not None else {}
+    skipped = []
+
+    def result(sc: dict[str, Any], kind: str, by: list[dict[str, Any]], **extra: Any) -> dict[str, Any]:
+        tot = sum(-b["loss_money"] for b in by)
+        return {"name": sc["name"], "type": kind, "group": sc.get("group", ""), "pnl_money": tot, "loss_money": -tot,
+                "loss_pct": -tot / V0, "by_asset": by, **extra}
+
+    # historical episodes: actual returns where the holding existed, else beta x the index move (compounded)
     for sc in cfg["stress"]["historical"]:
         start, end = pd.Timestamp(sc["start"]), pd.Timestamp(sc["end"])
-        by = []
-        method = []
+        mkt_move = None
+        if mret is not None and len(mret) and mret.index[0] <= start:
+            mkt_move = float(mret[(mret.index > start) & (mret.index <= end)].sum())  # log move after the start close
+        by, method, actual_mv = [], [], 0.0
         for i, s in enumerate(symbols):
             ser = px_all[s].dropna()
             if len(ser) and ser.index[0] <= start and ser.index[-1] >= end:
                 r = float(ser.loc[:end].iloc[-1] / ser.loc[:start].iloc[-1] - 1)
                 method.append("actual")
-            elif mret is not None and len(mret) and mret.index[0] <= start:
-                beta, _ = capm_beta(R[s], mret)
-                mr = float(np.exp(mret.loc[start:end].sum()) - 1)
-                r = beta * mr
+                actual_mv += mv0[i]
+            elif mkt_move is not None and s in betas_mkt:
+                r = float(np.exp(betas_mkt[s] * mkt_move) - 1)
                 method.append("beta")
             else:
                 r = float("nan")
                 method.append("n/a")
             by.append({"symbol": s, "name": names[i], "return": r, "loss_money": -r * mv0[i] if np.isfinite(r) else 0.0})
-        tot = sum(-b["loss_money"] for b in by)
-        out.append({"name": sc["name"], "type": "historical", "pnl_money": tot, "loss_money": -tot,
-                    "loss_pct": -tot / V0, "by_asset": by, "method": method})
-    # hypothetical multifactor
-    factors = {}
+        if all(m == "n/a" for m in method):
+            skipped.append(sc["name"])
+            continue
+        out.append(result(sc, "historical", by, method=method, period=f"{sc['start']} – {sc['end']}",
+                          coverage=actual_mv / mv0.sum() if mv0.sum() else 0.0,
+                          incomplete=any(m == "n/a" for m in method)))
+
+    # hypothetical factor shocks: multi-factor betas on the estimation window
+    level = set(cfg["data"].get("level_factors", []))
+    factors: dict[str, pd.Series] = {}
     if mret is not None:
         factors["market"] = mret
     for name, tk in cfg["data"]["factor_tickers"].items():
         try:
-            b = md.bars(tk)
-            c = b["close"].astype(float)
-            factors[name] = c.diff().dropna() if name == "rates" else np.log(c / c.shift(1)).dropna()
-        except Exception as exc:
+            c = md.bars(tk)["close"].astype(float)
+            c = c[c > 0] if name not in level else c
+            factors[name] = c.diff().dropna() if name in level else np.log(c / c.shift(1)).dropna()
+        except Exception as exc:  # noqa: BLE001
             md.messages_admin(f"Faktor {tk} alınmadı: {exc}")
     if factors:
         F = pd.DataFrame(factors)
         fits = {s: multifactor(R[s], F) for s in symbols}
         admin["stress_factor_models"] = fits
         for sc in cfg["stress"]["hypothetical"]:
+            shocks = sc.get("shocks") or {sc["factor"]: sc["shock"]}
+            if any(f not in factors for f in shocks):
+                skipped.append(sc["name"])
+                continue
+            # factor move in model units: level factors as given, return factors as log(1 + shock)
+            move = {f: (v if f in level else float(np.log1p(v))) for f, v in shocks.items()}
             by = []
             for i, s in enumerate(symbols):
-                beta = fits[s]["betas"].get(sc["factor"])
-                r = float(beta * sc["shock"]) if beta is not None else float("nan")
+                b = fits[s]["betas"]
+                if not b:
+                    r = float("nan")
+                else:
+                    r = float(np.expm1(sum(b.get(f, 0.0) * x for f, x in move.items())))
                 by.append({"symbol": s, "name": names[i], "return": r,
                            "loss_money": -r * mv0[i] if np.isfinite(r) else 0.0})
-            tot = sum(-b["loss_money"] for b in by)
-            out.append({"name": sc["name"], "type": "hypothetical", "pnl_money": tot, "loss_money": -tot,
-                        "loss_pct": -tot / V0, "by_asset": by})
+            out.append(result(sc, "hypothetical", by, shocks=shocks))
+    if skipped:
+        admin["notes"].append(f"Stress: məlumat çatmadığı üçün buraxılan ssenarilər: {', '.join(skipped)}")
     out.sort(key=lambda x: -x["loss_money"])
     return out

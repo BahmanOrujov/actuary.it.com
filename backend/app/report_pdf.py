@@ -300,6 +300,20 @@ class Report(FPDF):
 
 
 # ---------------------------------------------------------------- content
+FACTOR_WORD = {"market": "bazar", "rates": "faiz", "oil": "neft", "usd": "dollar", "gold": "qızıl", "vix": "VIX"}
+
+
+def _stress_what(s: dict[str, Any]) -> str:
+    if s["type"] == "historical":
+        a, _, b = (s.get("period") or "").partition(" – ")
+        return f"{date_az(a)} – {date_az(b)}" if a and b else ""
+    parts = []
+    for f, v in (s.get("shocks") or {}).items():
+        parts.append(f"{FACTOR_WORD.get(f, f)} {'+' if v > 0 else '−'}{round(abs(v) * 100)} bp" if f == "rates"
+                     else f"{FACTOR_WORD.get(f, f)} {pct(v, True)}")
+    return ", ".join(parts)
+
+
 def _var_at(q: list[float | None] | None, res: dict[str, Any], level: float) -> tuple[float, float] | None:
     r = res["risk"].get(str(level))
     if r:
@@ -389,10 +403,17 @@ def build_pdf(view: dict[str, Any], portfolio_name: str) -> bytes:
             colors.append([None, None, RAG.get(k["status"], MUTED), MUTED])
         pdf.table(["Göstərici", "Dəyər", "Status", "Şərh"], rows, [38, 11, 10, 41], "LRLL", colors, size=8)
     if res.get("stress"):
-        pdf.h2("Stress testləri (ssenaridir, ehtimal deyil)")
-        rows = [[s["name"], "tarixi" if s["type"] == "historical" else "hipotetik", money(s["pnl_money"], ccy, True),
-                 pct(-s["loss_pct"], True)] for s in sorted(res["stress"], key=lambda s: -s["loss_money"])]
-        pdf.table(["Ssenari", "Növ", "Portfel", "%"], rows, [40, 16, 22, 14], "LLRR")
+        ranked = sorted(res["stress"], key=lambda s: -s["loss_money"])
+        top = int(get_settings()["report"]["stress_rows"])
+        pdf.h2(f"Stress testləri — ən pis {min(top, len(ranked))} / {len(ranked)} ssenari (ehtimal deyil)")
+        rows, colors = [], []
+        for s in ranked[:top]:
+            rows.append([s["name"], _stress_what(s), money(s["pnl_money"], ccy, True), pct(-s["loss_pct"], True)])
+            c = NEG if s["pnl_money"] < 0 else POS
+            colors.append([None, MUTED, c, c])
+        pdf.table(["Ssenari", "Dövr / şok", "Portfel", "%"], rows, [34, 40, 14, 10], "LLRR", colors, size=8)
+        if len(ranked) > top:
+            pdf.para(f"Qalan {len(ranked) - top} ssenari (o cümlədən ralli ssenariləri) tətbiqin Risk bölməsindədir.", 8, MUTED)
     pdf.h2("Model nə qədər etibarlıdır?")
     pdf.para(f"Ümumi etibarlılıq: {rel}. {view.get('reliability_text', '')}", 9.5)
     tr = view.get("trust")
