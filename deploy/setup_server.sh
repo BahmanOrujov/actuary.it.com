@@ -55,13 +55,14 @@ mkdir -p "$DATA/backups"
 chown -R $SVC_USER:$SVC_USER "$DATA"
 
 if [ ! -f "$ENVFILE" ]; then
-  umask 077
-  cat > "$ENVFILE" <<EOF
+  # umask only for the secret file: the venv and build created below must stay readable by the service user
+  (umask 077; cat > "$ENVFILE" <<EOF
 APP_MODE=personal
 SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')
 PA_DATA_DIR=$DATA
 PA_OPEN_REGISTRATION=false
 EOF
+  )
   chown root:$SVC_USER "$ENVFILE" && chmod 640 "$ENVFILE"
 fi
 
