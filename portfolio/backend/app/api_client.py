@@ -7,7 +7,7 @@ import secrets
 from datetime import date, datetime, timedelta, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.admin_settings import effective, feature_enabled
 from app.config import get_settings
 from app.db import get_db, retry_locked
+from app.mailer import mail_enabled, send_mail
 from app.models import (
     Alert, AnalysisRun, Instrument, Notification, PasswordReset, Portfolio, PositionTarget, RunResult, Transaction,
     User, UserSession,
@@ -148,9 +149,11 @@ class ResetConfirm(BaseModel):
 
 
 @router.post("/auth/password-reset/request")
-def password_reset_request(body: ResetRequest, request: Request, db: Session = Depends(get_db)):
-    """Always answers the same way (no account enumeration). Personal mode has no e-mail: the one-time link
-    is printed to the server console, which only the local owner can see."""
+def password_reset_request(body: ResetRequest, request: Request, background: BackgroundTasks,
+                           db: Session = Depends(get_db)):
+    """Always answers the same way (no account enumeration). With SMTP configured the one-time link is e-mailed
+    (after the response, so timing does not reveal accounts either); otherwise it is printed to the server
+    console, which only the local owner can see."""
     if not rate_limiter.allow(f"auth:{request.client.host if request.client else '-'}",
                               get_settings()["security"]["login_rate_limit_per_minute"]):
         raise HTTPException(429, "Çox cəhd. Bir dəqiqə sonra yenidən yoxlayın.")
@@ -162,11 +165,20 @@ def password_reset_request(body: ResetRequest, request: Request, db: Session = D
                              expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=minutes)))
         base = request.headers.get("origin") or str(request.base_url).rstrip("/")  # dev: Vite origin
         base += request.headers.get("x-forwarded-prefix", "").rstrip("/")  # served under /portfolio by Caddy
-        logging.getLogger("password-reset").warning(
-            "PAROL BƏRPASI %s üçün link (%s dəqiqə etibarlıdır): %s/reset?token=%s", user.email, minutes, base, token)
+        link = f"{base}/reset?token={token}"
+        if mail_enabled():
+            background.add_task(send_mail, user.email, "Portfel Analizi: parolun bərpası",
+                                f"Parolu yeniləmək üçün bu linki açın ({minutes} dəqiqə etibarlıdır):\n\n{link}\n\n"
+                                "Bərpanı siz istəməmisinizsə, bu məktubu nəzərə almayın.")
+        else:
+            logging.getLogger("password-reset").warning(
+                "PAROL BƏRPASI %s üçün link (%s dəqiqə etibarlıdır): %s", user.email, minutes, link)
         db.add(Alert(level="info", kind="auth", message=f"Parol bərpası istəndi: {user.email}", user_id=user.id))
         audit(db, user.id, "password_reset_requested")
         commit(db)
+    if mail_enabled():
+        return {"ok": True, "message": "Bu e-poçt qeydiyyatdadırsa, bərpa linki ora göndərildi. "
+                                       "Gələnlər qutusunu (və Spam qovluğunu) yoxlayın."}
     return {"ok": True, "message": "Bu e-poçt qeydiyyatdadırsa, bərpa linki server konsoluna yazıldı "
                                    "(lokal rejimdə e-poçt göndərilmir)."}
 
