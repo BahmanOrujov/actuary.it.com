@@ -14,7 +14,10 @@ import RecommendationsPage from "./pages/Recommendations";
 import { InvestmentView, RiskView } from "./pages/Results";
 import ResetPage from "./pages/Reset";
 import SettingsPage from "./pages/Settings";
+import SharedLayout from "./pages/Shared";
+import WhatIfPage from "./pages/WhatIf";
 import { t } from "./i18n";
+import { L } from "./lang";
 
 interface Ctx {
   user: User | null;
@@ -82,7 +85,21 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
-  if (loading) return <div className="page muted">Yüklənir…</div>;
+  // a share link opens the same way whether or not the visitor is signed in, without the app shell
+  if (location.pathname.startsWith("/shared/")) {
+    return (
+      <Routes>
+        <Route path="/shared/:token" element={<SharedLayout />}>
+          <Route index element={<Navigate to="results" replace />} />
+          <Route path="results" element={<InvestmentView />} />
+          <Route path="risk" element={<RiskView />} />
+          <Route path="recommendations" element={<RecommendationsPage />} />
+        </Route>
+      </Routes>
+    );
+  }
+
+  if (loading) return <div className="page muted">{L("Yüklənir…", "Loading…")}</div>;
 
   const ctx: Ctx = {
     user, setUser, config, portfolios, reloadPortfolios, openNewPortfolio: () => setNewOpen(true), unread, refreshUnread,
@@ -107,7 +124,7 @@ export default function App() {
         <div className="scrim" onClick={() => setNavOpen(false)} />
         <div className="main">
           <div className="mobilebar">
-            <button className="icon-btn" onClick={() => setNavOpen(true)} aria-label="Menyunu aç" aria-expanded={navOpen}>
+            <button className="icon-btn" onClick={() => setNavOpen(true)} aria-label={L("Menyunu aç", "Open the menu")} aria-expanded={navOpen}>
               <Icon name="menu" size={22} />
             </button>
             <span className="title">{config?.brand ?? t("brand")}</span>
@@ -119,8 +136,8 @@ export default function App() {
             {DEMO && (
               <div className="banner info demo-banner">
                 <span className="ic">ℹ</span>
-                <span><b>Demo.</b> Nümunə portfelin hazır nəticələri göstərilir; dəyişiklik və yeni hesablama yoxdur.
-                  Tam versiya (öz portfelləriniz, Generate, PDF) kompüterdə lokal işləyir.</span>
+                <span><b>Demo.</b> {L("Nümunə portfelin hazır nəticələri göstərilir; dəyişiklik və yeni hesablama yoxdur. Tam versiya (öz portfelləriniz, Generate, PDF) kompüterdə lokal işləyir.",
+                  "The ready results of a sample portfolio are shown; no changes or new analyses. The full version (your own portfolios, Generate, PDF) runs on your computer.")}</span>
               </div>
             )}
             <Routes>
@@ -132,6 +149,7 @@ export default function App() {
                 <Route path="results" element={<InvestmentView />} />
                 <Route path="risk" element={<RiskView />} />
                 <Route path="recommendations" element={<RecommendationsPage />} />
+                <Route path="whatif" element={<WhatIfPage />} />
               </Route>
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/notifications" element={<NotificationsPage onChange={refreshUnread} />} />

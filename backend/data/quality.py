@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from app.config import get_settings
+from app.i18n import L
 
 
 @dataclass
@@ -34,13 +35,16 @@ class QualityReport:
         cfg = get_settings()
         out = []
         if self.years < cfg["data"]["min_estimation_years"]:
-            out.append("Bu səhmin tarixçəsi qısadır, nəticələr daha az etibarlıdır.")
+            out.append(L("Bu səhmin tarixçəsi qısadır, nəticələr daha az etibarlıdır.", "This stock has a short history; the results are less reliable."))
         if self.longest_stale_run >= cfg["data"]["quality"]["stale_run_days"]:
-            out.append("Bu səhmin qiyməti uzun müddət dəyişməyib (aşağı likvidlik ola bilər).")
+            out.append(L("Bu səhmin qiyməti uzun müddət dəyişməyib (aşağı likvidlik ola bilər).", "This stock's price did not change for a long time (it may be illiquid)."))
         if self.trading_share is not None and self.trading_share < cfg["data"]["quality"]["min_trading_share"]:
-            out.append(f"Bu alət az alınıb-satılır: son ildə iş günlərinin {self.trading_share * 100:.0f}%-ində ticarət olub. "
-                       "Risk sadə modellə hesablanır və nəticələr daha az etibarlıdır; eyni şirkətin əsas birjadakı "
-                       "səhmini seçmək daha yaxşıdır.")
+            out.append(L(f"Bu alət az alınıb-satılır: son ildə iş günlərinin {self.trading_share * 100:.0f}%-ində ticarət olub. "
+                         "Risk sadə modellə hesablanır və nəticələr daha az etibarlıdır; eyni şirkətin əsas birjadakı "
+                         "səhmini seçmək daha yaxşıdır.",
+                         f"This instrument trades rarely: it traded on {self.trading_share * 100:.0f}% of business days "
+                         "last year. Its risk uses a simpler model and the results are less reliable; the same company's "
+                         "listing on its main exchange is a better choice."))
         return out
 
 

@@ -10,6 +10,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from app.i18n import L
 from risk.factors import capm_beta
 from risk.garch import AssetModel
 from risk.measures import var_cvar
@@ -21,8 +22,8 @@ QUANTILE_GRID = np.arange(1, 1000) / 1000
 def _pct(x: float, sign: bool = False) -> str:
     if x is None or not np.isfinite(x):
         return "—"
-    s = f"{abs(x) * 100:.1f}%".replace(".", ",")
-    return ("−" if x < 0 else "+" if sign and x > 0 else "") + s
+    s = f"{abs(x) * 100:.1f}%"
+    return ("−" if x < 0 else "+" if sign and x > 0 else "") + L(s.replace(".", ","), s)
 
 
 def _money(x: float, ccy: str) -> str:
@@ -38,7 +39,8 @@ def _money(x: float, ccy: str) -> str:
 
 
 def _ratio(x: float, digits: int = 2) -> str:
-    return f"{x:.{digits}f}".replace(".", ",")
+    s = f"{x:.{digits}f}"
+    return L(s.replace(".", ","), s)
 
 
 def _status(v: float | None, amber: float, red: float | None = None) -> str:
@@ -133,7 +135,8 @@ def build_insights(ctx: dict[str, Any], limit: float, cfg: dict[str, Any]) -> di
         for k, x in zip(keys, w):
             agg[k] = agg.get(k, 0.0) + float(x)
         if ctx["cash"]:
-            agg["nağd"] = agg.get("nağd", 0.0) + ctx["cash"] / V0
+            cash = L("nağd", "cash")
+            agg[cash] = agg.get(cash, 0.0) + ctx["cash"] / V0
         return [{"key": k, "weight": v} for k, v in sorted(agg.items(), key=lambda kv: -kv[1])]
 
     tail_n = max(1, int(round(len(ret) * 0.05)))
@@ -162,43 +165,61 @@ def build_insights(ctx: dict[str, Any], limit: float, cfg: dict[str, Any]) -> di
 
     memo_inv = [{
         "tone": "info",
-        "text": f"{H} ticarət günündə gözlənilən gəlir {_pct(exp_ret, True)} ({_money(exp_ret * V0, ccy)}). Bu, "
-                f"daşıdığınız bazar riskinin mükafatıdır, səhmlər barədə xüsusi proqnoz deyil. Ssenarilərin 90%-i "
-                f"{_pct(p05, True)} ilə {_pct(p95, True)} arasındadır.",
+        "text": L(f"{H} ticarət günündə gözlənilən gəlir {_pct(exp_ret, True)} ({_money(exp_ret * V0, ccy)}). Bu, "
+                  f"daşıdığınız bazar riskinin mükafatıdır, səhmlər barədə xüsusi proqnoz deyil. Ssenarilərin 90%-i "
+                  f"{_pct(p05, True)} ilə {_pct(p95, True)} arasındadır.",
+                  f"Expected return over {H} trading days is {_pct(exp_ret, True)} ({_money(exp_ret * V0, ccy)}). This is "
+                  f"the reward for the market risk you carry, not a specific forecast for the stocks. 90% of the scenarios "
+                  f"fall between {_pct(p05, True)} and {_pct(p95, True)}."),
     }]
     if invest_metrics["return_to_cvar"] is not None:
         memo_inv.append({"tone": "info",
-                         "text": f"Risk-gəlir balansı: pis ssenaridəki hər 1 {ccy} itki (CVaR 95%) qarşılığında "
-                                 f"{_ratio(invest_metrics['return_to_cvar'])} {ccy} gözlənilən gəlir"
-                                 + (f"; illik Sharpe ≈ {_ratio(invest_metrics['sharpe'])}" if invest_metrics["sharpe"] is not None else "")
+                         "text": L(f"Risk-gəlir balansı: pis ssenaridəki hər 1 {ccy} itki (CVaR 95%) qarşılığında "
+                                   f"{_ratio(invest_metrics['return_to_cvar'])} {ccy} gözlənilən gəlir",
+                                   f"Risk-return balance: {_ratio(invest_metrics['return_to_cvar'])} {ccy} of expected "
+                                   f"return for every 1 {ccy} of bad-case loss (CVaR 95%)")
+                                 + (L(f"; illik Sharpe ≈ {_ratio(invest_metrics['sharpe'])}",
+                                      f"; annual Sharpe ≈ {_ratio(invest_metrics['sharpe'])}") if invest_metrics["sharpe"] is not None else "")
                                  + "."})
     spec_status = _status(1 - systematic, ic["idio_share_amber"], ic["idio_share_red"])
     memo_inv.append({"tone": {"green": "good", "amber": "warn", "red": "bad"}.get(spec_status, "info"),
-                     "text": f"Riskin {_pct(systematic)}-i bazar riskidir və mükafatlandırılır. Qalan {_pct(1 - systematic)}-i "
-                             f"şirkətlərə xas riskdir: bazar bunun üçün əlavə gəlir ödəmir, onu yalnız diversifikasiya azaldır."})
+                     "text": L(f"Riskin {_pct(systematic)}-i bazar riskidir və mükafatlandırılır. Qalan {_pct(1 - systematic)}-i "
+                               f"şirkətlərə xas riskdir: bazar bunun üçün əlavə gəlir ödəmir, onu yalnız diversifikasiya azaldır.",
+                               f"{_pct(systematic)} of the risk is market risk, which is rewarded. The other {_pct(1 - systematic)} "
+                               f"is company-specific: the market pays no extra return for it; only diversification reduces it.")})
     if N > 1:
         memo_inv.append({"tone": "good" if div_benefit > 0 else "info",
-                         "text": f"Diversifikasiya pis ssenari itkisini {_pct(div_benefit)} azaldır: mövqelər ayrılıqda "
-                                 f"{_money(standalone.sum(), ccy)} itirərdi, birlikdə {_money(cvar95 * V0, ccy)}. "
-                                 f"Effektiv səhm sayı ≈ {_ratio(ctx['effective_n'], 1)}."})
+                         "text": L(f"Diversifikasiya pis ssenari itkisini {_pct(div_benefit)} azaldır: mövqelər ayrılıqda "
+                                   f"{_money(standalone.sum(), ccy)} itirərdi, birlikdə {_money(cvar95 * V0, ccy)}. "
+                                   f"Effektiv səhm sayı ≈ {_ratio(ctx['effective_n'], 1)}.",
+                                   f"Diversification cuts the bad-case loss by {_pct(div_benefit)}: separately the positions "
+                                   f"would lose {_money(standalone.sum(), ccy)}, together {_money(cvar95 * V0, ccy)}. "
+                                   f"Effective number of stocks ≈ {_ratio(ctx['effective_n'], 1)}.")})
         costly = [p for p in positions if p["class"] == "costly"]
         if costly:
             c = max(costly, key=lambda p: p["risk_share"])
             memo_inv.append({"tone": "warn",
-                             "text": f"{c['symbol']} riskin {_pct(c['risk_share'])}-ni daşıyır, gözlənilən gəlirin isə yalnız "
-                                     f"{_pct(c['return_share'] or 0)}-ni verir — portfeldə ən baha başa gələn riskdir."})
+                             "text": L(f"{c['symbol']} riskin {_pct(c['risk_share'])}-ni daşıyır, gözlənilən gəlirin isə yalnız "
+                                       f"{_pct(c['return_share'] or 0)}-ni verir — portfeldə ən baha başa gələn riskdir.",
+                                       f"{c['symbol']} carries {_pct(c['risk_share'])} of the risk but gives only "
+                                       f"{_pct(c['return_share'] or 0)} of the expected return — the most expensive risk in the portfolio.")})
         best = [p for p in positions if p["class"] == "efficient"]
         if best:
             b = max(best, key=lambda p: p["efficiency"] or 0)
             memo_inv.append({"tone": "good",
-                             "text": f"{b['symbol']} ən səmərəli mövqedir: gəlirin {_pct(b['return_share'] or 0)}-ni "
-                                     f"riskin {_pct(b['risk_share'])}-i ilə verir."})
+                             "text": L(f"{b['symbol']} ən səmərəli mövqedir: gəlirin {_pct(b['return_share'] or 0)}-ni "
+                                       f"riskin {_pct(b['risk_share'])}-i ilə verir.",
+                                       f"{b['symbol']} is the most efficient position: {_pct(b['return_share'] or 0)} of the return "
+                                       f"for {_pct(b['risk_share'])} of the risk.")})
         hedges = [p for p in positions if p["class"] == "hedge"]
         if hedges:
             memo_inv.append({"tone": "good",
-                             "text": f"{', '.join(h['symbol'] for h in hedges)} portfeli sığortalayır: pis ssenarilərdə adətən "
-                                     f"digərləri ilə birgə düşmür və ümumi quyruq itkisini azaldır "
-                                     f"(töhfə {', '.join(_pct(h['risk_share']) for h in hedges)})."})
+                             "text": L(f"{', '.join(h['symbol'] for h in hedges)} portfeli sığortalayır: pis ssenarilərdə adətən "
+                                       f"digərləri ilə birgə düşmür və ümumi quyruq itkisini azaldır "
+                                       f"(töhfə {', '.join(_pct(h['risk_share']) for h in hedges)}).",
+                                       f"{', '.join(h['symbol'] for h in hedges)} insures the portfolio: in bad scenarios it usually "
+                                       f"does not fall together with the others and reduces the overall tail loss "
+                                       f"(contribution {', '.join(_pct(h['risk_share']) for h in hedges)}).")})
 
     # ------------------------------------------------------------------ risk (CRO)
     # 99% measures stay in result.risk only: the run view hides them when the model is unreliable
@@ -224,65 +245,93 @@ def build_insights(ctx: dict[str, Any], limit: float, cfg: dict[str, Any]) -> di
     liq_max = max(liq_known) if liq_known else None
 
     kri = [
-        {"key": "limit_use", "label": "Risk limitindən istifadə (CVaR 95% / limit)", "value": use, "kind": "pct",
+        {"key": "limit_use", "label": L("Risk limitindən istifadə (CVaR 95% / limit)", "Use of the risk limit (CVaR 95% / limit)"),
+         "value": use, "kind": "pct",
          "status": _status(use, ic["limit_use_amber"], 1.0),
-         "hint": (f"Limit {_pct(limit)}; " + (f"ehtiyat {_money((limit - cvar95) * V0, ccy)}." if cvar95 <= limit
-                                                else f"aşım {_money((cvar95 - limit) * V0, ccy)}.")) if limit else ""},
-        {"key": "beyond_limit", "label": "Dövrün sonunda limitdən çox itki ehtimalı", "value": beyond, "kind": "prob",
-         "status": "none", "hint": "Limit CVaR ilə qoyulur; bu, limitin özünün aşılma ehtimalıdır."},
-        {"key": "stress", "label": "Ən pis stress ssenarisi / limit", "value": stress_x, "kind": "times",
+         "hint": (f"Limit {_pct(limit)}; " + (L(f"ehtiyat {_money((limit - cvar95) * V0, ccy)}.",
+                                                 f"headroom {_money((limit - cvar95) * V0, ccy)}.") if cvar95 <= limit
+                                                else L(f"aşım {_money((cvar95 - limit) * V0, ccy)}.",
+                                                       f"excess {_money((cvar95 - limit) * V0, ccy)}."))) if limit else ""},
+        {"key": "beyond_limit", "label": L("Dövrün sonunda limitdən çox itki ehtimalı", "Probability of losing more than the limit by the end"),
+         "value": beyond, "kind": "prob",
+         "status": "none", "hint": L("Limit CVaR ilə qoyulur; bu, limitin özünün aşılma ehtimalıdır.",
+                                     "The limit is set on CVaR; this is the probability of the limit itself being exceeded.")},
+        {"key": "stress", "label": L("Ən pis stress ssenarisi / limit", "Worst stress scenario / limit"), "value": stress_x, "kind": "times",
          "status": _status(stress_x, 1.0, ic["stress_limit_red"]),
          "hint": f"{worst['name']}: {_pct(-worst['loss_pct'], True)}" if worst else ""},
-        {"key": "vol_regime", "label": "Volatillik rejimi (indi / uzunmüddətli norma)", "value": regime, "kind": "times",
+        {"key": "vol_regime", "label": L("Volatillik rejimi (indi / uzunmüddətli norma)", "Volatility regime (now / long-run norm)"),
+         "value": regime, "kind": "times",
          "status": _status(regime, ic["vol_regime_amber"], ic["vol_regime_red"]),
-         "hint": f"İllik {_pct(ctx['port_vol_now'])}, norma {_pct(ctx['port_vol_long'])}."},
-        {"key": "drawdown", "label": f"Dövr ərzində −{_pct(lvl)}-ə toxunma ehtimalı", "value": ex["p_touch"], "kind": "prob",
+         "hint": L(f"İllik {_pct(ctx['port_vol_now'])}, norma {_pct(ctx['port_vol_long'])}.",
+                   f"Annual {_pct(ctx['port_vol_now'])}, norm {_pct(ctx['port_vol_long'])}.")},
+        {"key": "drawdown", "label": L(f"Dövr ərzində −{_pct(lvl)}-ə toxunma ehtimalı", f"Probability of touching −{_pct(lvl)} during the period"),
+         "value": ex["p_touch"], "kind": "prob",
          "status": _status(ex["p_touch"], ic["drawdown_touch_amber"], ic["drawdown_touch_red"]),
-         "hint": f"Maksimal drawdown medianı {_pct(ctx['drawdown']['mdd_percentiles']['50'])}."},
-        {"key": "top_weight", "label": "Ən böyük mövqenin çəkisi", "value": float(w.max()) if N else None, "kind": "pct",
+         "hint": L(f"Maksimal drawdown medianı {_pct(ctx['drawdown']['mdd_percentiles']['50'])}.",
+                   f"Median maximum drawdown {_pct(ctx['drawdown']['mdd_percentiles']['50'])}.")},
+        {"key": "top_weight", "label": L("Ən böyük mövqenin çəkisi", "Weight of the largest position"),
+         "value": float(w.max()) if N else None, "kind": "pct",
          "status": _status(float(w.max()) if N else None, rc["max_position_weight"], rc["max_cluster_weight"]),
          "hint": labels[int(np.argmax(w))] if N else ""},
-        {"key": "top3_risk", "label": "Üç ən riskli mövqenin CVaR payı", "value": top3, "kind": "pct",
+        {"key": "top3_risk", "label": L("Üç ən riskli mövqenin CVaR payı", "CVaR share of the three riskiest positions"),
+         "value": top3, "kind": "pct",
          "status": _status(top3, ic["top3_risk_amber"], ic["top3_risk_red"]) if N > 3 else "none",
          "hint": ", ".join(labels[k] for k in order[:3])},
-        {"key": "corr", "label": "Orta korrelyasiya (indi)", "value": c_now, "kind": "ratio",
+        {"key": "corr", "label": L("Orta korrelyasiya (indi)", "Average correlation (now)"), "value": c_now, "kind": "ratio",
          "status": _status(c_now, ic["corr_amber"], ic["corr_red"]),
-         "hint": (f"Uzunmüddətli {_ratio(c_long)}" if c_long is not None else "")
-                 + (f"; ən güclü cüt {pair['a']}–{pair['b']} {_ratio(pair['value'])}" if pair else "")},
-        {"key": "specific", "label": "Şirkətə xas (mükafatsız) risk payı", "value": 1 - systematic, "kind": "pct",
-         "status": spec_status, "hint": "Bazarın izah etmədiyi dəyişkənlik."},
-        {"key": "liquidity", "label": "Ən uzun satış müddəti (gün)", "value": liq_max, "kind": "days",
+         "hint": (L(f"Uzunmüddətli {_ratio(c_long)}", f"Long-run {_ratio(c_long)}") if c_long is not None else "")
+                 + (L(f"; ən güclü cüt {pair['a']}–{pair['b']} {_ratio(pair['value'])}",
+                      f"; strongest pair {pair['a']}–{pair['b']} {_ratio(pair['value'])}") if pair else "")},
+        {"key": "specific", "label": L("Şirkətə xas (mükafatsız) risk payı", "Company-specific (unrewarded) risk share"),
+         "value": 1 - systematic, "kind": "pct",
+         "status": spec_status, "hint": L("Bazarın izah etmədiyi dəyişkənlik.", "Volatility the market does not explain.")},
+        {"key": "liquidity", "label": L("Ən uzun satış müddəti (gün)", "Longest time to sell (days)"), "value": liq_max, "kind": "days",
          "status": _status(liq_max, ic["liquidity_days_amber"], ic["liquidity_days_red"]),
-         "hint": f"Gündəlik həcmin {_pct(part)}-i ilə satmaq şərtilə."},
-        {"key": "tail", "label": "Quyruq dərinliyi (CVaR 95% / VaR 95%)", "value": cvar95 / var95 if var95 > 0 else None,
-         "kind": "times", "status": "none", "hint": "Normal paylanmada ≈ 1,25; böyük dəyər — dərin quyruq."},
+         "hint": L(f"Gündəlik həcmin {_pct(part)}-i ilə satmaq şərtilə.", f"Selling {_pct(part)} of the daily volume.")},
+        {"key": "tail", "label": L("Quyruq dərinliyi (CVaR 95% / VaR 95%)", "Tail depth (CVaR 95% / VaR 95%)"),
+         "value": cvar95 / var95 if var95 > 0 else None,
+         "kind": "times", "status": "none", "hint": L("Normal paylanmada ≈ 1,25; böyük dəyər — dərin quyruq.",
+                                                      "≈ 1.25 for a normal distribution; a larger value means a deep tail.")},
     ]
 
     kri_by = {k["key"]: k for k in kri}
     memo_risk = []
     if use is not None:
         memo_risk.append({"tone": {"green": "good", "amber": "warn", "red": "bad"}[_status(use, ic["limit_use_amber"], 1.0)],
-                          "text": (f"Risk iştahı: CVaR 95% {_money(cvar95 * V0, ccy)} ({_pct(cvar95)}) — limitin {_pct(use)}-i. "
-                                   + (f"Ehtiyat {_money((limit - cvar95) * V0, ccy)}." if use <= 1
-                                      else f"Limit {_money((cvar95 - limit) * V0, ccy)} aşılıb."))})
+                          "text": (L(f"Risk iştahı: CVaR 95% {_money(cvar95 * V0, ccy)} ({_pct(cvar95)}) — limitin {_pct(use)}-i. ",
+                                     f"Risk appetite: CVaR 95% {_money(cvar95 * V0, ccy)} ({_pct(cvar95)}) — {_pct(use)} of the limit. ")
+                                   + (L(f"Ehtiyat {_money((limit - cvar95) * V0, ccy)}.", f"Headroom {_money((limit - cvar95) * V0, ccy)}.")
+                                      if use <= 1
+                                      else L(f"Limit {_money((cvar95 - limit) * V0, ccy)} aşılıb.",
+                                             f"The limit is exceeded by {_money((cvar95 - limit) * V0, ccy)}.")))})
     if regime is not None:
         st = _status(regime, ic["vol_regime_amber"], ic["vol_regime_red"])
         memo_risk.append({"tone": {"green": "info", "amber": "warn", "red": "bad"}[st],
-                          "text": f"Volatillik indi uzunmüddətli normanın {_ratio(regime)}×-idir (illik {_pct(ctx['port_vol_now'])}, "
-                                  f"norma {_pct(ctx['port_vol_long'])}). "
-                                  + ("Bazar sakitdir: risk ölçüləri normadan aşağıdır və sakitlik pozularsa sürətlə arta bilər."
-                                     if regime < 1 else "Risk normadan yüksək rejimdədir." if st != "green" else "")})
+                          "text": L(f"Volatillik indi uzunmüddətli normanın {_ratio(regime)}×-idir (illik {_pct(ctx['port_vol_now'])}, "
+                                    f"norma {_pct(ctx['port_vol_long'])}). ",
+                                    f"Volatility is now {_ratio(regime)}× its long-run norm (annual {_pct(ctx['port_vol_now'])}, "
+                                    f"norm {_pct(ctx['port_vol_long'])}). ")
+                                  + (L("Bazar sakitdir: risk ölçüləri normadan aşağıdır və sakitlik pozularsa sürətlə arta bilər.",
+                                       "The market is calm: risk measures are below normal and can rise quickly if the calm breaks.")
+                                     if regime < 1 else L("Risk normadan yüksək rejimdədir.", "Risk is in an above-normal regime.")
+                                     if st != "green" else "")})
     if N > 1:
         memo_risk.append({"tone": {"green": "info", "amber": "warn", "red": "bad"}.get(kri_by["top3_risk"]["status"], "info"),
-                          "text": f"Riskin {_pct(top3)}-i {', '.join(labels[k] for k in order[:min(3, N)])} mövqelərindədir; "
-                                  f"ən böyük töhfə {labels[order[0]]} ({_pct(risk_share[order[0]])}, çəkisi {_pct(w[order[0]])})."})
+                          "text": L(f"Riskin {_pct(top3)}-i {', '.join(labels[k] for k in order[:min(3, N)])} mövqelərindədir; "
+                                    f"ən böyük töhfə {labels[order[0]]} ({_pct(risk_share[order[0]])}, çəkisi {_pct(w[order[0]])}).",
+                                    f"{_pct(top3)} of the risk is in {', '.join(labels[k] for k in order[:min(3, N)])}; "
+                                    f"the largest contributor is {labels[order[0]]} ({_pct(risk_share[order[0]])}, weight {_pct(w[order[0]])}).")})
     if worst:
         memo_risk.append({"tone": {"green": "info", "amber": "warn", "red": "bad"}[_status(stress_x, 1.0, ic["stress_limit_red"])],
-                          "text": f"Ən pis stress ssenarisi — {worst['name']}: {_money(-worst['loss_money'], ccy)} "
-                                  f"({_pct(-worst['loss_pct'], True)}), limitin {_ratio(stress_x or 0)}×-i. Bu ehtimal deyil, ssenaridir."})
+                          "text": L(f"Ən pis stress ssenarisi — {worst['name']}: {_money(-worst['loss_money'], ccy)} "
+                                    f"({_pct(-worst['loss_pct'], True)}), limitin {_ratio(stress_x or 0)}×-i. Bu ehtimal deyil, ssenaridir.",
+                                    f"Worst stress scenario — {worst['name']}: {_money(-worst['loss_money'], ccy)} "
+                                    f"({_pct(-worst['loss_pct'], True)}), {_ratio(stress_x or 0)}× the limit. This is a scenario, not a probability.")})
     memo_risk.append({"tone": {"green": "info", "amber": "warn", "red": "bad"}[kri_by["drawdown"]["status"]],
-                      "text": f"Dövr ərzində portfelin ən azı bir dəfə −{_pct(lvl)}-ə düşmə ehtimalı {_pct(ex['p_touch'])}; "
-                              f"dövrün sonunda bu səviyyədən aşağı qalma ehtimalı {_pct(ex['p_end'])}."})
+                      "text": L(f"Dövr ərzində portfelin ən azı bir dəfə −{_pct(lvl)}-ə düşmə ehtimalı {_pct(ex['p_touch'])}; "
+                                f"dövrün sonunda bu səviyyədən aşağı qalma ehtimalı {_pct(ex['p_end'])}.",
+                                f"Probability that the portfolio falls to −{_pct(lvl)} at least once during the period: {_pct(ex['p_touch'])}; "
+                                f"probability of ending below that level: {_pct(ex['p_end'])}.")})
 
     vol_rows = [{"symbol": labels[i], "now": float(ctx["vol_now"][i]), "long": float(ctx["vol_long"][i]),
                  "ratio": float(ctx["vol_now"][i] / ctx["vol_long"][i]) if ctx["vol_long"][i] > 0 else None,

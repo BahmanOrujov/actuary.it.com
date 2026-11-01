@@ -6,6 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from app.config import get_settings
+from app.i18n import L
 
 _LEET = str.maketrans({"@": "a", "4": "a", "0": "o", "1": "i", "!": "i", "3": "e", "$": "s", "5": "s", "7": "t",
                        "9": "g", "+": "t"})
@@ -44,22 +45,22 @@ def check_password(pw: str, email: str | None = None) -> list[str]:
     errors: list[str] = []
     min_len = int(cfg["password_min_length"])
     if len(pw) < min_len:
-        errors.append(f"Parol ən azı {min_len} simvol olmalıdır.")
+        errors.append(L(f"Parol ən azı {min_len} simvol olmalıdır.", f"The password must be at least {min_len} characters."))
     if len(pw) > 128:
-        errors.append("Parol 128 simvoldan uzun ola bilməz.")
+        errors.append(L("Parol 128 simvoldan uzun ola bilməz.", "The password cannot be longer than 128 characters."))
     low = pw.lower()
     core = _core(pw)
     common = _common()
     if low in common or core in common or (len(core) >= 4 and core.rstrip("0123456789") in common):
-        errors.append("Bu parol çox yayılmışdır və ya sızmış parollar siyahısındadır.")
+        errors.append(L("Bu parol çox yayılmışdır və ya sızmış parollar siyahısındadır.", "This password is too common or appears in leaked-password lists."))
     if len(set(low)) < int(cfg["password_min_unique_chars"]):
-        errors.append("Parolda çox az fərqli simvol var.")
+        errors.append(L("Parolda çox az fərqli simvol var.", "The password has too few different characters."))
     if _is_sequence(low) or _is_sequence(core):
-        errors.append("Parol ardıcıl simvollardan ibarətdir (məs. 12345678, qwerty).")
+        errors.append(L("Parol ardıcıl simvollardan ibarətdir (məs. 12345678, qwerty).", "The password is a simple sequence (e.g. 12345678, qwerty)."))
     if email:
         local = email.split("@")[0].lower()
         if len(local) >= 4 and (local in low or local in core):
-            errors.append("Parolda e-poçt adınız olmamalıdır.")
+            errors.append(L("Parolda e-poçt adınız olmamalıdır.", "The password must not contain your e-mail name."))
     if "portfel" in core or "analiz" in core:
-        errors.append("Parolda tətbiqin adı olmamalıdır.")
+        errors.append(L("Parolda tətbiqin adı olmamalıdır.", "The password must not contain the app's name."))
     return list(dict.fromkeys(errors))

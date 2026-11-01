@@ -1,12 +1,13 @@
 import { ReliabilityBadge } from "../components/Badges";
 import { money, num, pct, prob } from "../format";
 import { NoResults, usePortfolio } from "./PortfolioLayout";
+import { L } from "../lang";
 
 const ACTION: Record<string, [string, string]> = {
-  reduce: ["↓", "azalt"],
-  increase: ["↑", "artır"],
-  hold: ["=", "saxla"],
-  attention: ["⚠", "diqqət"],
+  reduce: ["↓", L("azalt", "reduce")],
+  increase: ["↑", L("artır", "increase")],
+  hold: ["=", L("saxla", "hold")],
+  attention: ["⚠", L("diqqət", "attention")],
 };
 
 export default function RecommendationsPage() {
@@ -23,15 +24,15 @@ export default function RecommendationsPage() {
   return (
     <>
       {run.stale && (
-        <div className="banner warn"><span className="ic">⚠</span> Portfel dəyişib. Tövsiyələr köhnə tərkibə aiddir — Generate düyməsini basın.</div>
+        <div className="banner warn"><span className="ic">⚠</span> {L("Portfel dəyişib. Tövsiyələr köhnə tərkibə aiddir — Generate düyməsini basın.", "The portfolio has changed. The recommendations refer to the old holdings — press Generate.")}</div>
       )}
       <section className="card">
         <div className="card-head">
           <div>
-            <h2>Risk limitiniz</h2>
-            <div className="sub">Ən pis 5% ssenaridə 3 aylıq orta itki (CVaR 95%) sizin limitinizlə müqayisədə.</div>
+            <h2>{L("Risk limitiniz", "Your risk limit")}</h2>
+            <div className="sub">{L("Ən pis 5% ssenaridə 3 aylıq orta itki (CVaR 95%) sizin limitinizlə müqayisədə.", "Average 3-month loss in the worst 5% of scenarios (CVaR 95%) against your limit.")}</div>
           </div>
-          {over ? <span className="badge err">✕ limit keçilib</span> : <span className="badge ok">✓ limit daxilində</span>}
+          {over ? <span className="badge err">✕ {L("limit keçilib", "limit exceeded")}</span> : <span className="badge ok">✓ {L("limit daxilində", "within the limit")}</span>}
         </div>
         <p style={{ fontSize: 15 }}>
           CVaR 95%: <b>{money(cvar.cvar_money, ccy)}</b> ({pct(cvar.cvar_pct)}) · limit: <b>{pct(res.risk_limit)}</b>
@@ -41,12 +42,12 @@ export default function RecommendationsPage() {
           <span className="mark" style={{ left: `${(res.risk_limit / scale) * 100}%` }} title="limit" />
         </div>
         <p className="small muted" style={{ marginTop: 10 }}>
-          Tövsiyələr gələcək risk və gəlirə əsaslanır, mövqenin hazırda mənfəətdə və ya zərərdə olmasına yox.
-          Etibarlılıq: <ReliabilityBadge level={run.reliability} />
+          {L("Tövsiyələr gələcək risk və gəlirə əsaslanır, mövqenin hazırda mənfəətdə və ya zərərdə olmasına yox.", "Recommendations are based on future risk and return, not on whether a position is currently in profit or loss.")}{" "}
+          {L("Etibarlılıq", "Reliability")}: <ReliabilityBadge level={run.reliability} />
         </p>
       </section>
 
-      {recs.length === 0 && <div className="card muted">Bu portfel üçün tövsiyə yoxdur.</div>}
+      {recs.length === 0 && <div className="card muted">{L("Bu portfel üçün tövsiyə yoxdur.", "There are no recommendations for this portfolio.")}</div>}
       {recs.map((r, i) => {
         const [icon, label] = ACTION[r.action] ?? ["•", r.action];
         return (
@@ -60,12 +61,12 @@ export default function RecommendationsPage() {
             <p>{r.reason}</p>
             {(r.action === "reduce" || r.action === "increase") && (
               <p>
-                Miqdar: <b>{num(r.shares, 4)} səhm</b> (~{money(r.money, ccy)})
+                {L("Miqdar", "Amount")}: <b>{num(r.shares, 4)} {L("səhm", "shares")}</b> (~{money(r.money, ccy)})
               </p>
             )}
-            {r.prob_target != null && <p className="small">Hədəfə çatma (sonda): {prob(r.prob_target)}</p>}
+            {r.prob_target != null && <p className="small">{L("Hədəfə çatma (sonda)", "Reaching the target (at the end)")}: {prob(r.prob_target)}</p>}
             <p className="small muted" style={{ marginBottom: 4 }}>
-              CVaR 95%: əvvəl {money(r.cvar_before, ccy)} ({pct(r.cvar_before_pct)}) → sonra {money(r.cvar_after, ccy)} ({pct(r.cvar_after_pct)})
+              CVaR 95%: {L("əvvəl", "before")} {money(r.cvar_before, ccy)} ({pct(r.cvar_before_pct)}) → {L("sonra", "after")} {money(r.cvar_after, ccy)} ({pct(r.cvar_after_pct)})
             </p>
             <p className="small muted" style={{ margin: 0 }}>{r.disclaimer}</p>
           </section>
@@ -73,7 +74,8 @@ export default function RecommendationsPage() {
       })}
       <p className="disclaimer" role="note">{run.disclaimer}</p>
       <p className="small muted">
-        Monitorinq: faktiki qiymət 90% aralıqdan çıxanda bildiriş gəlir və mövqeyə yenidən baxmaq tövsiyə olunur. Bu, avtomatik satış deyil.
+        {L("Monitorinq: faktiki qiymət 90% aralıqdan çıxanda bildiriş gəlir və mövqeyə yenidən baxmaq tövsiyə olunur. Bu, avtomatik satış deyil.",
+          "Monitoring: when the actual price leaves the 90% range you get a notification suggesting a review of the position. This is not an automatic sale.")}
       </p>
     </>
   );

@@ -12,6 +12,7 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 
+from app.i18n import L
 from data.calendars import future_sessions, month_end_checkpoints
 from data.quality import check_bars
 from data.service import MarketData, to_base_currency
@@ -23,6 +24,7 @@ from risk.garch import AssetModel, fit_ewma, garch_break_test, select_garch
 from risk.insights import collect as collect_insights
 from risk.measures import compute_measures, var_cvar
 from risk.simulate import SimOutput, build_pool, simulate_paths
+from risk.stress_names import stress_group, stress_name
 from validation.stat_tests import engle_sheppard, hosking_portmanteau
 
 log = logging.getLogger(__name__)
@@ -159,7 +161,7 @@ def fit_system(R: pd.DataFrame, cfg: dict[str, Any], full: bool, parallel: bool 
     for m in models:
         common = common.intersection(m.index)
     if len(common) < 60:
-        raise AnalysisError("Bütün səhmlərin birlikdə məlumatı olan dövr çox qısadır (ən azı 3 ay lazımdır).")
+        raise AnalysisError(L("Bütün səhmlərin birlikdə məlumatı olan dövr çox qısadır (ən azı 3 ay lazımdır).", "The period with data for all the stocks together is too short (at least 3 months are needed)."))
     common_years = _years(common)
     info: dict[str, Any] = {
         "window_years": round(_years(R.index), 2), "common_years": round(common_years, 2),
@@ -340,7 +342,7 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
     snap = pdata.snapshot
     positions = snap["positions"]
     if not positions:
-        raise AnalysisError("Portfeldə açıq mövqe yoxdur (yalnız nağd pul). Təhlil üçün səhm əlavə edin.")
+        raise AnalysisError(L("Portfeldə açıq mövqe yoxdur (yalnız nağd pul). Təhlil üçün səhm əlavə edin.", "The portfolio has no open positions (cash only). Add a stock to analyse it."))
     alpha = cfg["validation"]["alpha"]
     base = snap["base_currency"]
     symbols = [p["symbol"] for p in positions]
@@ -373,7 +375,7 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
 
     R, market = prepare_returns(pdata, md, cfg, symbols, base, admin)
     if len(R.dropna()) < 60:
-        raise AnalysisError("Təhlil üçün kifayət qədər qiymət tarixçəsi yoxdur (ən azı 3 ay lazımdır).")
+        raise AnalysisError(L("Təhlil üçün kifayət qədər qiymət tarixçəsi yoxdur (ən azı 3 ay lazımdır).", "There is not enough price history for the analysis (at least 3 months are needed)."))
     lb_lags = tuple(cfg["validation"]["ljung_box_lags"])
     admin["returns_diagnostics"] = {s: return_diagnostics(R[s], alpha, lb_lags) for s in symbols}
     exchanges = {pdata.exchange_of.get(s) for s in symbols}
@@ -457,8 +459,11 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
     # instrument instead of failing later with an opaque error
     bad = [names[i] for i in range(len(symbols)) if not np.isfinite(meas["_pnl_assets_end"][:, i]).all()]
     if bad or not np.isfinite(meas["_ret_H"]).all():
-        raise AnalysisError(f"{', '.join(bad) or 'Portfel'}: model bu alətin qiymət tarixçəsi ilə sabit nəticə vermədi "
-                            "(çox az ticarət və ya xətalı məlumat ola bilər). Alətin əsas birjadakı səhmini seçin və ya onu çıxarın.")
+        raise AnalysisError(L(f"{', '.join(bad) or 'Portfel'}: model bu alətin qiymət tarixçəsi ilə sabit nəticə vermədi "
+                              "(çox az ticarət və ya xətalı məlumat ola bilər). Alətin əsas birjadakı səhmini seçin və ya onu çıxarın.",
+                              f"{', '.join(bad) or 'Portfolio'}: the model gave no stable result with this instrument's price "
+                              "history (it may trade very rarely or have faulty data). Choose the listing on its main exchange "
+                              "or remove it."))
     admin["mc"] = {"scenarios": S, "errors": meas["mc_error"], "target_rel": target,
                    "euler_sum": meas["euler_sum"], "cvar95_money": meas["risk"]["0.95"]["cvar_money"]}
 
@@ -614,7 +619,8 @@ def run_stress(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any], symbol
 
     def result(sc: dict[str, Any], kind: str, by: list[dict[str, Any]], **extra: Any) -> dict[str, Any]:
         tot = sum(-b["loss_money"] for b in by)
-        return {"name": sc["name"], "type": kind, "group": sc.get("group", ""), "pnl_money": tot, "loss_money": -tot,
+        return {"name": stress_name(sc["name"]), "type": kind, "group": stress_group(sc.get("group", "")),
+                "pnl_money": tot, "loss_money": -tot,
                 "loss_pct": -tot / V0, "by_asset": by, **extra}
 
     # historical episodes: actual returns where the holding existed, else beta x the index move (compounded)

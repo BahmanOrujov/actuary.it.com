@@ -1,4 +1,5 @@
-// i18n: Azerbaijani is the default (and currently only) language. Add another dictionary with the same keys.
+// i18n: Azerbaijani is the default; English has the same keys. Longer texts use L() from ./lang in place.
+import { LANG } from "./lang";
 
 const az = {
   brand: "Portfel Analizi",
@@ -71,7 +72,78 @@ const az = {
 } as const;
 
 export type Key = keyof typeof az;
-const dict: Record<Key, string> = az;
+
+const en: Record<Key, string> = {
+  brand: "Portfel Analizi",
+  login: "Sign in",
+  register: "Register",
+  logout: "Sign out",
+  email: "E-mail",
+  password: "Password",
+  forgot: "Forgot your password?",
+  forgotText:
+    "Enter your e-mail: a one-time reset link (valid for 30 minutes) will be sent. In local (personal) mode without e-mail, the link is written to the server's console window. An administrator can also reset the password in the admin panel.",
+  notifications: "Notifications",
+  portfolios: "Portfolios",
+  settings: "Settings",
+  admin: "Admin",
+  newPortfolio: "New portfolio",
+  name: "Name",
+  baseCurrency: "Base currency",
+  riskProfile: "Risk profile",
+  riskLimit: "Risk limit (3-month CVaR 95%)",
+  cash: "Cash",
+  create: "Create",
+  save: "Save",
+  cancel: "Cancel",
+  delete: "Delete",
+  copy: "Copy",
+  rename: "Rename",
+  open: "Open",
+  generate: "Generate",
+  staleBanner: "The portfolio has changed. Press Generate to update the results.",
+  lastGenerate: "Last Generate",
+  never: "not yet",
+  addStock: "Add a stock",
+  symbol: "Symbol (as shown on investing.com)",
+  search: "Search",
+  quantity: "Quantity",
+  date: "Date",
+  price: "Price",
+  fees: "Fees",
+  optional: "optional",
+  side: "Side",
+  buy: "Buy",
+  sell: "Sell",
+  transactions: "Transactions",
+  positions: "Positions",
+  target: "Target price",
+  stopLoss: "Stop-loss",
+  csvImport: "CSV import",
+  results: "Results",
+  recommendations: "Recommendations",
+  table: "Table",
+  chart: "Chart",
+  conservative: "Conservative",
+  moderate: "Moderate",
+  aggressive: "Aggressive",
+  high: "high",
+  medium: "medium",
+  low: "low",
+  checking: "checking",
+  "medium-low": "medium-low",
+  steps_queued: "Queued",
+  steps_data: "Updating data",
+  steps_checking: "Checking",
+  steps_modeling: "Building models",
+  steps_simulation: "Simulation",
+  steps_stress: "Stress tests",
+  steps_recommendations: "Recommendations",
+  steps_done: "Done",
+  steps_failed: "Failed",
+};
+
+const dict: Record<Key, string> = LANG === "en" ? en : az;
 
 export function t(k: Key): string {
   return dict[k] ?? k;

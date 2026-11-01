@@ -49,6 +49,12 @@ class Portfolio(Base):
     version: Mapped[int] = mapped_column(Integer, default=1)  # bumped on every change -> stale detection
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    # read-only share link: only the token's hash is stored; a new link replaces the old one
+    share_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+    # a what-if scenario is a hidden copy of its portfolio plus hypothetical trades (never listed or monitored)
+    scenario_of: Mapped[int | None] = mapped_column(
+        ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=True, index=True)
+    scenario_trades: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     owner: Mapped[User] = relationship(back_populates="portfolios")
     transactions: Mapped[list["Transaction"]] = relationship(
         back_populates="portfolio", cascade="all, delete-orphan", order_by="Transaction.trade_date"

@@ -10,6 +10,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
+from app.i18n import L
 from app.models import Instrument, PriceBar, SymbolFetchLog
 from data.provider import BAR_COLUMNS, MarketDataProvider, ProviderError
 
@@ -230,11 +231,13 @@ class MarketData:
                 if cached.empty:
                     raise
                 self.messages.append(
-                    f"{symbol}: məlumat mənbəyi cavab vermədi, keşdəki məlumat istifadə olundu "
-                    f"(son tarix {cached.index.max():%Y-%m-%d})."
+                    L(f"{symbol}: məlumat mənbəyi cavab vermədi, keşdəki məlumat istifadə olundu "
+                      f"(son tarix {cached.index.max():%Y-%m-%d}).",
+                      f"{symbol}: the data source did not answer; cached data was used "
+                      f"(last date {cached.index.max():%Y-%m-%d}).")
                 )
         if cached.empty:
-            raise ProviderError(f"{symbol} üçün qiymət tarixçəsi tapılmadı.")
+            raise ProviderError(L(f"{symbol} üçün qiymət tarixçəsi tapılmadı.", f"No price history found for {symbol}."))
         return cached
 
     def _log_fetch(self, symbol: str, status: str) -> None:
@@ -251,7 +254,7 @@ class MarketData:
         bars = self.bars(symbol)
         sub = bars.loc[: pd.Timestamp(d)]
         if sub.empty:
-            raise ValueError("Bu tarix alətin tarixçəsindən əvvəldir.")
+            raise ValueError(L("Bu tarix alətin tarixçəsindən əvvəldir.", "This date is before the instrument's history."))
         row = sub.iloc[-1]
         return sub.index[-1].date(), float(row["close"]), _nf(row.get("low")), _nf(row.get("high"))
 

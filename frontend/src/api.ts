@@ -1,4 +1,5 @@
 // Thin fetch wrapper: cookies + CSRF double-submit header.
+import { L, LANG } from "./lang";
 
 function csrfToken(): string {
   const m = document.cookie.match(/(?:^|;\s*)pa_csrf=([^;]+)/);
@@ -15,7 +16,8 @@ export class ApiError extends Error {
 
 /** Read-only demo build (VITE_DEMO=1): answers come from a pre-computed sample run, nothing is written. */
 export const DEMO = import.meta.env.VITE_DEMO === "1";
-export const DEMO_MESSAGE = "Bu, demo versiyadır: dəyişiklik və yeni hesablama mümkün deyil. Tam versiya kompüterdə lokal işləyir.";
+export const DEMO_MESSAGE = L("Bu, demo versiyadır: dəyişiklik və yeni hesablama mümkün deyil. Tam versiya kompüterdə lokal işləyir.",
+  "This is the demo: changes and new analyses are not possible. The full version runs on your computer.");
 
 interface DemoData {
   user: User;
@@ -51,7 +53,7 @@ export const apiUrl = (path: string) => ROOT + path;
 
 async function request<T>(method: string, url: string, body?: unknown, form?: FormData): Promise<T> {
   if (DEMO) return demoRequest<T>(method, url);
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { "x-lang": LANG };
   if (method !== "GET") headers["x-csrf-token"] = csrfToken();
   if (body !== undefined) headers["content-type"] = "application/json";
   const res = await fetch(apiUrl(url), {
@@ -113,6 +115,8 @@ export interface PortfolioSummary {
   n_transactions: number;
   n_instruments: number;
   last_run: null | { id: number; status: string; created_at: string; stale: boolean; reliability: string };
+  /** A read-only share link is active. */
+  shared?: boolean;
   /** Key numbers of the latest finished run, for the overview card. */
   headline?: null | {
     run_id: number;
@@ -483,4 +487,32 @@ export interface Trust {
   fallback_model: boolean;
   mc_rel_error: number | null;
   scenarios: number;
+}
+
+export type Headline = NonNullable<PortfolioSummary["headline"]>;
+
+export interface WhatIfTrade {
+  provider_symbol: string;
+  investing_symbol?: string | null;
+  side: "BUY" | "SELL";
+  quantity: number;
+}
+
+/** A hypothetical version of a portfolio (its trades applied at today's price) next to the real one. */
+export interface WhatIfView {
+  trades: WhatIfTrade[];
+  created_at: string;
+  outdated: boolean;
+  base: Headline | null;
+  scenario: Headline | null;
+  run: RunView | null;
+  warnings?: string[];
+}
+
+/** What a read-only share link shows. */
+export interface SharedView {
+  name: string;
+  base_currency: string;
+  risk_profile: string;
+  run: RunView | null;
 }

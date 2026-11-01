@@ -11,14 +11,18 @@ import {
 import { dateAz, frequency, money, pct, price, prob } from "../format";
 import { Grid, maxLevel, probBelow, quantile, varCvar } from "../quantiles";
 import { NoResults, usePortfolio } from "./PortfolioLayout";
+import { L, LANG } from "../lang";
+
+/** Decimal comma in Azerbaijani, point in English. */
+const dec = (s: string) => (LANG === "az" ? s.replace(".", ",") : s);
 
 // ---------------------------------------------------------------- shared
 
 /** A confidence level as people write it: 0.95 -> "95%", 0.975 -> "97,5%". */
-const levelPct = (v: number) => `${Number((v * 100).toFixed(2)).toString().replace(".", ",")}%`;
+const levelPct = (v: number) => `${dec(Number((v * 100).toFixed(2)).toString())}%`;
 
 const ratio = (v: number | null | undefined, digits = 2) =>
-  v == null || !isFinite(v) ? "—" : `${v < 0 ? "−" : ""}${Math.abs(v).toFixed(digits).replace(".", ",")}`;
+  v == null || !isFinite(v) ? "—" : `${v < 0 ? "−" : ""}${dec(Math.abs(v).toFixed(digits))}`;
 
 function fmtKri(k: Kri): string {
   const v = k.value;
@@ -26,12 +30,12 @@ function fmtKri(k: Kri): string {
   if (k.kind === "pct") return pct(v);
   if (k.kind === "prob") return prob(v);
   if (k.kind === "times") return `${ratio(v)}×`;
-  if (k.kind === "days") return v < 0.1 ? "<0,1 gün" : `${ratio(v, 1)} gün`;
+  if (k.kind === "days") return v < 0.1 ? L("<0,1 gün", "<0.1 days") : `${ratio(v, 1)} ${L("gün", "days")}`;
   return ratio(v);
 }
 
 const TONE_ICON: Record<string, string> = { good: "✓", warn: "⚠", bad: "✕", info: "•" };
-const RAG_LABEL: Record<Rag, string> = { green: "normal", amber: "diqqət", red: "kritik", none: "məlumat" };
+const RAG_LABEL: Record<Rag, string> = { green: L("normal", "normal"), amber: L("diqqət", "watch"), red: L("kritik", "critical"), none: L("məlumat", "info") };
 const RAG_ORDER: Record<Rag, number> = { red: 0, amber: 1, green: 2, none: 3 };
 
 function Memo({ eyebrow, title, items, children }: { eyebrow: string; title: string; items: MemoItem[]; children?: ReactNode }) {
@@ -68,8 +72,8 @@ function OlderRun() {
   return (
     <div className="banner info">
       <span className="ic">ℹ</span>
-      Bu nəticə əvvəlki versiyada hesablanıb: brifinq, göstəricilər və yeni bölmələr yoxdur. Onları görmək üçün yuxarıdakı
-      Generate düyməsini basın (adətən 30–60 saniyə).
+      {L("Bu nəticə əvvəlki versiyada hesablanıb: brifinq, göstəricilər və yeni bölmələr yoxdur. Onları görmək üçün yuxarıdakı Generate düyməsini basın (adətən 30–60 saniyə).",
+        "This result was computed by an earlier version: the briefing, measures and new sections are missing. Press Generate above to see them (usually 30–60 seconds).")}
     </div>
   );
 }
@@ -115,8 +119,8 @@ function KpiGroups({ groups }: { groups: { title: string; hint: string; items: R
     <section className="card kpi-groups-card">
       <button className="expander" onClick={toggle} aria-expanded={open}>
         <span>
-          <b>Ətraflı göstəricilər</b>
-          <span className="muted"> · {n} göstərici: {groups.map((g) => g.title.toLocaleLowerCase("az")).join(", ")}</span>
+          <b>{L("Ətraflı göstəricilər", "Detailed measures")}</b>
+          <span className="muted"> · {n} {L("göstərici", "measures")}: {groups.map((g) => g.title.toLocaleLowerCase(LANG)).join(", ")}</span>
         </span>
         <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
       </button>
@@ -136,8 +140,8 @@ function NumField({ label, value, onChange, min, max, step = 0.5, suffix, hint, 
   label: string; value: number; onChange: (v: number) => void; min: number; max: number; step?: number;
   suffix?: string; hint?: string; list?: number[];
 }) {
-  const [text, setText] = useState(String(value).replace(".", ","));
-  useEffect(() => setText(String(value).replace(".", ",")), [value]);
+  const [text, setText] = useState(dec(String(value)));
+  useEffect(() => setText(dec(String(value))), [value]);
   const id = `dl-${label.replace(/\W+/g, "")}`;
   const commit = (raw: string) => {
     const v = Number(raw.replace(",", ".").replace(/[^\d.\-]/g, ""));
@@ -150,7 +154,7 @@ function NumField({ label, value, onChange, min, max, step = 0.5, suffix, hint, 
       <span className="numwrap">
         <input inputMode="decimal" value={text} list={list ? id : undefined}
           onChange={(e) => { setText(e.target.value); commit(e.target.value); }}
-          onBlur={() => setText(String(value).replace(".", ","))}
+          onBlur={() => setText(dec(String(value)))}
           onKeyDown={(e) => {
             if (e.key === "ArrowUp" || e.key === "ArrowDown") {
               e.preventDefault();
@@ -159,7 +163,7 @@ function NumField({ label, value, onChange, min, max, step = 0.5, suffix, hint, 
           }} />
         {suffix && <span className="unit">{suffix}</span>}
       </span>
-      {list && <datalist id={id}>{list.map((x) => <option key={x} value={String(x).replace(".", ",")} />)}</datalist>}
+      {list && <datalist id={id}>{list.map((x) => <option key={x} value={dec(String(x))} />)}</datalist>}
       {hint && <span className="hint">{hint}</span>}
     </label>
   );
@@ -170,43 +174,43 @@ function Toolbar({ res, cp, setCp, unit, setUnit, level, setLevel, levelMax, ass
   level?: number; setLevel?: (l: number) => void; levelMax?: number; asset?: string; setAsset?: (s: string) => void;
 }) {
   return (
-    <div className="toolbar" role="group" aria-label="Filtrlər">
+    <div className="toolbar" role="group" aria-label={L("Filtrlər", "Filters")}>
       <div className="wide small muted">
-        <div><b style={{ color: "var(--fg)" }}>Məlumat tarixi:</b> {dateAz(res.as_of)}</div>
-        <div><b style={{ color: "var(--fg)" }}>Dövrün sonu:</b> {dateAz(res.horizon_end)} ({res.horizon_days} ticarət günü) · {res.base_currency}</div>
+        <div><b style={{ color: "var(--fg)" }}>{L("Məlumat tarixi:", "Data as of:")}</b> {dateAz(res.as_of)}</div>
+        <div><b style={{ color: "var(--fg)" }}>{L("Dövrün sonu:", "Period end:")}</b> {dateAz(res.horizon_end)} ({res.horizon_days} {L("ticarət günü", "trading days")}) · {res.base_currency}</div>
       </div>
       <label>
-        Aralıq tarix
+        {L("Aralıq tarix", "Checkpoint date")}
         <select value={cp} onChange={(e) => setCp(Number(e.target.value))}>
           {res.checkpoint_dates.map((d, i) => <option key={d} value={i}>{dateAz(d)}</option>)}
         </select>
       </label>
       {level != null && setLevel && (levelMax != null ? (
-        <NumField label="Güvən səviyyəsi (VaR/CVaR)" value={Math.round(level * 1000) / 10} suffix="%"
+        <NumField label={L("Güvən səviyyəsi (VaR/CVaR)", "Confidence level (VaR/CVaR)")} value={Math.round(level * 1000) / 10} suffix="%"
           min={50} max={levelMax * 100} step={0.5} list={[90, 95, 97.5, 99].filter((x) => x <= levelMax * 100)}
           onChange={(v) => setLevel(v / 100)}
-          hint={levelMax < 0.99 ? `model yoxlamadan keçmədiyi üçün maksimum ${pct(levelMax)}` : "istənilən dəyər: 90, 97,5…"} />
+          hint={levelMax < 0.99 ? L(`model yoxlamadan keçmədiyi üçün maksimum ${pct(levelMax)}`, `at most ${pct(levelMax)} because the model failed a check`) : L("istənilən dəyər: 90, 97,5…", "any value: 90, 97.5…")} />
       ) : (
         <label>
-          VaR səviyyəsi
+          {L("VaR səviyyəsi", "VaR level")}
           <select value={String(level)} onChange={(e) => setLevel(Number(e.target.value))}>
             <option value="0.95">95%</option>
-            <option value="0.99" disabled={!res.risk["0.99"]}>99%{!res.risk["0.99"] ? " (gizlədilib)" : ""}</option>
+            <option value="0.99" disabled={!res.risk["0.99"]}>99%{!res.risk["0.99"] ? L(" (gizlədilib)", " (hidden)") : ""}</option>
           </select>
         </label>
       ))}
       <div>
-        <div className="small muted" style={{ marginBottom: 4, fontWeight: 500 }}>Göstərmə</div>
-        <div className="toggle" role="group" aria-label="Vahid">
-          <button aria-pressed={unit === "money"} onClick={() => setUnit("money")}>Məbləğ</button>
+        <div className="small muted" style={{ marginBottom: 4, fontWeight: 500 }}>{L("Göstərmə", "Show as")}</div>
+        <div className="toggle" role="group" aria-label={L("Vahid", "Unit")}>
+          <button aria-pressed={unit === "money"} onClick={() => setUnit("money")}>{L("Məbləğ", "Amount")}</button>
           <button aria-pressed={unit === "pct"} onClick={() => setUnit("pct")}>%</button>
         </div>
       </div>
       {asset !== undefined && setAsset && (
         <label className="wide">
-          Səhm
+          {L("Səhm", "Stock")}
           <select value={asset} onChange={(e) => setAsset(e.target.value)}>
-            <option value="__portfolio">Bütün portfel</option>
+            <option value="__portfolio">{L("Bütün portfel", "Whole portfolio")}</option>
             {res.assets.map((a) => <option key={a.symbol} value={a.symbol}>{a.investing_symbol} — {a.name}</option>)}
           </select>
         </label>
@@ -217,7 +221,7 @@ function Toolbar({ res, cp, setCp, unit, setUnit, level, setLevel, levelMax, ass
 
 function SectionNav({ items }: { items: [string, string][] }) {
   return (
-    <nav className="section-nav" aria-label="Bölmələr">
+    <nav className="section-nav" aria-label={L("Bölmələr", "Sections")}>
       {items.map(([id, label]) => (
         <a key={id} href={`#${id}`} onClick={(e) => {
           e.preventDefault();
@@ -245,17 +249,17 @@ function Checkpoints({ res, cp, unit }: { res: RunResult; cp: number; unit: Unit
     <section className="card" id="checkpoints">
       <div className="card-head">
         <div>
-          <h2>Aralıq tarixlər</h2>
-          <div className="sub">Hər ayın sonunda vəziyyət. Seçilmiş tarix vurğulanıb; ehtimallar maya dəyərinə və bugünkü dəyərə nisbətəndir.</div>
+          <h2>{L("Aralıq tarixlər", "Checkpoints")}</h2>
+          <div className="sub">{L("Hər ayın sonunda vəziyyət. Seçilmiş tarix vurğulanıb; ehtimallar maya dəyərinə və bugünkü dəyərə nisbətəndir.", "The position at each month end. The selected date is highlighted; probabilities are against cost and today's value.")}</div>
         </div>
       </div>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Tarix</th><th className="num">Median</th><th className="num">50% aralıq</th><th className="num">90% aralıq</th>
-              <th className="num">M/z (median)</th><th className="num">Mənfəətdə olma</th>
-              <th className="num">5%+ itki</th><th className="num">10%+ itki</th><th className="num">20%+ itki</th>
+              <th>{L("Tarix", "Date")}</th><th className="num">{L("Median", "Median")}</th><th className="num">{L("50% aralıq", "50% range")}</th><th className="num">{L("90% aralıq", "90% range")}</th>
+              <th className="num">{L("M/z (median)", "P/L (median)")}</th><th className="num">{L("Mənfəətdə olma", "In profit")}</th>
+              <th className="num">{L("5%+ itki", "5%+ loss")}</th><th className="num">{L("10%+ itki", "10%+ loss")}</th><th className="num">{L("20%+ itki", "20%+ loss")}</th>
             </tr>
           </thead>
           <tbody>
@@ -280,7 +284,7 @@ function Checkpoints({ res, cp, unit }: { res: RunResult; cp: number; unit: Unit
 // ---------------------------------------------------------------- investment (CIO)
 
 const CLASS_LABEL: Record<string, [string, string]> = {
-  efficient: ["ok", "səmərəli"], balanced: ["checking", "balanslı"], costly: ["err", "baha risk"], hedge: ["ok", "sığorta"],
+  efficient: ["ok", L("səmərəli", "efficient")], balanced: ["checking", L("balanslı", "balanced")], costly: ["err", L("baha risk", "costly risk")], hedge: ["ok", L("sığorta", "hedge")],
 };
 
 function EfficiencyMap({ ins }: { ins: Insights }) {
@@ -291,13 +295,13 @@ function EfficiencyMap({ ins }: { ins: Insights }) {
   const build = (p: Palette): EChartsOption => ({
     ...baseOption(p),
     grid: { left: 64, right: 24, top: 20, bottom: 52 },
-    xAxis: { type: "value", min: minX, max, ...axisStyle(p), name: "riskin payı (CVaR 95%)", nameLocation: "middle", nameGap: 30,
+    xAxis: { type: "value", min: minX, max, ...axisStyle(p), name: L("riskin payı (CVaR 95%)", "share of risk (CVaR 95%)"), nameLocation: "middle", nameGap: 30,
       axisLabel: { color: p.muted, formatter: (v: number) => pct(v), showMinLabel: false, showMaxLabel: false } },
-    yAxis: { type: "value", min: 0, max, ...axisStyle(p), name: "gözlənilən gəlirin payı", nameLocation: "middle", nameGap: 46,
+    yAxis: { type: "value", min: 0, max, ...axisStyle(p), name: L("gözlənilən gəlirin payı", "share of expected return"), nameLocation: "middle", nameGap: 46,
       axisLabel: { color: p.muted, formatter: (v: number) => pct(v), showMaxLabel: false } },
     tooltip: { ...baseOption(p).tooltip, trigger: "item", formatter: (x: unknown) => {
       const r = rows[(x as { dataIndex: number }).dataIndex];
-      return `<b>${r.symbol}</b> ${r.name}<br/>Çəki ${pct(r.weight)}<br/>Riskin payı ${pct(r.risk_share)}<br/>Gəlirin payı ${pct(r.return_share)}<br/>Səmərəlilik ${ratio(r.efficiency)}`;
+      return `<b>${r.symbol}</b> ${r.name}<br/>${L("Çəki", "Weight")} ${pct(r.weight)}<br/>${L("Riskin payı", "Share of risk")} ${pct(r.risk_share)}<br/>${L("Gəlirin payı", "Share of return")} ${pct(r.return_share)}<br/>${L("Səmərəlilik", "Efficiency")} ${ratio(r.efficiency)}`;
     } },
     series: [{
       type: "scatter",
@@ -308,21 +312,22 @@ function EfficiencyMap({ ins }: { ins: Insights }) {
         label: { show: true, formatter: r.symbol, position: "right", color: p.fg, fontSize: 12 },
       })),
       markLine: { silent: true, symbol: "none", lineStyle: { color: p.muted, type: "dashed" as const },
-        label: { formatter: "ədalətli bölgü", color: p.muted, fontSize: 12, position: "insideEndTop" as const },
+        label: { formatter: L("ədalətli bölgü", "fair split"), color: p.muted, fontSize: 12, position: "insideEndTop" as const },
         data: [[{ coord: [0, 0] }, { coord: [max, max] }]] },
     }],
   });
   return (
     <ChartCard
       id="efficiency"
-      title="Risk-gəlir xəritəsi: hansı mövqe riskini “qazanır”?"
-      subtitle="Hər dairə bir mövqedir (ölçüsü — çəkisi). Xəttin üstündəkilər riskindən çox gəlir payı verir (səmərəli, göy), altındakılar portfelə gəlirindən baha risk gətirir (vermilion). Sıfırdan solda olanlar portfelin pis ssenari itkisini azaldır (sığorta)."
+      title={L("Risk-gəlir xəritəsi: hansı mövqe riskini “qazanır”?", "Risk-return map: which position “earns” its risk?")}
+      subtitle={L("Hər dairə bir mövqedir (ölçüsü — çəkisi). Xəttin üstündəkilər riskindən çox gəlir payı verir (səmərəli, göy), altındakılar portfelə gəlirindən baha risk gətirir (vermilion). Sıfırdan solda olanlar portfelin pis ssenari itkisini azaldır (sığorta).",
+        "Each circle is a position (size — its weight). Those above the line give a larger share of return than of risk (efficient, blue); those below bring the portfolio risk that costs more than their return (vermilion). Those left of zero reduce the portfolio's bad-case loss (hedge).")}
       build={build}
       deps={[ins]}
-      ariaLabel="Mövqelərin risk payı və gəlir payı səpələnmə qrafiki"
+      ariaLabel={L("Mövqelərin risk payı və gəlir payı səpələnmə qrafiki", "Scatter chart of the positions' share of risk and share of return")}
       table={
         <table>
-          <thead><tr><th>Səhm</th><th className="num">Çəki</th><th className="num">Riskin payı</th><th className="num">Gəlirin payı</th><th className="num">Səmərəlilik</th></tr></thead>
+          <thead><tr><th>{L("Səhm", "Stock")}</th><th className="num">{L("Çəki", "Weight")}</th><th className="num">{L("Riskin payı", "Share of risk")}</th><th className="num">{L("Gəlirin payı", "Share of return")}</th><th className="num">{L("Səmərəlilik", "Efficiency")}</th></tr></thead>
           <tbody>{rows.map((r) => (
             <tr key={r.symbol}><td>{r.symbol}</td><td className="num">{pct(r.weight)}</td><td className="num">{pct(r.risk_share)}</td>
               <td className="num">{pct(r.return_share)}</td><td className="num">{ratio(r.efficiency)}</td></tr>
@@ -338,17 +343,17 @@ function RiskSource({ ins }: { ins: Insights }) {
   const rows = [...ins.investment.positions].sort((a, b) => b.specific_risk_share - a.specific_risk_share);
   return (
     <section className="card" id="source">
-      <h2>Riskin mənbəyi: mükafatlı və mükafatsız</h2>
+      <h2>{L("Riskin mənbəyi: mükafatlı və mükafatsız", "Where the risk comes from: rewarded and unrewarded")}</h2>
       <p className="small muted">
-        Bazar riskini daşıdığınız üçün bazar gəlir “ödəyir”. Şirkətə xas risk isə mükafatlandırılmır — onu diversifikasiya ilə azaltmaq
-        pulsuzdur.
+        {L("Bazar riskini daşıdığınız üçün bazar gəlir “ödəyir”. Şirkətə xas risk isə mükafatlandırılmır — onu diversifikasiya ilə azaltmaq pulsuzdur.",
+          "The market “pays” a return for carrying market risk. Company-specific risk is not rewarded — reducing it through diversification is free.")}
       </p>
-      <div className="stack" role="img" aria-label={`Bazar riski ${pct(m.systematic_share)}, şirkətə xas risk ${pct(m.specific_share)}`}>
-        <div className="sys" style={{ width: `${m.systematic_share * 100}%` }}>bazar {pct(m.systematic_share)}</div>
-        <div className="spec" style={{ width: `${m.specific_share * 100}%` }}>şirkətə xas {pct(m.specific_share)}</div>
+      <div className="stack" role="img" aria-label={L(`Bazar riski ${pct(m.systematic_share)}, şirkətə xas risk ${pct(m.specific_share)}`, `Market risk ${pct(m.systematic_share)}, company-specific risk ${pct(m.specific_share)}`)}>
+        <div className="sys" style={{ width: `${m.systematic_share * 100}%` }}>{L("bazar", "market")} {pct(m.systematic_share)}</div>
+        <div className="spec" style={{ width: `${m.specific_share * 100}%` }}>{L("şirkətə xas", "company-specific")} {pct(m.specific_share)}</div>
       </div>
       <table className="small" style={{ marginTop: 12 }}>
-        <thead><tr><th>Səhm</th><th className="num">Bazar həssaslığı (β)</th><th>Şirkətə xas pay</th></tr></thead>
+        <thead><tr><th>{L("Səhm", "Stock")}</th><th className="num">{L("Bazar həssaslığı (β)", "Market sensitivity (β)")}</th><th>{L("Şirkətə xas pay", "Company-specific share")}</th></tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.symbol}>
@@ -381,11 +386,11 @@ function Exposure({ ins }: { ins: Insights }) {
   );
   return (
     <section className="card" id="exposure">
-      <h2>Ekspozisiya</h2>
-      <p className="small muted">Pulunuz harada işləyir. Əsas valyutadan fərqli valyutalar əlavə məzənnə riski daşıyır (modelə daxildir).</p>
+      <h2>{L("Ekspozisiya", "Exposure")}</h2>
+      <p className="small muted">{L("Pulunuz harada işləyir. Əsas valyutadan fərqli valyutalar əlavə məzənnə riski daşıyır (modelə daxildir).", "Where your money works. Currencies other than the base currency carry extra exchange-rate risk (included in the model).")}</p>
       <div className="grid" style={{ gap: 18 }}>
-        {block("Valyuta", currency)}
-        {block("Birja", exchange)}
+        {block(L("Valyuta", "Currency"), currency)}
+        {block(L("Birja", "Exchange"), exchange)}
       </div>
     </section>
   );
@@ -398,17 +403,17 @@ function Holdings({ res, ins }: { res: RunResult; ins: Insights }) {
     <section className="card" id="holdings">
       <div className="card-head">
         <div>
-          <h2>Mövqelərin skorkartı</h2>
-          <div className="sub">Hər mövqe nə qazandırır, nə qədər risk gətirir və bu bölgü ədalətlidirmi.</div>
+          <h2>{L("Mövqelərin skorkartı", "Position scorecard")}</h2>
+          <div className="sub">{L("Hər mövqe nə qazandırır, nə qədər risk gətirir və bu bölgü ədalətlidirmi.", "What each position earns, how much risk it brings and whether that split is fair.")}</div>
         </div>
       </div>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Səhm</th><th className="num">Çəki</th><th className="num">Cari m/z</th><th className="num">Gözlənilən gəlir</th>
-              <th className="num">Qalxma ehtimalı</th><th className="num">90% aralıq</th><th className="num">Gəlir payı</th>
-              <th className="num">Risk payı</th><th>Qiymət</th>
+              <th>{L("Səhm", "Stock")}</th><th className="num">{L("Çəki", "Weight")}</th><th className="num">{L("Cari m/z", "Current P/L")}</th><th className="num">{L("Gözlənilən gəlir", "Expected return")}</th>
+              <th className="num">{L("Qalxma ehtimalı", "Probability up")}</th><th className="num">{L("90% aralıq", "90% range")}</th><th className="num">{L("Gəlir payı", "Return share")}</th>
+              <th className="num">{L("Risk payı", "Risk share")}</th><th>{L("Qiymət", "Rating")}</th>
             </tr>
           </thead>
           <tbody>
@@ -445,8 +450,8 @@ function TargetCalc({ res, grid }: { res: RunResult; grid: Grid }) {
   const above = (x: number) => {
     const b = probBelow(grid, x);
     if (!b) return "—";
-    if (b.bound === "lt") return ">99,9%";
-    if (b.bound === "gt") return "<0,1%";
+    if (b.bound === "lt") return dec(">99.9%");
+    if (b.bound === "gt") return dec("<0.1%");
     return prob(1 - b.p);
   };
   const lo = quantile(grid, (1 - band / 100) / 2);
@@ -455,25 +460,25 @@ function TargetCalc({ res, grid }: { res: RunResult; grid: Grid }) {
     <section className="card" id="calc">
       <div className="card-head">
         <div>
-          <h2>Hədəf kalkulyatoru</h2>
-          <div className="sub">Öz hədəfinizi yazın: 3 ayın sonunda ona çatma ehtimalı eyni ssenarilərdən dərhal hesablanır.</div>
+          <h2>{L("Hədəf kalkulyatoru", "Target calculator")}</h2>
+          <div className="sub">{L("Öz hədəfinizi yazın: 3 ayın sonunda ona çatma ehtimalı eyni ssenarilərdən dərhal hesablanır.", "Enter your own target: the probability of reaching it after 3 months is computed at once from the same scenarios.")}</div>
         </div>
       </div>
       <div className="calc-grid">
         <div className="calc">
-          <NumField label="Gəlir hədəfi" value={gainPct} onChange={setGainPct} min={-50} max={100} step={1} suffix="%" list={[0, 5, 10, 20]} />
-          <div className="calc-out"><b>{above(gainPct / 100)}</b><span>ehtimalla portfel {pct(gainPct / 100, { sign: true })} və ya daha çox
-            qazanır ({money((gainPct / 100) * res.V0, ccy, { sign: true })})</span></div>
+          <NumField label={L("Gəlir hədəfi", "Return target")} value={gainPct} onChange={setGainPct} min={-50} max={100} step={1} suffix="%" list={[0, 5, 10, 20]} />
+          <div className="calc-out"><b>{above(gainPct / 100)}</b><span>{L(`ehtimalla portfel ${pct(gainPct / 100, { sign: true })} və ya daha çox qazanır`, `probability that the portfolio gains ${pct(gainPct / 100, { sign: true })} or more`)}{" "}
+            ({money((gainPct / 100) * res.V0, ccy, { sign: true })})</span></div>
         </div>
         <div className="calc">
-          <NumField label={`Qazanc hədəfi (${ccy})`} value={gainMoney} onChange={setGainMoney} min={-Math.round(res.V0)} max={Math.round(res.V0)} step={100} />
-          <div className="calc-out"><b>{above(gainMoney / res.V0)}</b><span>ehtimalla qazanc {money(gainMoney, ccy)}-ı keçir</span></div>
+          <NumField label={`${L("Qazanc hədəfi", "Gain target")} (${ccy})`} value={gainMoney} onChange={setGainMoney} min={-Math.round(res.V0)} max={Math.round(res.V0)} step={100} />
+          <div className="calc-out"><b>{above(gainMoney / res.V0)}</b><span>{L(`ehtimalla qazanc ${money(gainMoney, ccy)}-ı keçir`, `probability that the gain exceeds ${money(gainMoney, ccy)}`)}</span></div>
         </div>
         <div className="calc">
-          <NumField label="Aralığın etibarlılığı" value={band} onChange={setBand} min={10} max={98} step={5} suffix="%" list={[50, 80, 90, 95]} />
+          <NumField label={L("Aralığın etibarlılığı", "Range confidence")} value={band} onChange={setBand} min={10} max={98} step={5} suffix="%" list={[50, 80, 90, 95]} />
           <div className="calc-out">
             <b>{lo != null && hi != null ? `${money(res.V0 * (1 + lo), ccy)} – ${money(res.V0 * (1 + hi), ccy)}` : "—"}</b>
-            <span>ssenarilərin {band}%-i bu aralıqdadır ({lo != null && hi != null ? `${pct(lo, { sign: true })} … ${pct(hi, { sign: true })}` : ""})</span>
+            <span>{L(`ssenarilərin ${band}%-i bu aralıqdadır`, `${band}% of the scenarios fall in this range`)} ({lo != null && hi != null ? `${pct(lo, { sign: true })} … ${pct(hi, { sign: true })}` : ""})</span>
           </div>
         </div>
       </div>
@@ -491,10 +496,10 @@ function LotsSection({ res }: { res: RunResult }) {
     <section className="card" id="lots">
       <div className="card-head">
         <div>
-          <h2>Alış tarixinə görə mənfəət/zərər</h2>
+          <h2>{L("Alış tarixinə görə mənfəət/zərər", "Profit/loss by purchase date")}</h2>
           <div className="sub">
-            Hər alış ayrıca: bu günə qədər nə qazandırıb və {dateAz(res.horizon_end)} tarixinə nə gözlənilir.
-            {many ? " Satışlar FIFO ilə ən köhnə alışdan çıxılıb." : ""}
+            {L(`Hər alış ayrıca: bu günə qədər nə qazandırıb və ${dateAz(res.horizon_end)} tarixinə nə gözlənilir.`, `Each purchase separately: what it has earned so far and what is expected by ${dateAz(res.horizon_end)}.`)}
+            {many ? L(" Satışlar FIFO ilə ən köhnə alışdan çıxılıb.", " Sales are taken from the oldest purchase first (FIFO).") : ""}
           </div>
         </div>
       </div>
@@ -502,9 +507,9 @@ function LotsSection({ res }: { res: RunResult }) {
         <table className="lots">
           <thead>
             <tr>
-              <th>Səhm / alış tarixi</th><th className="num">Say</th><th className="num">Alış qiyməti</th>
-              <th className="num">Maya → cari dəyər</th><th className="num">Cari m/z</th><th className="num">Saxlama / illik</th>
-              <th className="num">Təxmini m/z</th><th className="num">90% aralıq</th><th className="num">Mənfəət ehtimalı</th>
+              <th>{L("Səhm / alış tarixi", "Stock / purchase date")}</th><th className="num">{L("Say", "Qty")}</th><th className="num">{L("Alış qiyməti", "Purchase price")}</th>
+              <th className="num">{L("Maya → cari dəyər", "Cost → current value")}</th><th className="num">{L("Cari m/z", "Current P/L")}</th><th className="num">{L("Saxlama / illik", "Held / annual")}</th>
+              <th className="num">{L("Təxmini m/z", "Est. P/L")}</th><th className="num">{L("90% aralıq", "90% range")}</th><th className="num">{L("Mənfəət ehtimalı", "Profit probability")}</th>
             </tr>
           </thead>
           <tbody>
@@ -524,7 +529,7 @@ function LotsSection({ res }: { res: RunResult }) {
                     </td>
                     <td className="num">{holding(l.holding_days)}
                       <div className={`small ${l.annualized_return != null ? signClass(l.annualized_return) : "muted"}`}>
-                        {l.annualized_return != null ? `${pct(l.annualized_return, { sign: true })} illik` : "illik — qısa müddət"}
+                        {l.annualized_return != null ? `${pct(l.annualized_return, { sign: true })} ${L("illik", "annual")}` : L("illik — qısa müddət", "annual — too short")}
                       </div>
                     </td>
                     {l.forecast ? (
@@ -534,7 +539,7 @@ function LotsSection({ res }: { res: RunResult }) {
                         <td className="num">{prob(l.forecast.prob_profit)}</td>
                       </>
                     ) : (
-                      <td colSpan={3} className="muted small">yenidən Generate basın</td>
+                      <td colSpan={3} className="muted small">{L("yenidən Generate basın", "press Generate again")}</td>
                     )}
                   </tr>
                 ))}
@@ -544,18 +549,18 @@ function LotsSection({ res }: { res: RunResult }) {
         </table>
       </div>
       <p className="small muted" style={{ marginTop: 10 }}>
-        Təxmini m/z — alışın öz maya dəyərinə nisbətən dövrün sonundakı mənfəət/zərər. İllik gəlir yalnız kifayət qədər uzun saxlanmış
-        alışlar üçün göstərilir. Maya dəyəri keçmişdə ödənilib: satış qərarı onun əsasında yox, gələcək risk və gəlirə görə verilməlidir.
+        {L("Təxmini m/z — alışın öz maya dəyərinə nisbətən dövrün sonundakı mənfəət/zərər. İllik gəlir yalnız kifayət qədər uzun saxlanmış alışlar üçün göstərilir. Maya dəyəri keçmişdə ödənilib: satış qərarı onun əsasında yox, gələcək risk və gəlirə görə verilməlidir.",
+          "Est. P/L — profit/loss at the period end against that purchase's own cost. Annual return is shown only for purchases held long enough. The cost was paid in the past: a decision to sell should rest on future risk and return, not on it.")}
       </p>
     </section>
   );
 }
 
 function holding(days: number): string {
-  if (days < 31) return `${days} gün`;
-  if (days < 365) return `${Math.round(days / 30.44)} ay`;
+  if (days < 31) return `${days} ${L("gün", "days")}`;
+  if (days < 365) return `${Math.round(days / 30.44)} ${L("ay", "mo")}`;
   const y = days / 365.25;
-  return `${y.toFixed(1).replace(".", ",")} il`;
+  return `${dec(y.toFixed(1))} ${L("il", "yr")}`;
 }
 
 export function InvestmentView() {
@@ -574,51 +579,51 @@ export function InvestmentView() {
       {res.warnings.map((w) => <div key={w} className="banner warn"><span className="ic">⚠</span> {w}</div>)}
 
       <Hero items={[
-        { label: "Portfelin dəyəri", value: money(res.V0, ccy),
-          sub: `${money(res.current.total.unrealized, ccy, { sign: true })} (${pct(res.current.total.unrealized_pct, { sign: true })}) cari mənfəət/zərər`,
+        { label: L("Portfelin dəyəri", "Portfolio value"), value: money(res.V0, ccy),
+          sub: `${money(res.current.total.unrealized, ccy, { sign: true })} (${pct(res.current.total.unrealized_pct, { sign: true })}) ${L("cari mənfəət/zərər", "current profit/loss")}`,
           subTone: res.current.total.unrealized >= 0 ? "pos" : "neg" },
-        { label: `Gözlənilən gəlir · ${dateAz(res.horizon_end)}`, value: m ? pct(m.expected_return, { sign: true }) : money(res.pnl_end.median, ccy, { sign: true }),
-          sub: m ? `${money(m.expected_money, ccy, { sign: true })} — bazar riskinin mükafatı` : "mənfəət/zərərin medianı" },
-        { label: "10 ssenaridən 9-u bu aralıqda", value: `${money(res.checkpoints[res.checkpoints.length - 1].p05, ccy)} – ${money(res.checkpoints[res.checkpoints.length - 1].p95, ccy)}`,
-          sub: m ? `${pct(m.range90[0], { sign: true })} … ${pct(m.range90[1], { sign: true })}` : "dövrün sonunda portfelin dəyəri" },
-        { label: "Mənfəətdə bitmə ehtimalı", value: prob(res.pnl_end.prob_profit), sub: "dövrün sonunda maya dəyərindən yuxarı" },
+        { label: `${L("Gözlənilən gəlir", "Expected return")} · ${dateAz(res.horizon_end)}`, value: m ? pct(m.expected_return, { sign: true }) : money(res.pnl_end.median, ccy, { sign: true }),
+          sub: m ? `${money(m.expected_money, ccy, { sign: true })} — ${L("bazar riskinin mükafatı", "reward for market risk")}` : L("mənfəət/zərərin medianı", "median profit/loss") },
+        { label: L("10 ssenaridən 9-u bu aralıqda", "9 in 10 scenarios in this range"), value: `${money(res.checkpoints[res.checkpoints.length - 1].p05, ccy)} – ${money(res.checkpoints[res.checkpoints.length - 1].p95, ccy)}`,
+          sub: m ? `${pct(m.range90[0], { sign: true })} … ${pct(m.range90[1], { sign: true })}` : L("dövrün sonunda portfelin dəyəri", "portfolio value at the period end") },
+        { label: L("Mənfəətdə bitmə ehtimalı", "Probability of ending in profit"), value: prob(res.pnl_end.prob_profit), sub: L("dövrün sonunda maya dəyərindən yuxarı", "above cost at the period end") },
       ]} />
 
       {!ins || !m ? <OlderRun /> : (<>
-      <Memo eyebrow="İnvestisiya · CIO brifinqi" title="Bu portfel pulunuzu necə işlədir?" items={ins.investment.memo}>
+      <Memo eyebrow={L("İnvestisiya · CIO brifinqi", "Investment · CIO briefing")} title={L("Bu portfel pulunuzu necə işlədir?", "How does this portfolio put your money to work?")} items={ins.investment.memo}>
         <p className="small muted" style={{ margin: "10px 0 0" }}>
-          Etibarlılıq: <ReliabilityBadge level={run.reliability} /> · riskin ətraflı təhlili və model yoxlaması{" "}
-          <Link to="../risk" relative="path">Risk</Link> bölməsindədir.
+          {L("Etibarlılıq", "Reliability")}: <ReliabilityBadge level={run.reliability} /> · {L("riskin ətraflı təhlili və model yoxlaması", "the detailed risk analysis and model check are in the")}{" "}
+          <Link to="../risk" relative="path">Risk</Link> {L("bölməsindədir.", "section.")}
         </p>
       </Memo>
 
       <KpiGroups groups={[
-        { title: "Gəlir potensialı", hint: "nə qədər qazana bilərəm", items: [
-          <Kpi key="beat" label="Depozitdən çox qazanma ehtimalı" value={prob(m.prob_beat_rf)} sub={`risksiz gəlir ${pct(m.rf_period)} (3 ay)`} />,
-          <Kpi key="best" label="Yaxşı ssenari (95%)" value={money(m.best_case_money, ccy, { sign: true })} sub={`20 ssenaridən 1-də ${pct(m.best_case, { sign: true })}-dən yaxşı`} />,
-          <Kpi key="ud" label="Yuxarı / aşağı asimmetriya" value={ratio(m.upside_downside)} sub=">1: yuxarı potensial aşağı riskdən genişdir" />,
-          <Kpi key="gl" label="Qazanc / itki nisbəti (Omega)" value={ratio(m.gain_loss_ratio)} sub="orta qazanc ÷ orta itki" />,
+        { title: L("Gəlir potensialı", "Return potential"), hint: L("nə qədər qazana bilərəm", "how much could I earn"), items: [
+          <Kpi key="beat" label={L("Depozitdən çox qazanma ehtimalı", "Probability of beating a deposit")} value={prob(m.prob_beat_rf)} sub={`${L("risksiz gəlir", "risk-free return")} ${pct(m.rf_period)} (${L("3 ay", "3 months")})`} />,
+          <Kpi key="best" label={L("Yaxşı ssenari (95%)", "Good scenario (95%)")} value={money(m.best_case_money, ccy, { sign: true })} sub={L(`20 ssenaridən 1-də ${pct(m.best_case, { sign: true })}-dən yaxşı`, `better than ${pct(m.best_case, { sign: true })} in 1 of 20 scenarios`)} />,
+          <Kpi key="ud" label={L("Yuxarı / aşağı asimmetriya", "Upside / downside asymmetry")} value={ratio(m.upside_downside)} sub={L(">1: yuxarı potensial aşağı riskdən genişdir", ">1: the upside is wider than the downside")} />,
+          <Kpi key="gl" label={L("Qazanc / itki nisbəti (Omega)", "Gain / loss ratio (Omega)")} value={ratio(m.gain_loss_ratio)} sub={L("orta qazanc ÷ orta itki", "average gain ÷ average loss")} />,
         ] },
-        { title: "Risk-gəlir səmərəliliyi", hint: "riskə görə nə qədər ödənilir", items: [
-          <Kpi key="sh" label="Sharpe (illik)" value={ratio(m.sharpe)} sub={`Sortino ${ratio(m.sortino)} · volatillik ${pct(m.vol_annual)}`} />,
-          <Kpi key="rc" label="Gəlir / CVaR 95%" value={ratio(m.return_to_cvar)} sub="pis ssenari itkisinin hər vahidinə gəlir" />,
-          <Kpi key="tr" label="Treynor (illik)" value={ratio(m.treynor)} sub="bazar riskinin hər vahidinə artıq gəlir" />,
-          <Kpi key="rv" label="Rachev nisbəti" value={ratio(m.rachev)} sub="ən yaxşı 5% ÷ ən pis 5% ssenari" />,
-          <Kpi key="cm" label="Calmar (gözlənilən)" value={ratio(m.calmar)} sub="gözlənilən gəlir ÷ tipik drawdown" />,
+        { title: L("Risk-gəlir səmərəliliyi", "Risk-return efficiency"), hint: L("riskə görə nə qədər ödənilir", "how much the risk pays"), items: [
+          <Kpi key="sh" label={L("Sharpe (illik)", "Sharpe (annual)")} value={ratio(m.sharpe)} sub={`Sortino ${ratio(m.sortino)} · ${L("volatillik", "volatility")} ${pct(m.vol_annual)}`} />,
+          <Kpi key="rc" label={L("Gəlir / CVaR 95%", "Return / CVaR 95%")} value={ratio(m.return_to_cvar)} sub={L("pis ssenari itkisinin hər vahidinə gəlir", "return per unit of bad-case loss")} />,
+          <Kpi key="tr" label={L("Treynor (illik)", "Treynor (annual)")} value={ratio(m.treynor)} sub={L("bazar riskinin hər vahidinə artıq gəlir", "excess return per unit of market risk")} />,
+          <Kpi key="rv" label={L("Rachev nisbəti", "Rachev ratio")} value={ratio(m.rachev)} sub={L("ən yaxşı 5% ÷ ən pis 5% ssenari", "best 5% ÷ worst 5% of scenarios")} />,
+          <Kpi key="cm" label={L("Calmar (gözlənilən)", "Calmar (expected)")} value={ratio(m.calmar)} sub={L("gözlənilən gəlir ÷ tipik drawdown", "expected return ÷ typical drawdown")} />,
         ] },
-        { title: "Portfelin quruluşu", hint: "pul necə yerləşdirilib", items: [
-          <Kpi key="b" label="Bazar həssaslığı (β)" value={ratio(m.market_sensitivity)}
-            sub={`bazar 10% düşsə, portfel təxminən ${pct(-0.1 * m.market_sensitivity, { sign: true })}`} />,
-          <Kpi key="dv" label="Diversifikasiya faydası" value={pct(m.diversification_benefit)} sub={`effektiv səhm sayı ≈ ${ratio(m.effective_n, 1)}`} />,
-          <Kpi key="tw" label="Ən böyük mövqe" value={pct(m.top_weight)} sub="portfelin payı" />,
-          <Kpi key="dd" label="Dividend (alınmış)" value={money(res.current.total.dividends ?? 0, ccy)} sub={`reallaşmış m/z ${money(res.current.total.realized, ccy, { sign: true })}`} />,
+        { title: L("Portfelin quruluşu", "Portfolio structure"), hint: L("pul necə yerləşdirilib", "how the money is placed"), items: [
+          <Kpi key="b" label={L("Bazar həssaslığı (β)", "Market sensitivity (β)")} value={ratio(m.market_sensitivity)}
+            sub={L(`bazar 10% düşsə, portfel təxminən ${pct(-0.1 * m.market_sensitivity, { sign: true })}`, `if the market falls 10%, the portfolio moves about ${pct(-0.1 * m.market_sensitivity, { sign: true })}`)} />,
+          <Kpi key="dv" label={L("Diversifikasiya faydası", "Diversification benefit")} value={pct(m.diversification_benefit)} sub={`${L("effektiv səhm sayı", "effective number of stocks")} ≈ ${ratio(m.effective_n, 1)}`} />,
+          <Kpi key="tw" label={L("Ən böyük mövqe", "Largest position")} value={pct(m.top_weight)} sub={L("portfelin payı", "share of the portfolio")} />,
+          <Kpi key="dd" label={L("Dividend (alınmış)", "Dividends (received)")} value={money(res.current.total.dividends ?? 0, ccy)} sub={`${L("reallaşmış m/z", "realised P/L")} ${money(res.current.total.realized, ccy, { sign: true })}`} />,
         ] },
       ]} />
       </>)}
 
       <Toolbar res={res} cp={cp} setCp={setCp} unit={unit} setUnit={setUnit} asset={asset} setAsset={setAsset} />
-      <SectionNav items={[["summary", "Brifinq"], ["calc", "Kalkulyator"], ["fan", "Proqnoz"], ["efficiency", "Risk-gəlir"], ["source", "Riskin mənbəyi"],
-        ["holdings", "Mövqelər"], ["pnl", "Mənfəət/zərər"], ["lots", "Alışlar"], ["stocks", "Səhmlər"], ["glossary", "Lüğət"]]} />
+      <SectionNav items={[["summary", L("Brifinq", "Briefing")], ["calc", L("Kalkulyator", "Calculator")], ["fan", L("Proqnoz", "Forecast")], ["efficiency", L("Risk-gəlir", "Risk-return")], ["source", L("Riskin mənbəyi", "Risk source")],
+        ["holdings", L("Mövqelər", "Positions")], ["pnl", L("Mənfəət/zərər", "Profit/loss")], ["lots", L("Alışlar", "Purchases")], ["stocks", L("Səhmlər", "Stocks")], ["glossary", L("Lüğət", "Glossary")]]} />
       {ins?.risk.quantiles && <TargetCalc res={res} grid={ins.risk.quantiles} />}
       <FanChart res={res} unit={unit} asset={asset} showPaths={showPaths} setShowPaths={setShowPaths} />
       {ins && ins.investment.positions.length > 1 && <EfficiencyMap ins={ins} />}
@@ -634,16 +639,16 @@ export function InvestmentView() {
       <LotsSection res={res} />
       <StocksSection res={res} />
       <Glossary res={res}>
-        <dt>Gözlənilən gəlir</dt>
-        <dd>Risksiz faiz + bazar həssaslığı × bazar risk mükafatı (CAPM). Bu, daşıdığınız bazar riskinin “haqqıdır”, səhm seçimi barədə proqnoz deyil.</dd>
-        <dt>Sharpe və Sortino</dt>
-        <dd>Risksiz faizdən artıq gözlənilən gəlirin dəyişkənliyə (Sharpe) və ya yalnız aşağı dəyişkənliyə (Sortino) nisbəti, illik.</dd>
-        <dt>Gəlir / CVaR</dt>
-        <dd>Ən pis 5% ssenaridə itkinin hər vahidinə düşən gözlənilən gəlir: quyruq riskinin qiyməti.</dd>
-        <dt>Səmərəlilik</dt>
-        <dd>Mövqenin gözlənilən gəlirdəki payının riskdəki (CVaR) payına nisbəti. 1-dən böyük — riskini “qazanır”; kiçik — portfelə baha başa gəlir.</dd>
-        <dt>Mükafatlı və mükafatsız risk</dt>
-        <dd>Bazarla birgə hərəkət (sistematik risk) gəlirlə mükafatlandırılır; şirkətə xas dəyişkənlik mükafatlandırılmır və diversifikasiya ilə azalır.</dd>
+        <dt>{L("Gözlənilən gəlir", "Expected return")}</dt>
+        <dd>{L("Risksiz faiz + bazar həssaslığı × bazar risk mükafatı (CAPM). Bu, daşıdığınız bazar riskinin “haqqıdır”, səhm seçimi barədə proqnoz deyil.", "Risk-free rate + market sensitivity × market risk premium (CAPM). It is the “fee” for the market risk you carry, not a forecast about stock picking.")}</dd>
+        <dt>{L("Sharpe və Sortino", "Sharpe and Sortino")}</dt>
+        <dd>{L("Risksiz faizdən artıq gözlənilən gəlirin dəyişkənliyə (Sharpe) və ya yalnız aşağı dəyişkənliyə (Sortino) nisbəti, illik.", "Expected return above the risk-free rate divided by volatility (Sharpe) or by downside volatility only (Sortino), annualised.")}</dd>
+        <dt>{L("Gəlir / CVaR", "Return / CVaR")}</dt>
+        <dd>{L("Ən pis 5% ssenaridə itkinin hər vahidinə düşən gözlənilən gəlir: quyruq riskinin qiyməti.", "Expected return per unit of loss in the worst 5% of scenarios: the price of tail risk.")}</dd>
+        <dt>{L("Səmərəlilik", "Efficiency")}</dt>
+        <dd>{L("Mövqenin gözlənilən gəlirdəki payının riskdəki (CVaR) payına nisbəti. 1-dən böyük — riskini “qazanır”; kiçik — portfelə baha başa gəlir.", "A position's share of expected return divided by its share of risk (CVaR). Above 1 — it “earns” its risk; below — it costs the portfolio dearly.")}</dd>
+        <dt>{L("Mükafatlı və mükafatsız risk", "Rewarded and unrewarded risk")}</dt>
+        <dd>{L("Bazarla birgə hərəkət (sistematik risk) gəlirlə mükafatlandırılır; şirkətə xas dəyişkənlik mükafatlandırılmır və diversifikasiya ilə azalır.", "Moving with the market (systematic risk) is rewarded with return; company-specific volatility is not rewarded and falls with diversification.")}</dd>
       </Glossary>
       <p className="disclaimer">{run.disclaimer}</p>
     </>
@@ -660,10 +665,10 @@ function Appetite({ res, ins }: { res: RunResult; ins: Insights }) {
   const status = k?.status ?? "none";
   return (
     <section className="card appetite">
-      <div className="eyebrow">Risk iştahı</div>
+      <div className="eyebrow">{L("Risk iştahı", "Risk appetite")}</div>
       <div className="big-num">{pct(use)}</div>
-      <div className="muted small">limitdən istifadə (CVaR 95% ÷ limit)</div>
-      <div className="limit-bar" role="img" aria-label={`Limitdən istifadə ${pct(use)}`}>
+      <div className="muted small">{L("limitdən istifadə (CVaR 95% ÷ limit)", "use of the limit (CVaR 95% ÷ limit)")}</div>
+      <div className="limit-bar" role="img" aria-label={`${L("Limitdən istifadə", "Use of the limit")} ${pct(use)}`}>
         <div className={`fill ${status}`} style={{ width: `${Math.min(100, (use / scale) * 100)}%` }} />
         <span className="mark" style={{ left: `${100 / scale}%` }} title="limit" />
       </div>
@@ -674,9 +679,9 @@ function Appetite({ res, ins }: { res: RunResult; ins: Insights }) {
       <div style={{ marginTop: 12 }}><RagChip status={status} /></div>
       <p className="small" style={{ marginTop: 10 }}>
         {m.headroom_money != null && m.headroom_money >= 0
-          ? <>Ehtiyat: <b>{money(m.headroom_money, res.base_currency)}</b></>
-          : <>Aşım: <b>{money(-(m.headroom_money ?? 0), res.base_currency)}</b></>}
-        {m.beyond_limit != null && <> · limitdən çox itki ehtimalı <b>{prob(m.beyond_limit)}</b></>}
+          ? <>{L("Ehtiyat", "Headroom")}: <b>{money(m.headroom_money, res.base_currency)}</b></>
+          : <>{L("Aşım", "Excess")}: <b>{money(-(m.headroom_money ?? 0), res.base_currency)}</b></>}
+        {m.beyond_limit != null && <> · {L("limitdən çox itki ehtimalı", "probability of losing more than the limit")} <b>{prob(m.beyond_limit)}</b></>}
       </p>
     </section>
   );
@@ -686,7 +691,7 @@ function KriBoard({ run, ins }: { run: RunView; ins: Insights }) {
   const relStatus: Rag = run.reliability === "high" ? "green" : run.reliability === "medium" ? "amber" : run.reliability === "low" ? "red" : "none";
   const rows: Kri[] = [
     ...ins.risk.kri,
-    { key: "model", label: "Modelin etibarlılığı (keçmiş məlumatda yoxlama)", value: null, kind: "ratio" as const, status: relStatus,
+    { key: "model", label: L("Modelin etibarlılığı (keçmiş məlumatda yoxlama)", "Model reliability (checked on past data)"), value: null, kind: "ratio" as const, status: relStatus,
       hint: run.reliability_text },
   ].sort((a, b) => RAG_ORDER[a.status] - RAG_ORDER[b.status]);
   const counts = { red: rows.filter((r) => r.status === "red").length, amber: rows.filter((r) => r.status === "amber").length };
@@ -694,17 +699,17 @@ function KriBoard({ run, ins }: { run: RunView; ins: Insights }) {
     <section className="card" id="kri">
       <div className="card-head">
         <div>
-          <h2>Əsas risk göstəriciləri (KRI)</h2>
-          <div className="sub">Svetofor: kritik → diqqət → normal. Hədlər admin parametrlərindədir və bütün portfellər üçün eynidir.</div>
+          <h2>{L("Əsas risk göstəriciləri (KRI)", "Key risk indicators (KRI)")}</h2>
+          <div className="sub">{L("Svetofor: kritik → diqqət → normal. Hədlər admin parametrlərindədir və bütün portfellər üçün eynidir.", "Traffic light: critical → watch → normal. The thresholds are admin settings and the same for every portfolio.")}</div>
         </div>
         <div className="row-actions small">
-          <span className="rag red"><span className="dot" aria-hidden="true" /> {counts.red} kritik</span>
-          <span className="rag amber"><span className="dot" aria-hidden="true" /> {counts.amber} diqqət</span>
+          <span className="rag red"><span className="dot" aria-hidden="true" /> {counts.red} {L("kritik", "critical")}</span>
+          <span className="rag amber"><span className="dot" aria-hidden="true" /> {counts.amber} {L("diqqət", "watch")}</span>
         </div>
       </div>
       <div className="table-wrap">
         <table className="kri">
-          <thead><tr><th>Göstərici</th><th className="num">Dəyər</th><th>Status</th><th>Şərh</th></tr></thead>
+          <thead><tr><th>{L("Göstərici", "Indicator")}</th><th className="num">{L("Dəyər", "Value")}</th><th>Status</th><th>{L("Şərh", "Comment")}</th></tr></thead>
           <tbody>
             {rows.map((k) => (
               <tr key={k.key} className={`kri-${k.status}`}>
@@ -724,7 +729,7 @@ function KriBoard({ run, ins }: { run: RunView; ins: Insights }) {
 function VolRegime({ ins }: { ins: Insights }) {
   const m = ins.risk.metrics;
   const rows = [...ins.risk.assets.map((a) => ({ name: a.symbol, now: a.now, long: a.long })),
-    { name: "Portfel", now: m.vol_now, long: m.vol_long }].reverse();
+    { name: L("Portfel", "Portfolio"), now: m.vol_now, long: m.vol_long }].reverse();
   const build = (p: Palette): EChartsOption => ({
     ...baseOption(p),
     legend: { top: 0, textStyle: { color: p.muted } },
@@ -733,8 +738,8 @@ function VolRegime({ ins }: { ins: Insights }) {
     xAxis: { type: "value", ...axisStyle(p), axisLabel: { color: p.muted, formatter: (v: number) => pct(v) } },
     tooltip: { ...baseOption(p).tooltip, trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v) => pct(Number(v)) },
     series: [
-      { name: "Uzunmüddətli norma", type: "scatter", data: rows.map((r) => r.long), symbolSize: 9, itemStyle: { color: p.neutral } },
-      { name: "İndi", type: "scatter", data: rows.map((r) => r.now), symbolSize: 11,
+      { name: L("Uzunmüddətli norma", "Long-run norm"), type: "scatter", data: rows.map((r) => r.long), symbolSize: 9, itemStyle: { color: p.neutral } },
+      { name: L("İndi", "Now"), type: "scatter", data: rows.map((r) => r.now), symbolSize: 11,
         itemStyle: { color: ((x: { dataIndex: number }) => (rows[x.dataIndex].now > rows[x.dataIndex].long ? p.neg : p.pos)) as never } },
       { type: "custom", silent: true, z: 1, data: rows.map((r, i) => [i, r.long, r.now]), encode: { y: 0, x: [1, 2] },
         renderItem: (_params, api) => {
@@ -747,20 +752,21 @@ function VolRegime({ ins }: { ins: Insights }) {
   return (
     <ChartCard
       id="regime"
-      title="Volatillik rejimi: indi normadan yüksəkdirmi?"
-      subtitle={`Boz — uzunmüddətli norma, rəngli — bugünkü proqnoz (illik). Vermilion — risk normadan yüksəkdir, göy — aşağı. Portfel: ${ratio(m.vol_regime)}× norma.`}
+      title={L("Volatillik rejimi: indi normadan yüksəkdirmi?", "Volatility regime: is it above normal now?")}
+      subtitle={L(`Boz — uzunmüddətli norma, rəngli — bugünkü proqnoz (illik). Vermilion — risk normadan yüksəkdir, göy — aşağı. Portfel: ${ratio(m.vol_regime)}× norma.`,
+        `Grey — long-run norm, coloured — today's forecast (annual). Vermilion — risk above normal, blue — below. Portfolio: ${ratio(m.vol_regime)}× the norm.`)}
       build={build}
       deps={[ins]}
-      ariaLabel="Bugünkü və uzunmüddətli volatillik müqayisəsi"
+      ariaLabel={L("Bugünkü və uzunmüddətli volatillik müqayisəsi", "Today's versus long-run volatility")}
       height={rows.length > 8 ? "tall" : "short"}
       table={
         <table>
-          <thead><tr><th>Səhm</th><th className="num">İndi</th><th className="num">Norma</th><th className="num">Nisbət</th><th className="num">Satış müddəti</th></tr></thead>
+          <thead><tr><th>{L("Səhm", "Stock")}</th><th className="num">{L("İndi", "Now")}</th><th className="num">{L("Norma", "Norm")}</th><th className="num">{L("Nisbət", "Ratio")}</th><th className="num">{L("Satış müddəti", "Time to sell")}</th></tr></thead>
           <tbody>
             {ins.risk.assets.map((a) => (
               <tr key={a.symbol}><td>{a.symbol}</td><td className="num">{pct(a.now)}</td><td className="num">{pct(a.long)}</td>
                 <td className="num">{ratio(a.ratio)}×</td>
-                <td className="num">{a.liquidity_days == null ? "—" : a.liquidity_days < 0.1 ? "<0,1 gün" : `${ratio(a.liquidity_days, 1)} gün`}</td></tr>
+                <td className="num">{a.liquidity_days == null ? "—" : a.liquidity_days < 0.1 ? L("<0,1 gün", "<0.1 days") : `${ratio(a.liquidity_days, 1)} ${L("gün", "days")}`}</td></tr>
             ))}
           </tbody>
         </table>
@@ -785,8 +791,8 @@ function VarLadder({ res, grid }: { res: RunResult; grid: Grid }) {
     <div className="table-wrap">
       <table>
         <thead>
-          <tr><th>Güvən səviyyəsi</th><th className="num">VaR</th><th className="num">VaR, məbləğ</th><th className="num">CVaR</th>
-            <th className="num">CVaR, məbləğ</th><th>Tezlik</th></tr>
+          <tr><th>{L("Güvən səviyyəsi", "Confidence level")}</th><th className="num">VaR</th><th className="num">{L("VaR, məbləğ", "VaR, amount")}</th><th className="num">CVaR</th>
+            <th className="num">{L("CVaR, məbləğ", "CVaR, amount")}</th><th>{L("Tezlik", "Frequency")}</th></tr>
         </thead>
         <tbody>
           {levels.map((l) => {
@@ -796,7 +802,7 @@ function VarLadder({ res, grid }: { res: RunResult; grid: Grid }) {
               <tr key={l}>
                 <td>{levelPct(l)}</td><td className="num">{pct(v.var)}</td><td className="num">{money(v.var * res.V0, ccy)}</td>
                 <td className="num">{pct(v.cvar)}</td><td className="num">{money(v.cvar * res.V0, ccy)}</td>
-                <td className="small muted">{frequency(1 - l)} itki VaR-dan çox olur</td>
+                <td className="small muted">{L(`${frequency(1 - l)} itki VaR-dan çox olur`, `the loss exceeds VaR in ${frequency(1 - l)}`)}</td>
               </tr>
             );
           })}
@@ -814,41 +820,41 @@ function RiskCalc({ res, ins, grid }: { res: RunResult; ins: Insights | undefine
   const pL = probBelow(grid, -lossPct / 100);
   const pM = probBelow(grid, -lossMoney / res.V0);
   const fmtP = (x: ReturnType<typeof probBelow>) =>
-    !x ? "göstərilmir" : x.bound === "lt" ? "<0,1%" : x.bound === "gt" ? ">99,9%" : prob(x.p);
+    !x ? L("göstərilmir", "not shown") : x.bound === "lt" ? dec("<0.1%") : x.bound === "gt" ? dec(">99.9%") : prob(x.p);
   const beta = ins?.investment.metrics.market_sensitivity;
   const positions = ins?.investment.positions ?? [];
   return (
     <section className="card" id="calc">
       <div className="card-head">
         <div>
-          <h2>Risk kalkulyatoru</h2>
-          <div className="sub">Öz rəqəmlərinizi yazın — cavab dərhal eyni {res.scenarios.toLocaleString("az")} ssenaridən hesablanır, yeni Generate lazım deyil.</div>
+          <h2>{L("Risk kalkulyatoru", "Risk calculator")}</h2>
+          <div className="sub">{L(`Öz rəqəmlərinizi yazın — cavab dərhal eyni ${res.scenarios.toLocaleString("az")} ssenaridən hesablanır, yeni Generate lazım deyil.`, `Enter your own numbers — the answer comes at once from the same ${res.scenarios.toLocaleString("en")} scenarios; no new Generate needed.`)}</div>
         </div>
       </div>
       <div className="calc-grid">
         <div className="calc">
-          <NumField label="İtki həddi" value={lossPct} onChange={setLossPct} min={0.5} max={80} step={1} suffix="%" list={[5, 10, 15, 20, 30]} />
-          <div className="calc-out"><b>{fmtP(pL)}</b><span>ehtimalla 3 ayın sonunda portfel bu qədər və ya daha çox itirir
+          <NumField label={L("İtki həddi", "Loss threshold")} value={lossPct} onChange={setLossPct} min={0.5} max={80} step={1} suffix="%" list={[5, 10, 15, 20, 30]} />
+          <div className="calc-out"><b>{fmtP(pL)}</b><span>{L("ehtimalla 3 ayın sonunda portfel bu qədər və ya daha çox itirir", "probability that the portfolio loses this much or more after 3 months")}{" "}
             ({money((lossPct / 100) * res.V0, ccy)})</span></div>
         </div>
         <div className="calc">
-          <NumField label={`İtki həddi (${ccy})`} value={lossMoney} onChange={setLossMoney} min={1} max={Math.round(res.V0)} step={100} />
-          <div className="calc-out"><b>{fmtP(pM)}</b><span>ehtimalla itki {money(lossMoney, ccy)}-ı keçir
-            ({pct(lossMoney / res.V0)} portfelin)</span></div>
+          <NumField label={`${L("İtki həddi", "Loss threshold")} (${ccy})`} value={lossMoney} onChange={setLossMoney} min={1} max={Math.round(res.V0)} step={100} />
+          <div className="calc-out"><b>{fmtP(pM)}</b><span>{L(`ehtimalla itki ${money(lossMoney, ccy)}-ı keçir`, `probability that the loss exceeds ${money(lossMoney, ccy)}`)}{" "}
+            ({pct(lossMoney / res.V0)} {L("portfelin", "of the portfolio")})</span></div>
         </div>
         {beta != null && (
           <div className="calc">
-            <NumField label="Bazar şoku (S&P 500 və s.)" value={shock} onChange={setShock} min={-60} max={60} step={5} suffix="%" list={[-30, -20, -10, 10, 20]} />
+            <NumField label={L("Bazar şoku (S&P 500 və s.)", "Market shock (S&P 500 etc.)")} value={shock} onChange={setShock} min={-60} max={60} step={5} suffix="%" list={[-30, -20, -10, 10, 20]} />
             <div className="calc-out"><b className={shock * beta < 0 ? "neg" : "pos"}>{pct((shock / 100) * beta, { sign: true })}</b>
-              <span>təxmini portfel dəyişikliyi ({money((shock / 100) * beta * res.V0, ccy, { sign: true })}); bazar həssaslığı {ratio(beta)}</span></div>
+              <span>{L("təxmini portfel dəyişikliyi", "estimated portfolio change")} ({money((shock / 100) * beta * res.V0, ccy, { sign: true })}); {L("bazar həssaslığı", "market sensitivity")} {ratio(beta)}</span></div>
           </div>
         )}
       </div>
       {beta != null && positions.length > 0 && (
         <details style={{ marginTop: 12 }}>
-          <summary className="small">Bazar şokunun mövqelərə bölgüsü</summary>
+          <summary className="small">{L("Bazar şokunun mövqelərə bölgüsü", "The market shock by position")}</summary>
           <table className="small" style={{ marginTop: 8 }}>
-            <thead><tr><th>Səhm</th><th className="num">Həssaslıq (β)</th><th className="num">Dəyişiklik</th><th className="num">Məbləğ</th></tr></thead>
+            <thead><tr><th>{L("Səhm", "Stock")}</th><th className="num">{L("Həssaslıq (β)", "Sensitivity (β)")}</th><th className="num">{L("Dəyişiklik", "Change")}</th><th className="num">{L("Məbləğ", "Amount")}</th></tr></thead>
             <tbody>
               {positions.map((p) => {
                 const ch = (shock / 100) * p.market_sensitivity;
@@ -860,10 +866,10 @@ function RiskCalc({ res, ins, grid }: { res: RunResult; ins: Insights | undefine
               })}
             </tbody>
           </table>
-          <p className="small muted">Xətti təxmindir: yalnız bazarla birgə hərəkəti nəzərə alır, şirkətə xas xəbərləri yox.</p>
+          <p className="small muted">{L("Xətti təxmindir: yalnız bazarla birgə hərəkəti nəzərə alır, şirkətə xas xəbərləri yox.", "A linear estimate: it covers only moving with the market, not company-specific news.")}</p>
         </details>
       )}
-      <h3 style={{ marginTop: 18 }}>VaR / CVaR nərdivanı</h3>
+      <h3 style={{ marginTop: 18 }}>{L("VaR / CVaR nərdivanı", "VaR / CVaR ladder")}</h3>
       <VarLadder res={res} grid={grid} />
     </section>
   );
@@ -889,44 +895,44 @@ export function RiskView() {
       {res.warnings.map((w) => <div key={w} className="banner warn"><span className="ic">⚠</span> {w}</div>)}
 
       <Hero items={[
-        { label: `VaR ${lvText} · 3 ay`, value: money(risk.var * res.V0, ccy),
-          sub: `${pct(risk.var)} · ${frequency(1 - lv)} itki bundan çox olur`, tone: "neg" },
-        { label: `CVaR ${lvText} · 3 ay`, value: money(risk.cvar * res.V0, ccy),
-          sub: `${pct(risk.cvar)} · ən pis ${levelPct(1 - lv)} ssenarinin orta itkisi`, tone: "neg" },
-        { label: "Dövr ərzində tipik ən dərin düşmə", value: pct(res.drawdown.mdd_percentiles["50"]),
-          sub: `20 rübdən 1-də ${pct(res.drawdown.mdd_percentiles["5"])}-dən pis` },
-        { label: "3 ayın sonunda itkidə olma", value: m ? prob(m.prob_loss) : prob(res.checkpoints[res.checkpoints.length - 1].prob_loss_vs_today),
-          sub: "bugünkü dəyərdən aşağı bitmə ehtimalı" },
+        { label: `VaR ${lvText} · ${L("3 ay", "3 months")}`, value: money(risk.var * res.V0, ccy),
+          sub: `${pct(risk.var)} · ${L(`${frequency(1 - lv)} itki bundan çox olur`, `the loss is larger in ${frequency(1 - lv)}`)}`, tone: "neg" },
+        { label: `CVaR ${lvText} · ${L("3 ay", "3 months")}`, value: money(risk.cvar * res.V0, ccy),
+          sub: `${pct(risk.cvar)} · ${L(`ən pis ${levelPct(1 - lv)} ssenarinin orta itkisi`, `average loss of the worst ${levelPct(1 - lv)} of scenarios`)}`, tone: "neg" },
+        { label: L("Dövr ərzində tipik ən dərin düşmə", "Typical deepest fall during the period"), value: pct(res.drawdown.mdd_percentiles["50"]),
+          sub: L(`20 rübdən 1-də ${pct(res.drawdown.mdd_percentiles["5"])}-dən pis`, `worse than ${pct(res.drawdown.mdd_percentiles["5"])} in 1 quarter in 20`) },
+        { label: L("3 ayın sonunda itkidə olma", "In loss after 3 months"), value: m ? prob(m.prob_loss) : prob(res.checkpoints[res.checkpoints.length - 1].prob_loss_vs_today),
+          sub: L("bugünkü dəyərdən aşağı bitmə ehtimalı", "probability of ending below today's value") },
       ]} />
 
       {ins ? (
         <div className="cro-top">
           <Appetite res={res} ins={ins} />
-          <Memo eyebrow="Risk · CRO paneli" title="Nə səhv gedə bilər və nə qədər?" items={ins.risk.memo} />
+          <Memo eyebrow={L("Risk · CRO paneli", "Risk · CRO panel")} title={L("Nə səhv gedə bilər və nə qədər?", "What can go wrong, and by how much?")} items={ins.risk.memo} />
         </div>
       ) : <OlderRun />}
 
       {m && (
         <KpiGroups groups={[
-          { title: "Dəyişkənlik", hint: "qiymət nə qədər tərpənir", items: [
-            <Kpi key="v" label="Volatillik (illik, indi)" value={pct(m.vol_now)} sub={`norma ${pct(m.vol_long)} · ${ratio(m.vol_regime)}×`} />,
-            <Kpi key="sd" label="Aşağı yarımsapma (illik)" value={pct(m.semidev_annual)} sub="yalnız itkiləri sayan dəyişkənlik" />,
-            <Kpi key="c" label="Orta korrelyasiya" value={ratio(m.corr_now)}
-              sub={m.corr_pair ? `ən güclü cüt ${m.corr_pair.a}–${m.corr_pair.b} ${ratio(m.corr_pair.value)}` : "tək mövqe"} />,
+          { title: L("Dəyişkənlik", "Volatility"), hint: L("qiymət nə qədər tərpənir", "how much the price moves"), items: [
+            <Kpi key="v" label={L("Volatillik (illik, indi)", "Volatility (annual, now)")} value={pct(m.vol_now)} sub={`${L("norma", "norm")} ${pct(m.vol_long)} · ${ratio(m.vol_regime)}×`} />,
+            <Kpi key="sd" label={L("Aşağı yarımsapma (illik)", "Downside semideviation (annual)")} value={pct(m.semidev_annual)} sub={L("yalnız itkiləri sayan dəyişkənlik", "volatility counting losses only")} />,
+            <Kpi key="c" label={L("Orta korrelyasiya", "Average correlation")} value={ratio(m.corr_now)}
+              sub={m.corr_pair ? `${L("ən güclü cüt", "strongest pair")} ${m.corr_pair.a}–${m.corr_pair.b} ${ratio(m.corr_pair.value)}` : L("tək mövqe", "single position")} />,
           ] },
-          { title: "Quyruq riski", hint: "nadir, amma ağır hallar", items: [
-            ...(m.worst_case != null ? [<Kpi key="w" label="Ən pis ssenari (0,1%)" value={pct(m.worst_case, { sign: true })}
-              sub={`${money(m.worst_case * res.V0, ccy, { sign: true })} · 1000 ssenaridən 1-i`} />] : []),
-            <Kpi key="sk" label="Asimmetriya (skewness)" value={ratio(m.skewness)} sub="<0: pis sürprizlər yaxşılardan böyükdür" />,
-            <Kpi key="ku" label="Quyruq qalınlığı (artıq kurtoz)" value={ratio(m.excess_kurtosis)} sub=">0: ekstremal hallar normaldan tez-tez" />,
+          { title: L("Quyruq riski", "Tail risk"), hint: L("nadir, amma ağır hallar", "rare but severe cases"), items: [
+            ...(m.worst_case != null ? [<Kpi key="w" label={L("Ən pis ssenari (0,1%)", "Worst scenario (0.1%)")} value={pct(m.worst_case, { sign: true })}
+              sub={`${money(m.worst_case * res.V0, ccy, { sign: true })} · ${L("1000 ssenaridən 1-i", "1 in 1000 scenarios")}`} />] : []),
+            <Kpi key="sk" label={L("Asimmetriya (skewness)", "Asymmetry (skewness)")} value={ratio(m.skewness)} sub={L("<0: pis sürprizlər yaxşılardan böyükdür", "<0: bad surprises are larger than good ones")} />,
+            <Kpi key="ku" label={L("Quyruq qalınlığı (artıq kurtoz)", "Tail thickness (excess kurtosis)")} value={ratio(m.excess_kurtosis)} sub={L(">0: ekstremal hallar normaldan tez-tez", ">0: extremes happen more often than normal")} />,
           ] },
         ]} />
       )}
-      {res.hidden_99 && <div className="banner warn"><span className="ic">⚠</span> Model bəzi yoxlamalardan keçmədiyi üçün ekstremal (98%-dən yuxarı) göstəricilər gizlədilib.</div>}
+      {res.hidden_99 && <div className="banner warn"><span className="ic">⚠</span> {L("Model bəzi yoxlamalardan keçmədiyi üçün ekstremal (98%-dən yuxarı) göstəricilər gizlədilib.", "Extreme measures (above 98%) are hidden because the model failed some checks.")}</div>}
 
       <Toolbar res={res} cp={cp} setCp={setCp} unit={unit} setUnit={setUnit} level={lv} setLevel={setLevel} levelMax={top} />
-      <SectionNav items={[["summary", "Brifinq"], ["calc", "Kalkulyator"], ["kri", "KRI"], ["dist", "Quyruq"], ["drawdown", "Drawdown"],
-        ["regime", "Rejim"], ["contrib", "Konsentrasiya"], ["stress", "Stress"], ["trust", "Model riski"], ["glossary", "Lüğət"]]} />
+      <SectionNav items={[["summary", L("Brifinq", "Briefing")], ["calc", L("Kalkulyator", "Calculator")], ["kri", "KRI"], ["dist", L("Quyruq", "Tail")], ["drawdown", "Drawdown"],
+        ["regime", L("Rejim", "Regime")], ["contrib", L("Konsentrasiya", "Concentration")], ["stress", "Stress"], ["trust", L("Model riski", "Model risk")], ["glossary", L("Lüğət", "Glossary")]]} />
       {grid && <RiskCalc res={res} ins={ins} grid={grid} />}
       {ins && <KriBoard run={run} ins={ins} />}
       <Distribution res={res} level={String(lv)} risk={risk} />
@@ -937,18 +943,18 @@ export function RiskView() {
       <Stress res={res} unit={unit} showLimit />
       <TrustPanel run={run} />
       <Glossary res={res}>
-        <dt>Risk iştahı və limit</dt>
-        <dd>Limit — 3 ayda ən pis 5% ssenaridə qəbul etdiyiniz orta itki (CVaR 95%). İstifadə 100%-i keçəndə portfel iştahınızdan risklidir.</dd>
-        <dt>Güvən səviyyəsini dəyişmək</dt>
-        <dd>VaR və CVaR istənilən səviyyədə (məs. 97,5% — Bazel standartı) eyni ssenarilərdən hesablanır. Səviyyə yüksəldikcə rəqəm böyüyür, amma hadisə nadirləşir.</dd>
-        <dt>KRI və svetofor</dt>
-        <dd>Əsas risk göstəriciləri: hər biri sabit hədlərlə müqayisə olunur. “Diqqət” — izləmək, “kritik” — qərar tələb edir.</dd>
-        <dt>Volatillik rejimi</dt>
-        <dd>Bugünkü proqnoz volatilliyin modelin uzunmüddətli normasına nisbəti. 1-dən böyük — bazar normadan təlatümlüdür.</dd>
-        <dt>Skewness və kurtoz</dt>
-        <dd>Paylanmanın forması: mənfi skewness — böyük itkilər böyük qazanclardan ehtimallıdır; müsbət artıq kurtoz — ekstremal günlər normal paylanmadan daha tez-tez olur.</dd>
-        <dt>Aşağı yarımsapma</dt>
-        <dd>Yalnız mənfi nəticələri nəzərə alan dəyişkənlik: “yuxarı” dəyişkənlik risk sayılmır.</dd>
+        <dt>{L("Risk iştahı və limit", "Risk appetite and limit")}</dt>
+        <dd>{L("Limit — 3 ayda ən pis 5% ssenaridə qəbul etdiyiniz orta itki (CVaR 95%). İstifadə 100%-i keçəndə portfel iştahınızdan risklidir.", "The limit is the average loss you accept in the worst 5% of scenarios over 3 months (CVaR 95%). Above 100% use, the portfolio is riskier than your appetite.")}</dd>
+        <dt>{L("Güvən səviyyəsini dəyişmək", "Changing the confidence level")}</dt>
+        <dd>{L("VaR və CVaR istənilən səviyyədə (məs. 97,5% — Bazel standartı) eyni ssenarilərdən hesablanır. Səviyyə yüksəldikcə rəqəm böyüyür, amma hadisə nadirləşir.", "VaR and CVaR are computed at any level (e.g. 97.5% — the Basel standard) from the same scenarios. A higher level gives a bigger number for a rarer event.")}</dd>
+        <dt>{L("KRI və svetofor", "KRI and traffic light")}</dt>
+        <dd>{L("Əsas risk göstəriciləri: hər biri sabit hədlərlə müqayisə olunur. “Diqqət” — izləmək, “kritik” — qərar tələb edir.", "Key risk indicators: each is compared with fixed thresholds. “Watch” — keep an eye on it, “critical” — needs a decision.")}</dd>
+        <dt>{L("Volatillik rejimi", "Volatility regime")}</dt>
+        <dd>{L("Bugünkü proqnoz volatilliyin modelin uzunmüddətli normasına nisbəti. 1-dən böyük — bazar normadan təlatümlüdür.", "Today's forecast volatility divided by the model's long-run norm. Above 1 — the market is more turbulent than normal.")}</dd>
+        <dt>{L("Skewness və kurtoz", "Skewness and kurtosis")}</dt>
+        <dd>{L("Paylanmanın forması: mənfi skewness — böyük itkilər böyük qazanclardan ehtimallıdır; müsbət artıq kurtoz — ekstremal günlər normal paylanmadan daha tez-tez olur.", "The shape of the distribution: negative skewness — big losses are likelier than big gains; positive excess kurtosis — extreme days happen more often than under a normal distribution.")}</dd>
+        <dt>{L("Aşağı yarımsapma", "Downside semideviation")}</dt>
+        <dd>{L("Yalnız mənfi nəticələri nəzərə alan dəyişkənlik: “yuxarı” dəyişkənlik risk sayılmır.", "Volatility of negative outcomes only: “upside” volatility is not counted as risk.")}</dd>
       </Glossary>
       <p className="disclaimer">{run.disclaimer}</p>
     </>

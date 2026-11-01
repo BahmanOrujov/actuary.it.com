@@ -7,6 +7,8 @@ import os
 import smtplib
 from email.message import EmailMessage
 
+from app.i18n import resolve_text
+
 
 def mail_enabled() -> bool:
     return bool(os.getenv("PA_SMTP_USER") and os.getenv("PA_SMTP_PASSWORD"))
@@ -18,8 +20,8 @@ def send_mail(to: str, subject: str, body: str) -> None:
     msg = EmailMessage()
     msg["From"] = os.getenv("PA_MAIL_FROM", user)
     msg["To"] = to
-    msg["Subject"] = subject
-    msg.set_content(body)
+    msg["Subject"] = resolve_text(subject)  # texts made in a request carry both languages until sent
+    msg.set_content(resolve_text(body))
     try:
         with smtplib.SMTP(os.getenv("PA_SMTP_HOST", "smtp.gmail.com"), int(os.getenv("PA_SMTP_PORT", "587")),
                           timeout=20) as s:

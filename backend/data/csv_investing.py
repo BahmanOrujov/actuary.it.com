@@ -10,6 +10,7 @@ import re
 import numpy as np
 import pandas as pd
 
+from app.i18n import L
 from data.provider import BAR_COLUMNS
 
 
@@ -60,7 +61,7 @@ def _to_number(raw: object, dec: str) -> float:
     try:
         return float(s) * mult
     except ValueError as exc:
-        raise CsvFormatError(f"Rəqəm oxunmadı: {raw!r}") from exc
+        raise CsvFormatError(L(f"Rəqəm oxunmadı: {raw!r}", f"Could not read the number: {raw!r}")) from exc
 
 
 def _parse_dates(values: pd.Series) -> pd.DatetimeIndex:
@@ -76,7 +77,7 @@ def _parse_dates(values: pd.Series) -> pd.DatetimeIndex:
             # MM/DD vs DD/MM ambiguity: prefer a format whose dates are monotonic after sorting by row order
             break
     if best is None or best_ok < len(vals):
-        raise CsvFormatError("Tarix formatı tanınmadı.")
+        raise CsvFormatError(L("Tarix formatı tanınmadı.", "The date format was not recognised."))
     return best
 
 
@@ -93,7 +94,7 @@ def parse_price_csv(content: bytes | str) -> pd.DataFrame:
     mapped = {c: _COLS[c] for c in df.columns if c in _COLS}
     df = df.rename(columns=mapped)
     if "date" not in df or "close" not in df:
-        raise CsvFormatError("CSV-də 'Date' və 'Price'/'Close' sütunları olmalıdır.")
+        raise CsvFormatError(L("CSV-də 'Date' və 'Price'/'Close' sütunları olmalıdır.", "The CSV must have 'Date' and 'Price'/'Close' columns."))
     df = df.dropna(subset=["date"])
     dec = _decimal_style(df["close"].dropna().astype(str).head(50).tolist())
     idx = _parse_dates(df["date"])
@@ -109,5 +110,5 @@ def parse_price_csv(content: bytes | str) -> pd.DataFrame:
     out["splits"] = 0.0
     out = out[~out.index.duplicated(keep="first")].sort_index()  # investing.com is reverse chronological
     if (out["close"] <= 0).any():
-        raise CsvFormatError("Sıfır və ya mənfi qiymət var.")
+        raise CsvFormatError(L("Sıfır və ya mənfi qiymət var.", "There is a zero or negative price."))
     return out[BAR_COLUMNS]

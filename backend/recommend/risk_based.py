@@ -5,10 +5,13 @@ from typing import Any
 
 import numpy as np
 
+from app.i18n import L, cfg_text
+
 
 def _pct(x: float) -> str:
-    """Azerbaijani percentage with one decimal: 0.172 -> "17,2%"."""
-    return f"{x * 100:.1f}%".replace(".", ",")
+    """Percentage with one decimal, decimal comma in Azerbaijani: 0.172 -> "17,2%" / "17.2%"."""
+    s = f"{x * 100:.1f}%"
+    return L(s.replace(".", ","), s)
 
 
 def _num(x: float) -> str:
@@ -66,7 +69,7 @@ def build_recommendations(ctx: dict[str, Any], cfg: dict[str, Any], reliability:
     cvar_now = scenario_cvar(P, base_keep)
     limit_money = ctx["limit"] * V
     recs: list[dict[str, Any]] = []
-    disclaimer = rc["disclaimer"]
+    disclaimer = cfg_text(rc, "disclaimer")
 
     def rec(kind: str, action: str, i: int | None, frac: float, reason: str, extra: dict | None = None) -> None:
         keep = base_keep.copy()
@@ -100,8 +103,10 @@ def build_recommendations(ctx: dict[str, Any], cfg: dict[str, Any], reliability:
                 if frac > 0.005:
                     flagged.add(i)
                     rec("risk_share", "reduce", i, frac,
-                        f"{names[i]} portfelin {w[i]:.0%} hissəsidir, amma pis ssenarilərdəki itkinin "
-                        f"{share:.0%}-ni verir. Mövqeni azaltmaq riski payına uyğunlaşdırar.")
+                        L(f"{names[i]} portfelin {w[i]:.0%} hissəsidir, amma pis ssenarilərdəki itkinin "
+                          f"{share:.0%}-ni verir. Mövqeni azaltmaq riski payına uyğunlaşdırar.",
+                          f"{names[i]} is {w[i]:.0%} of the portfolio but causes {share:.0%} of the loss in bad "
+                          "scenarios. Reducing the position would bring its risk in line with its weight."))
 
     # limit breach: greedy sells by marginal CVaR per money unit
     if cvar_now > limit_money and N >= 1:
@@ -133,16 +138,20 @@ def build_recommendations(ctx: dict[str, Any], cfg: dict[str, Any], reliability:
             if i in flagged:
                 continue
             rec("limit", "reduce", i, frac,
-                f"Portfelin 3 aylıq CVaR 95%-i ({_pct(cvar_now / V)}) seçdiyiniz limiti ({ctx['limit']:.0%}) keçir. "
-                f"{names[i]} satılan hər pul vahidi üçün riski ən çox azaldan mövqelərdəndir.")
+                L(f"Portfelin 3 aylıq CVaR 95%-i ({_pct(cvar_now / V)}) seçdiyiniz limiti ({ctx['limit']:.0%}) keçir. "
+                  f"{names[i]} satılan hər pul vahidi üçün riski ən çox azaldan mövqelərdəndir.",
+                  f"The portfolio's 3-month CVaR 95% ({_pct(cvar_now / V)}) exceeds your limit ({ctx['limit']:.0%}). "
+                  f"Per unit of money sold, {names[i]} is among the positions that reduce the risk the most."))
             flagged.add(i)
 
     # concentration
     for i in range(N):
         if w[i] > rc["max_position_weight"]:
             rec("concentration", "attention", i, 0.0,
-                f"{names[i]} portfelin {w[i]:.0%}-ni təşkil edir (hədd {rc['max_position_weight']:.0%}). "
-                "Diversifikasiyanı nəzərdən keçirin.")
+                L(f"{names[i]} portfelin {w[i]:.0%}-ni təşkil edir (hədd {rc['max_position_weight']:.0%}). "
+                  "Diversifikasiyanı nəzərdən keçirin.",
+                  f"{names[i]} is {w[i]:.0%} of the portfolio (threshold {rc['max_position_weight']:.0%}). "
+                  "Consider diversifying."))
     labels = ctx.get("clusters") or []
     if labels and N > 2:
         for lab in set(labels):
@@ -152,9 +161,12 @@ def build_recommendations(ctx: dict[str, Any], cfg: dict[str, Any], reliability:
                 recs.append({
                     "kind": "cluster", "action": "attention", "symbol": None,
                     "name": ", ".join(names[i] for i in members), "shares": 0.0, "money": 0.0,
-                    "reason": f"Bir-biri ilə sıx əlaqəli səhmlər ({', '.join(names[i] for i in members)}) "
-                              f"portfelin {cw:.0%}-ni təşkil edir (hədd {rc['max_cluster_weight']:.0%}). "
-                              "Onlar adətən birlikdə düşür.",
+                    "reason": L(f"Bir-biri ilə sıx əlaqəli səhmlər ({', '.join(names[i] for i in members)}) "
+                                f"portfelin {cw:.0%}-ni təşkil edir (hədd {rc['max_cluster_weight']:.0%}). "
+                                "Onlar adətən birlikdə düşür.",
+                                f"Closely related stocks ({', '.join(names[i] for i in members)}) make up "
+                                f"{cw:.0%} of the portfolio (threshold {rc['max_cluster_weight']:.0%}). "
+                                "They usually fall together."),
                     "cvar_before": cvar_now, "cvar_after": cvar_now, "cvar_before_pct": cvar_now / V,
                     "cvar_after_pct": cvar_now / V, "reliability": reliability, "disclaimer": disclaimer,
                 })
@@ -166,8 +178,10 @@ def build_recommendations(ctx: dict[str, Any], cfg: dict[str, Any], reliability:
             recs.append({
                 "kind": "stress", "action": "attention", "symbol": None, "name": sc["name"],
                 "shares": 0.0, "money": 0.0,
-                "reason": f"“{sc['name']}” ssenarisində itki ({_pct(sc['loss_pct'])}) risk limitini keçir. "
-                          f"Əsas səbəb: {', '.join(a['name'] for a in top)}. Bu, ehtimal deyil, ssenaridir.",
+                "reason": L(f"“{sc['name']}” ssenarisində itki ({_pct(sc['loss_pct'])}) risk limitini keçir. "
+                            f"Əsas səbəb: {', '.join(a['name'] for a in top)}. Bu, ehtimal deyil, ssenaridir.",
+                            f"In the “{sc['name']}” scenario the loss ({_pct(sc['loss_pct'])}) exceeds the risk limit. "
+                            f"Main drivers: {', '.join(a['name'] for a in top)}. This is a scenario, not a probability."),
                 "cvar_before": cvar_now, "cvar_after": cvar_now, "cvar_before_pct": cvar_now / V,
                 "cvar_after_pct": cvar_now / V, "reliability": reliability, "disclaimer": disclaimer,
             })
@@ -181,11 +195,14 @@ def build_recommendations(ctx: dict[str, Any], cfg: dict[str, Any], reliability:
         if t.get("target_price"):
             extra["prob_target"] = t.get("prob_target")
             extra["prob_touch_target"] = t.get("prob_touch_target")
-            msg.append(f"Hədəf qiymətə ({_num(t['target_price'])}) dövrün sonunda çatma ehtimalı "
-                       f"təxminən {t.get('prob_target', 0):.0%}, dövr ərzində toxunma ehtimalı {t.get('prob_touch_target', 0):.0%}.")
+            msg.append(L(f"Hədəf qiymətə ({_num(t['target_price'])}) dövrün sonunda çatma ehtimalı "
+                         f"təxminən {t.get('prob_target', 0):.0%}, dövr ərzində toxunma ehtimalı {t.get('prob_touch_target', 0):.0%}.",
+                         f"Probability of being at the target price ({_num(t['target_price'])}) at the end of the period is "
+                         f"about {t.get('prob_target', 0):.0%}; probability of touching it during the period {t.get('prob_touch_target', 0):.0%}."))
         if t.get("stop_loss"):
             if end["p25"] <= t["stop_loss_base"] <= end["p75"]:
-                msg.append("Stop-loss səviyyəsi gözlənilən 50% aralığın içindədir: adi dalğalanmada tez-tez işə düşə bilər.")
+                msg.append(L("Stop-loss səviyyəsi gözlənilən 50% aralığın içindədir: adi dalğalanmada tez-tez işə düşə bilər.",
+                             "The stop-loss is inside the expected 50% range: ordinary swings may trigger it often."))
             extra["prob_touch_stop"] = t.get("prob_touch_stop")
         if msg:
             rec("target", "attention", i, 0.0, " ".join(msg), extra)
@@ -194,5 +211,6 @@ def build_recommendations(ctx: dict[str, Any], cfg: dict[str, Any], reliability:
     mentioned = {r["symbol"] for r in recs if r.get("symbol")}
     for i in range(N):
         if syms[i] not in mentioned:
-            rec("hold", "hold", i, 0.0, f"{names[i]} üçün risk göstəriciləri həddlər daxilindədir; dəyişiklik tələb olunmur.")
+            rec("hold", "hold", i, 0.0, L(f"{names[i]} üçün risk göstəriciləri həddlər daxilindədir; dəyişiklik tələb olunmur.",
+                                          f"{names[i]}'s risk measures are within the thresholds; no change is needed."))
     return recs

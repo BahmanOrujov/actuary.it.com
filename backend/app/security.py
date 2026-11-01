@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_db
+from app.i18n import B, L
 from app.models import Portfolio, User, UserSession
 
 SESSION_COOKIE = "pa_session"
@@ -54,7 +55,8 @@ def validate_new_password(pw: str, email: str | None) -> None:
 
 
 # ---------------------------------------------------------------- account lockout
-LOCKED_MESSAGE = "Çox uğursuz cəhd. Hesab müvəqqəti bağlanıb, bir az sonra yenidən yoxlayın."
+LOCKED_MESSAGE = B("Çox uğursuz cəhd. Hesab müvəqqəti bağlanıb, bir az sonra yenidən yoxlayın.",
+                   "Too many failed attempts. The account is locked for a while; try again later.")
 _unknown_failures: dict[str, deque[float]] = defaultdict(deque)
 _unknown_lock = threading.Lock()
 
@@ -127,22 +129,22 @@ def current_user(request: Request, db: Session = Depends(get_db)) -> User:
         raise HTTPException(401, "Daxil olun.")
     s = db.get(UserSession, token_digest(token))
     if s is None or s.expires_at < _now():
-        raise HTTPException(401, "Sessiyanın vaxtı bitib. Yenidən daxil olun.")
+        raise HTTPException(401, L("Sessiyanın vaxtı bitib. Yenidən daxil olun.", "The session has expired. Sign in again."))
     user = db.get(User, s.user_id)
     if user is None or user.is_blocked:
-        raise HTTPException(403, "Hesab bloklanıb.")
+        raise HTTPException(403, L("Hesab bloklanıb.", "The account is blocked."))
     # CSRF: double-submit token for state-changing requests
     if request.method not in ("GET", "HEAD", "OPTIONS"):
         header = request.headers.get(CSRF_HEADER)
         if not header or not secrets.compare_digest(header, s.csrf_token):
-            raise HTTPException(403, "CSRF yoxlaması uğursuz oldu.")
+            raise HTTPException(403, L("CSRF yoxlaması uğursuz oldu.", "The CSRF check failed."))
     request.state.user = user
     return user
 
 
 def require_admin(user: User = Depends(current_user)) -> User:
     if user.role != "admin":
-        raise HTTPException(403, "Bu bölmə yalnız admin üçündür.")
+        raise HTTPException(403, L("Bu bölmə yalnız admin üçündür.", "This section is for administrators only."))
     return user
 
 
@@ -150,7 +152,7 @@ def owned_portfolio(db: Session, user: User, portfolio_id: int) -> Portfolio:
     p = db.get(Portfolio, portfolio_id)
     if p is None or p.owner_id != user.id:
         # same response for "not found" and "not yours" to avoid leaking existence
-        raise HTTPException(404, "Portfel tapılmadı.")
+        raise HTTPException(404, L("Portfel tapılmadı.", "Portfolio not found."))
     return p
 
 

@@ -6,6 +6,7 @@ import { ReliabilityBadge } from "../components/Badges";
 import { Icon } from "../components/Icons";
 import { dateTimeAz, pct } from "../format";
 import { Key, STEP_ORDER, t } from "../i18n";
+import { L, LANG } from "../lang";
 
 export interface PortfolioOutlet {
   summary: PortfolioSummary;
@@ -30,6 +31,8 @@ export default function PortfolioLayout() {
   const startedHere = useRef(false);
   const prevStatus = useRef<string | null>(null);
   const menuRef = useRef<HTMLDetailsElement>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
   const nav = useNavigate();
 
   const poll = useCallback(async () => {
@@ -65,6 +68,8 @@ export default function PortfolioLayout() {
     prevStatus.current = null;
     setRenaming(false);
     setError(null);
+    setShareUrl(null);
+    setShareOpen(false);
   }, [pid]);
 
   useEffect(() => {
@@ -74,13 +79,13 @@ export default function PortfolioLayout() {
     };
   }, [poll, summary?.version]);
 
-  if (portfolios === null) return <div className="muted">Yüklənir…</div>;
+  if (portfolios === null) return <div className="muted">{L("Yüklənir…", "Loading…")}</div>;
   if (!summary) {
     return (
       <div className="card empty">
-        <h2>Portfel tapılmadı</h2>
-        <p className="muted">Silinmiş ola bilər.</p>
-        <Link to="/">Portfellərimə qayıt</Link>
+        <h2>{L("Portfel tapılmadı", "Portfolio not found")}</h2>
+        <p className="muted">{L("Silinmiş ola bilər.", "It may have been deleted.")}</p>
+        <Link to="/">{L("Portfellərimə qayıt", "Back to my portfolios")}</Link>
       </div>
     );
   }
@@ -122,9 +127,33 @@ export default function PortfolioLayout() {
     }
   }
 
+  async function share() {
+    menuRef.current?.removeAttribute("open");
+    setError(null);
+    try {
+      const r = await api.post<{ url: string }>(`/api/portfolios/${pid}/share`);
+      setShareUrl(r.url);
+      setShareOpen(true);
+      reloadPortfolios();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function unshare() {
+    try {
+      await api.del(`/api/portfolios/${pid}/share`);
+      setShareUrl(null);
+      setShareOpen(false);
+      reloadPortfolios();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   async function remove() {
     menuRef.current?.removeAttribute("open");
-    if (!confirm(`"${summary!.name}" portfeli və bütün nəticələri silinsin? Bu geri qaytarıla bilməz.`)) return;
+    if (!confirm(L(`"${summary!.name}" portfeli və bütün nəticələri silinsin? Bu geri qaytarıla bilməz.`, `Delete the "${summary!.name}" portfolio and all its results? This cannot be undone.`))) return;
     try {
       await api.del(`/api/portfolios/${pid}`);
       await reloadPortfolios();
@@ -143,7 +172,7 @@ export default function PortfolioLayout() {
     <>
       <div className="page-head">
         <div style={{ minWidth: 0 }}>
-          <div className="eyebrow">Portfel</div>
+          <div className="eyebrow">{L("Portfel", "Portfolio")}</div>
           {renaming ? (
             <form onSubmit={rename} className="row-actions" style={{ marginTop: 4 }}>
               <input autoFocus value={newName} maxLength={120} onChange={(e) => setNewName(e.target.value)} aria-label={t("rename")} style={{ fontSize: 18, minWidth: 260 }} />
@@ -155,30 +184,35 @@ export default function PortfolioLayout() {
           )}
           <div className="chips">
             <span>{summary.base_currency}</span>
-            <span>{t(summary.risk_profile as Key)} profil{limit != null ? ` · limit ${pct(limit)}` : ""}</span>
-            <span>{summary.n_instruments} səhm</span>
+            <span>{t(summary.risk_profile as Key)} {L("profil", "profile")}{limit != null ? ` · limit ${pct(limit)}` : ""}</span>
+            <span>{summary.n_instruments} {L("səhm", "stocks")}</span>
             <span>{t("lastGenerate")}: {run?.created_at ? dateTimeAz(run.created_at) : t("never")}</span>
             {run?.status === "done" && <ReliabilityBadge level={run.reliability} />}
           </div>
         </div>
         <div className="row-actions">
           <button className="primary" onClick={generate} disabled={busy || empty}
-            title={empty ? "Əvvəlcə ən azı bir səhm əlavə edin" : "3 aylıq təhlili hesabla"}>
+            title={empty ? L("Əvvəlcə ən azı bir səhm əlavə edin", "Add at least one stock first") : L("3 aylıq təhlili hesabla", "Run the 3-month analysis")}>
             <Icon name="play" size={15} /> {t("generate")}
           </button>
           {summary.headline ? (
-            <a className="btn" href={DEMO ? `${import.meta.env.BASE_URL}demo/report.pdf` : apiUrl(`/api/portfolios/${pid}/report.pdf`)} download
-              title="Son nəticənin hesabatı: investisiya, risk, mövqelər, alışlar və tövsiyələr">
-              <Icon name="download" size={16} /> PDF yüklə
+            <a className="btn" href={DEMO ? `${import.meta.env.BASE_URL}demo/report.pdf` : apiUrl(`/api/portfolios/${pid}/report.pdf?lang=${LANG}`)} download
+              title={L("Son nəticənin hesabatı: investisiya, risk, mövqelər, alışlar və tövsiyələr", "Report of the latest result: investment, risk, positions, purchases and recommendations")}>
+              <Icon name="download" size={16} /> {L("PDF yüklə", "Download PDF")}
             </a>
           ) : (
-            <button disabled title="Hesabat üçün əvvəlcə Generate basın"><Icon name="download" size={16} /> PDF yüklə</button>
+            <button disabled title={L("Hesabat üçün əvvəlcə Generate basın", "Run Generate first to get a report")}><Icon name="download" size={16} /> {L("PDF yüklə", "Download PDF")}</button>
           )}
           <details className="menu" ref={menuRef}>
-            <summary className="btn" aria-label="Portfel əməliyyatları"><Icon name="more" /></summary>
+            <summary className="btn" aria-label={L("Portfel əməliyyatları", "Portfolio actions")}><Icon name="more" /></summary>
             <div className="menu-list">
               <button onClick={() => { menuRef.current?.removeAttribute("open"); setNewName(summary.name); setRenaming(true); }}>{t("rename")}</button>
               <button onClick={copy}>{t("copy")}</button>
+              {!DEMO && (
+                <button onClick={() => { menuRef.current?.removeAttribute("open"); summary.shared ? setShareOpen(true) : share(); }}>
+                  {summary.shared ? L("Paylaşım linki", "Share link") : L("Paylaş (yalnız baxış)", "Share (view only)")}
+                </button>
+              )}
               <button className="danger" onClick={remove}>{t("delete")}</button>
             </div>
           </details>
@@ -186,13 +220,42 @@ export default function PortfolioLayout() {
       </div>
 
       {error && <div className="banner err" role="alert">✕ {error}</div>}
+      {shareOpen && (
+        <section className="card">
+          <div className="card-head" style={{ marginBottom: 4 }}>
+            <div>
+              <h2><Icon name="share" size={18} /> {L("Paylaşım linki", "Share link")}</h2>
+              <div className="sub">
+                {L("Linki alan hər kəs bu portfelin son nəticələrini (investisiya, risk, tövsiyələr) girişsiz görür, heç nəyi dəyişə bilmir. E-poçtunuz göstərilmir.",
+                  "Anyone with the link sees this portfolio's latest results (investment, risk, recommendations) without signing in and cannot change anything. Your e-mail is not shown.")}
+              </div>
+            </div>
+            <button className="link" onClick={() => setShareOpen(false)}>{L("Bağla", "Close")}</button>
+          </div>
+          {shareUrl ? (
+            <div className="share-link">
+              <input readOnly value={shareUrl} onFocus={(e) => e.target.select()} aria-label={L("Paylaşım linki", "Share link")} />
+              <button className="primary" onClick={() => navigator.clipboard?.writeText(shareUrl)}>{t("copy")}</button>
+            </div>
+          ) : (
+            <p className="muted small">
+              {L("Link aktivdir, amma təhlükəsizlik üçün yalnız yaradılanda göstərilir. Yeni link yaradın — köhnəsi işləməyəcək.",
+                "A link is active, but for security it is shown only when created. Create a new one — the old link will stop working.")}
+            </p>
+          )}
+          <div className="row-actions" style={{ marginTop: 10 }}>
+            <button onClick={share}>{L("Yeni link yarat", "Create a new link")}</button>
+            <button className="danger" onClick={unshare}>{L("Paylaşımı dayandır", "Stop sharing")}</button>
+          </div>
+        </section>
+      )}
       <div aria-live="polite">
         {busy && run && (
           <section className="card run-panel">
             <div className="card-head" style={{ marginBottom: 8 }}>
               <div>
-                <h2>Təhlil hesablanır…</h2>
-                <div className="sub">3 aylıq (63 ticarət günü) ehtimal proqnozu, risk və tövsiyələr. Adətən 1–3 dəqiqə çəkir; bu səhifədən çıxmaq olar.</div>
+                <h2>{L("Təhlil hesablanır…", "Analysing…")}</h2>
+                <div className="sub">{L("3 aylıq (63 ticarət günü) ehtimal proqnozu, risk və tövsiyələr. Adətən 1–3 dəqiqə çəkir; bu səhifədən çıxmaq olar.", "3-month (63 trading days) probabilistic forecast, risk and recommendations. Usually takes 1–3 minutes; you can leave this page.")}</div>
               </div>
               <span className="small muted">{Math.round(run.progress * 100)}%</span>
             </div>
@@ -209,17 +272,18 @@ export default function PortfolioLayout() {
             </div>
           </section>
         )}
-        {run?.status === "failed" && <div className="banner err" role="alert">✕ Son təhlil alınmadı: {run.error}</div>}
+        {run?.status === "failed" && <div className="banner err" role="alert">✕ {L("Son təhlil alınmadı", "The last analysis failed")}: {run.error}</div>}
         {run?.status === "done" && run.stale && (
           <div className="banner warn" role="status"><span className="ic">⚠</span> {t("staleBanner")}</div>
         )}
       </div>
 
-      <nav className="tabs" aria-label="Portfel bölmələri">
-        <NavLink to={`/portfolios/${pid}`} end><Icon name="list" size={16} /> Tərkib</NavLink>
-        <NavLink to={`/portfolios/${pid}/results`}><Icon name="chart" size={16} /> İnvestisiya</NavLink>
+      <nav className="tabs" aria-label={L("Portfel bölmələri", "Portfolio sections")}>
+        <NavLink to={`/portfolios/${pid}`} end><Icon name="list" size={16} /> {L("Tərkib", "Holdings")}</NavLink>
+        <NavLink to={`/portfolios/${pid}/results`}><Icon name="chart" size={16} /> {L("İnvestisiya", "Investment")}</NavLink>
         <NavLink to={`/portfolios/${pid}/risk`}><Icon name="shield" size={16} /> Risk</NavLink>
         <NavLink to={`/portfolios/${pid}/recommendations`}><Icon name="bulb" size={16} /> {t("recommendations")}</NavLink>
+        {!DEMO && <NavLink to={`/portfolios/${pid}/whatif`}><Icon name="branch" size={16} /> {L("Nə olardı?", "What if?")}</NavLink>}
       </nav>
 
       <Outlet context={{ summary, run, runLoaded } satisfies PortfolioOutlet} />
@@ -229,15 +293,15 @@ export default function PortfolioLayout() {
 
 /** Shown on the results/recommendations tabs when there is no finished run to show. */
 export function NoResults({ run, runLoaded }: { run: RunView | null; runLoaded: boolean }) {
-  if (!runLoaded) return <div className="muted">Yüklənir…</div>;
+  if (!runLoaded) return <div className="muted">{L("Yüklənir…", "Loading…")}</div>;
   const busy = run && (run.status === "queued" || run.status === "running");
   return (
     <div className="card empty">
-      <h2>{busy ? "Təhlil hesablanır" : "Hələ nəticə yoxdur"}</h2>
+      <h2>{busy ? L("Təhlil hesablanır", "Analysing") : L("Hələ nəticə yoxdur", "No results yet")}</h2>
       <p className="muted">
         {busy
-          ? "Hazır olanda nəticələr burada avtomatik görünəcək."
-          : "Səhmləri “Tərkib” bölməsində əlavə edin və yuxarıdakı Generate düyməsini basın."}
+          ? L("Hazır olanda nəticələr burada avtomatik görünəcək.", "The results will appear here automatically when ready.")
+          : L("Səhmləri “Tərkib” bölməsində əlavə edin və yuxarıdakı Generate düyməsini basın.", "Add stocks in the “Holdings” section and press Generate above.")}
       </p>
     </div>
   );

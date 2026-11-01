@@ -8,6 +8,7 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.i18n import L
 from app.models import AnalysisRun, Notification, Portfolio, RunResult
 from data.provider import ProviderError
 from data.service import MarketData
@@ -56,14 +57,18 @@ def check_portfolio(db: Session, md: MarketData, portfolio: Portfolio) -> int:
         lo, hi = band
         if lo <= px <= hi:
             continue
-        side = "aşağı" if px < lo else "yuxarı"
+        below = px < lo
         key = f"band:{run.id}:{a['symbol']}:{d.isoformat()}"
         if db.scalar(select(Notification).where(Notification.dedup_key == key)):
             continue
         db.add(Notification(
             user_id=portfolio.owner_id, portfolio_id=portfolio.id, run_id=run.id, kind="band", dedup_key=key,
-            message=(f"{portfolio.name}: {a['name']} ({a['investing_symbol']}) qiyməti {d:%d.%m.%Y} tarixində "
-                     f"gözlənilən 90% aralıqdan {side} çıxıb. Mövqeyə yenidən baxın. Bu, avtomatik satış deyil."),
+            message=L(f"{portfolio.name}: {a['name']} ({a['investing_symbol']}) qiyməti {d:%d.%m.%Y} tarixində "
+                      f"gözlənilən 90% aralıqdan {'aşağı' if below else 'yuxarı'} çıxıb. Mövqeyə yenidən baxın. "
+                      "Bu, avtomatik satış deyil.",
+                      f"{portfolio.name}: the price of {a['name']} ({a['investing_symbol']}) moved "
+                      f"{'below' if below else 'above'} its expected 90% range on {d:%d.%m.%Y}. Review the position. "
+                      "This is not an automatic sale."),
         ))
         created += 1
     return created
@@ -72,6 +77,6 @@ def check_portfolio(db: Session, md: MarketData, portfolio: Portfolio) -> int:
 def monitor_all(db: Session, md: MarketData | None = None) -> int:
     md = md or MarketData(db)
     total = 0
-    for portfolio in db.scalars(select(Portfolio)).all():
+    for portfolio in db.scalars(select(Portfolio).where(Portfolio.scenario_of.is_(None))).all():
         total += check_portfolio(db, md, portfolio)
     return total
