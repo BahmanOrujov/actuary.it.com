@@ -72,6 +72,30 @@ def test_password_reset_flow(caplog):
     assert anon.post("/api/auth/login", json={"email": "erin@example.com", "password": "brand-new-pass"}).status_code == 200
 
 
+def test_admin_invite_creates_account_and_link(admin, monkeypatch):
+    from app import api_admin
+    monkeypatch.delenv("PA_SMTP_USER", raising=False)
+    anon = TestClient(app)
+    assert anon.post("/api/admin/users/invite", json={"email": "gina@example.com"}).status_code in (401, 403)
+    r = admin.post("/api/admin/users/invite", json={"email": "Gina@example.com"})
+    assert r.status_code == 200 and r.json()["emailed"] is False and "invite=1" in r.json()["link"]
+    assert admin.post("/api/admin/users/invite", json={"email": "gina@example.com"}).status_code == 409
+    # nobody knows the initial password; the invitee sets one through the link
+    assert anon.post("/api/auth/login", json={"email": "gina@example.com", "password": "secret-pass-1"}).status_code == 401
+    token = re.search(r"token=([\w-]+)", r.json()["link"]).group(1)
+    assert anon.post("/api/auth/password-reset/confirm", json={"token": token, "new_password": "maple-river-42"}).status_code == 200
+    me = anon.post("/api/auth/login", json={"email": "gina@example.com", "password": "maple-river-42"})
+    assert me.status_code == 200 and me.json()["role"] == "client"
+
+    sent = []
+    monkeypatch.setenv("PA_SMTP_USER", "site@example.com")
+    monkeypatch.setenv("PA_SMTP_PASSWORD", "app-password")
+    monkeypatch.setattr(api_admin, "send_mail", lambda to, subject, body: sent.append((to, body)))
+    r = admin.post("/api/admin/users/invite", json={"email": "hank@example.com", "role": "admin"})
+    assert r.json() == {"ok": True, "emailed": True}  # the link is not shown when it was e-mailed
+    assert sent[0][0] == "hank@example.com" and "invite=1" in sent[0][1]
+
+
 def test_password_reset_link_is_emailed_when_smtp_is_set(monkeypatch, caplog):
     from app import api_client
     sent = []

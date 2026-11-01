@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { NavLink, Route, Routes, useParams } from "react-router-dom";
 import { api, apiUrl } from "../api";
 import { ReliabilityBadge, StatusBadge } from "../components/Badges";
@@ -203,9 +203,40 @@ function Users() {
       alert((err as Error).message);
     }
   }
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("client");
+  const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string; link?: string } | null>(null);
+  async function invite(e: FormEvent) {
+    e.preventDefault();
+    try {
+      const r = await api.post<{ emailed: boolean; link?: string }>("/api/admin/users/invite", { email: inviteEmail, role: inviteRole });
+      setInviteMsg(r.emailed
+        ? { ok: true, text: `Dəvət ${inviteEmail} ünvanına göndərildi. İstifadəçi linkdən öz parolunu təyin edəcək.` }
+        : { ok: true, text: "Hesab açıldı, amma serverdə e-poçt qurulmayıb. Bu linki istifadəçiyə özünüz göndərin:", link: r.link });
+      setInviteEmail("");
+      load();
+    } catch (err) {
+      setInviteMsg({ ok: false, text: (err as Error).message });
+    }
+  }
   return (
     <section className="card">
       <h2>İstifadəçilər</h2>
+      <form onSubmit={invite} className="row-actions" style={{ marginBottom: 12, flexWrap: "wrap" }}>
+        <input type="email" required placeholder="yeni.istifadeci@example.com" aria-label="Dəvət ediləcək e-poçt"
+          value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
+        <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} aria-label="Dəvət olunanın rolu">
+          <option value="client">client</option>
+          <option value="admin">admin</option>
+        </select>
+        <button className="primary" type="submit">Dəvət et</button>
+      </form>
+      {inviteMsg && (
+        <div className={`banner ${inviteMsg.ok ? "info" : "err"}`} role="status">
+          {inviteMsg.ok ? "✓" : "✕"} {inviteMsg.text}
+          {inviteMsg.link && <div><code style={{ wordBreak: "break-all" }}>{inviteMsg.link}</code></div>}
+        </div>
+      )}
       <table>
         <thead><tr><th>E-poçt</th><th>Rol</th><th className="num">Portfel</th><th>Vəziyyət</th><th /></tr></thead>
         <tbody>

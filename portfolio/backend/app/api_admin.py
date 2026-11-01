@@ -3,14 +3,19 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+import secrets
+from datetime import timedelta
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.admin_settings import EDITABLE_KEYS, effective, set_override
+from app.api_client import issue_reset_link
 from app.config import get_settings
+from app.mailer import mail_enabled, send_mail
 from app.db import get_db, retry_locked
 from app.models import Alert, AnalysisRun, AuditLog, Job, Portfolio, RunDiagnostics, User, UserSession
 from app.security import hash_password, is_locked, record_successful_login, require_admin, validate_new_password
@@ -141,6 +146,35 @@ def users(db: Session = Depends(get_db)):
              "failed_logins": u.failed_logins or 0,
              "created_at": u.created_at.isoformat(), "portfolios": len(u.portfolios)}
             for u in db.scalars(select(User).order_by(User.id)).all()]
+
+
+class Invite(BaseModel):
+    email: EmailStr
+    role: Literal["client", "admin"] = "client"
+
+
+@router.post("/users/invite")
+def invite_user(body: Invite, request: Request, background: BackgroundTasks, db: Session = Depends(get_db),
+                admin: User = Depends(require_admin)):
+    """Creates the account (registration is closed on a server) with a password nobody knows, and e-mails a link
+    where the invitee sets their own. Without SMTP the link is returned for the admin to pass on."""
+    email = body.email.lower()
+    if db.scalar(select(User).where(User.email == email)):
+        raise HTTPException(409, "Bu e-poçtla hesab artıq var. Parolu unudubsa, «Parolu unutmusunuz?» ilə bərpa etsin.")
+    user = User(email=email, password_hash=hash_password(secrets.token_urlsafe(32)), role=body.role)
+    db.add(user)
+    db.flush()
+    hours = get_settings()["security"]["invite_hours"]
+    link = issue_reset_link(db, user, request, timedelta(hours=hours), query="&invite=1")
+    audit(db, admin.id, "user_invited", {"user_id": user.id, "role": body.role})
+    commit(db)
+    if mail_enabled():
+        background.add_task(send_mail, email, "Portfel Analizi: hesabınız açıldı",
+                            f"Sizin üçün Portfel Analizi hesabı açıldı ({email}).\n\n"
+                            f"Parolunuzu təyin etmək üçün bu linki açın ({hours} saat etibarlıdır):\n\n{link}\n\n"
+                            "Link vaxtı keçsə, giriş səhifəsində «Parolu unutmusunuz?» ilə yenisini istəyin.")
+        return {"ok": True, "emailed": True}
+    return {"ok": True, "emailed": False, "link": link}
 
 
 class UserPatch(BaseModel):
