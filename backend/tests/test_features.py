@@ -72,6 +72,24 @@ def test_password_reset_flow(caplog):
     assert anon.post("/api/auth/login", json={"email": "erin@example.com", "password": "brand-new-pass"}).status_code == 200
 
 
+def test_password_reset_link_is_emailed_when_smtp_is_set(monkeypatch, caplog):
+    from app import api_client
+    sent = []
+    monkeypatch.setenv("PA_SMTP_USER", "site@example.com")
+    monkeypatch.setenv("PA_SMTP_PASSWORD", "app-password")
+    monkeypatch.setattr(api_client, "send_mail", lambda to, subject, body: sent.append((to, body)))
+    _client("fred@example.com")
+    anon = TestClient(app)
+    with caplog.at_level(logging.WARNING, logger="password-reset"):
+        r = anon.post("/api/auth/password-reset/request", json={"email": "fred@example.com"})
+    assert r.status_code == 200 and "göndərildi" in r.json()["message"]
+    assert anon.post("/api/auth/password-reset/request", json={"email": "nobody@example.com"}).json() == r.json()
+    assert len(sent) == 1 and sent[0][0] == "fred@example.com"
+    assert "token=" not in caplog.text  # the link goes only to the mailbox, not to the server log
+    token = re.search(r"token=([\w-]+)", sent[0][1]).group(1)
+    assert anon.post("/api/auth/password-reset/confirm", json={"token": token, "new_password": "brand-new-pass"}).status_code == 200
+
+
 # ------------------------------------------------------------------ search helpers and CSV source
 def test_candidate_currency_and_suggest(dora):
     r = dora.get("/api/symbols/search", params={"q": "SAP"}).json()

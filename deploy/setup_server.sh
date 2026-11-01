@@ -61,6 +61,9 @@ APP_MODE=personal
 SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')
 PA_DATA_DIR=$DATA
 PA_OPEN_REGISTRATION=false
+# password-reset e-mails (Gmail: an app password, not the account password). Empty = link goes to the log.
+PA_SMTP_USER=
+PA_SMTP_PASSWORD=
 EOF
   )
   chown root:$SVC_USER "$ENVFILE" && chmod 640 "$ENVFILE"

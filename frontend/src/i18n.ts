@@ -9,7 +9,7 @@ const az = {
   password: "Parol",
   forgot: "Parolu unutmusunuz?",
   forgotText:
-    "Lokal (şəxsi) rejimdə e-poçt göndərilmir: birdəfəlik bərpa linki serverin konsol pəncərəsinə yazılır (30 dəqiqə etibarlıdır). Admin paneldən də parolu yeniləmək olar.",
+    "E-poçtunuzu yazın: birdəfəlik bərpa linki (30 dəqiqə etibarlıdır) göndəriləcək. Lokal (şəxsi) rejimdə e-poçt qurulmayıbsa, link serverin konsol pəncərəsinə yazılır. Admin paneldən də parolu yeniləmək olar.",
   notifications: "Bildirişlər",
   portfolios: "Portfellər",
   settings: "Parametrlər",
