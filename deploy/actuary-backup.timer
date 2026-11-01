@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily off-server backup to Google Drive
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+RandomizedDelaySec=15m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

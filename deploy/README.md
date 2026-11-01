@@ -50,6 +50,19 @@ sudo nano /etc/actuary-site.env
 sudo systemctl restart actuary-site
 ```
 
+## 5. Google Drive backup
+
+Hər gün 04:00-da (UTC) hər iki verilənlər bazası şifrələnmiş arxiv kimi Google Drive-a (`actuary-backups`
+qovluğu) göndərilir, 30 gündən köhnələri silinir. Server Drive-da yalnız özünün yaratdığı faylları görür.
+
+1. Kompüterdə: `winget install Rclone.Rclone`
+2. Serverdə: `sudo bash /opt/actuary/deploy/connect_drive.sh` və ekrandakı addımlar.
+3. Arxivin parolunu serverdən götürüb etibarlı yerdə saxlayın (server itsə, onsuz backup açılmır):
+   `sudo cat /etc/actuary-backup.pass`
+
+Bərpa: `openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in actuary-TARİX.tar.gz.enc | tar -xz`
+(parolu soruşur) → `portfel.db` (`/var/lib/portfel/app.db`) və `site.db` (`/var/lib/actuary/db.sqlite3`).
+
 ## Gündəlik
 
 - Yeniləmə: `sudo bash /opt/actuary/deploy/update.sh`

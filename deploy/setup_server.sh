@@ -73,11 +73,27 @@ systemctl daemon-reload
 systemctl enable --now actuary-site
 systemctl restart actuary-site
 
+echo "==> off-server backups (encrypted, to Google Drive once connected)"
+command -v rclone >/dev/null || apt-get install -y -q rclone
+# the archive passphrase never leaves the server: keep a copy elsewhere, backups cannot be opened without it
+[ -s /etc/actuary-backup.pass ] || ( umask 077; openssl rand -base64 32 > /etc/actuary-backup.pass )
+install -m 644 "$SRC/deploy/actuary-backup.service" "$SRC/deploy/actuary-backup.timer" /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now actuary-backup.timer
+
 echo "==> https (Caddy)"
 {
   echo "$SITE_HOSTS {"
   cat <<'EOF'
 	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
 	@backend path /api/* /admin /admin/* /static/*
 	handle @backend {
 		reverse_proxy 127.0.0.1:8001
