@@ -5,18 +5,20 @@ import { useApp } from "../App";
 import { t } from "../i18n";
 import { portfolioState } from "./Badges";
 import { Icon } from "./Icons";
+import { L } from "../lang";
+import LangSwitch from "./LangSwitch";
 
 type Theme = "auto" | "dark" | "light";
 
 function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>((document.documentElement.dataset.theme as Theme) ?? "auto");
   const next: Theme = theme === "auto" ? "dark" : theme === "dark" ? "light" : "auto";
-  const label = { auto: "Tema: avtomatik", dark: "Tema: tünd", light: "Tema: açıq" }[theme];
+  const label = { auto: L("Tema: avtomatik", "Theme: automatic"), dark: L("Tema: tünd", "Theme: dark"), light: L("Tema: açıq", "Theme: light") }[theme];
   return (
     <button
       className="sb-link ghost"
       style={{ justifyContent: "flex-start", border: "none" }}
-      title="Temanı dəyiş"
+      title={L("Temanı dəyiş", "Change the theme")}
       onClick={() => {
         if (next === "auto") delete document.documentElement.dataset.theme;
         else document.documentElement.dataset.theme = next;
@@ -46,18 +48,18 @@ export default function Sidebar() {
       </NavLink>
 
       <NavLink to="/" end className="sb-link">
-        <Icon name="home" /> Ümumi baxış
+        <Icon name="home" /> {L("Ümumi baxış", "Overview")}
       </NavLink>
 
       <div className="sb-section">
-        <span id="sb-portfolios">Portfellərim</span>
+        <span id="sb-portfolios">{L("Portfellərim", "My portfolios")}</span>
         <button className="icon-btn" onClick={openNewPortfolio} aria-label={t("newPortfolio")} title={t("newPortfolio")}>
           <Icon name="plus" size={16} />
         </button>
       </div>
       <nav className="sb-list" aria-labelledby="sb-portfolios">
-        {portfolios === null && <div className="sb-empty">Yüklənir…</div>}
-        {portfolios?.length === 0 && <div className="sb-empty">Hələ portfel yoxdur.</div>}
+        {portfolios === null && <div className="sb-empty">{L("Yüklənir…", "Loading…")}</div>}
+        {portfolios?.length === 0 && <div className="sb-empty">{L("Hələ portfel yoxdur.", "No portfolios yet.")}</div>}
         {portfolios?.map((p) => {
           const st = portfolioState(p);
           return (
@@ -75,7 +77,7 @@ export default function Sidebar() {
       </button>
 
       <div className="sb-foot">
-        <NavLink to="/notifications" className="sb-link" aria-label={`${t("notifications")}: ${unread} oxunmamış`}>
+        <NavLink to="/notifications" className="sb-link" aria-label={`${t("notifications")}: ${unread} ${L("oxunmamış", "unread")}`}>
           <Icon name="bell" /> {t("notifications")}
           {unread > 0 && <span className="count">{unread}</span>}
         </NavLink>
@@ -88,11 +90,12 @@ export default function Sidebar() {
           </NavLink>
         )}
         <ThemeToggle />
+        <div className="sb-lang"><LangSwitch /></div>
         <div className="sb-user">
           <span className="avatar" aria-hidden="true">{user.email.slice(0, 1).toUpperCase()}</span>
           <div className="who small">
             <div>{user.email}</div>
-            <div className="muted">{user.role === "admin" ? "admin" : "müştəri"}</div>
+            <div className="muted">{user.role === "admin" ? "admin" : L("müştəri", "client")}</div>
           </div>
           <button
             className="icon-btn"

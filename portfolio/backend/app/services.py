@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.admin_settings import profile_limit
 from app.config import get_settings
+from app.i18n import B, L, cfg_text
 from app.models import (
     AnalysisRun, AuditLog, Instrument, Job, Portfolio, PositionTarget, Recommendation, RunDiagnostics, RunResult,
     Transaction,
@@ -38,14 +39,14 @@ def add_transaction(db: Session, md: MarketData, portfolio: Portfolio, *, provid
                     price: float | None, fees: float) -> tuple[Transaction, list[str]]:
     side = side.upper()
     if side not in ("BUY", "SELL"):
-        raise HTTPException(422, "Əməliyyat növü BUY və ya SELL olmalıdır.")
+        raise HTTPException(422, L("Əməliyyat növü BUY və ya SELL olmalıdır.", "The transaction type must be BUY or SELL."))
     if fees is not None and fees < 0:
-        raise HTTPException(422, "Komissiya mənfi ola bilməz.")
+        raise HTTPException(422, L("Komissiya mənfi ola bilməz.", "Fees cannot be negative."))
     try:
         inst = md.ensure_instrument(provider_symbol, investing_symbol)
         bars = md.bars(inst.provider_symbol)
     except ProviderError as exc:
-        raise HTTPException(502, f"Məlumat mənbəyi xətası: {exc}") from exc
+        raise HTTPException(502, L(f"Məlumat mənbəyi xətası: {exc}", f"Data source error: {exc}")) from exc
     today = date.today()
     first = bars.index.min().date() if len(bars) else None
 
@@ -129,7 +130,7 @@ def thaw_composition(db: Session, portfolio_id: int, owner_id: int, frozen: dict
 
 def enqueue_generate(db: Session, portfolio: Portfolio) -> AnalysisRun:
     if not portfolio.transactions:
-        raise HTTPException(422, "Portfeldə səhm yoxdur. Əvvəlcə səhm əlavə edin.")
+        raise HTTPException(422, L("Portfeldə səhm yoxdur. Əvvəlcə səhm əlavə edin.", "The portfolio has no stocks. Add a stock first."))
     active = db.scalar(select(AnalysisRun).where(
         AnalysisRun.portfolio_id == portfolio.id, AnalysisRun.status.in_(("queued", "running")),
         AnalysisRun.portfolio_version == portfolio.version))
@@ -154,16 +155,20 @@ def risk_limit_for(db: Session, portfolio) -> float:
 
 
 RELIABILITY_TEXT = {
-    "high": "Model statistik yoxlamalardan keçib. Aralıqlar keçmiş məlumatda gözlənildiyi kimi işləyib.",
-    "medium": "Model əsas yoxlamaların çoxundan keçib, bəzi məhdudiyyətlər var. Nəticələri ehtiyatla şərh edin.",
-    "low": "Model bəzi statistik yoxlamalardan keçməyib. Nəticələr daha az etibarlıdır; ekstremal göstəricilər gizlədilib.",
-    "checking": "Modelin statistik yoxlaması davam edir. Bitəndə etiket yenilənəcək.",
+    "high": B("Model statistik yoxlamalardan keçib. Aralıqlar keçmiş məlumatda gözlənildiyi kimi işləyib.",
+              "The model passed the statistical checks. Its ranges behaved as expected on past data."),
+    "medium": B("Model əsas yoxlamaların çoxundan keçib, bəzi məhdudiyyətlər var. Nəticələri ehtiyatla şərh edin.",
+                "The model passed most of the main checks, with some limitations. Interpret the results with care."),
+    "low": B("Model bəzi statistik yoxlamalardan keçməyib. Nəticələr daha az etibarlıdır; ekstremal göstəricilər gizlədilib.",
+             "The model failed some statistical checks. The results are less reliable; extreme measures are hidden."),
+    "checking": B("Modelin statistik yoxlaması davam edir. Bitəndə etiket yenilənəcək.",
+                  "The model's statistical check is still running. The label will update when it finishes."),
 }
 SECTION_RELIABILITY = [
-    {"item": "Aralığın eni və portfel üzrə nəticələr", "label": "high"},
-    {"item": "Ayrı səhmlər üzrə nəticələr", "label": "medium"},
-    {"item": "Ekstremal hallar (99%)", "label": "medium-low"},
-    {"item": "Median (istiqamət)", "label": "low"},
+    {"item": B("Aralığın eni və portfel üzrə nəticələr", "Width of the range and portfolio-level results"), "label": "high"},
+    {"item": B("Ayrı səhmlər üzrə nəticələr", "Results for individual stocks"), "label": "medium"},
+    {"item": B("Ekstremal hallar (99%)", "Extreme cases (99%)"), "label": "medium-low"},
+    {"item": B("Median (istiqamət)", "Median (direction)"), "label": "low"},
 ]
 
 FORBIDDEN_CLIENT_KEYS = {"p_value", "statistic", "q_value", "p_holm", "params", "robust_se", "bic", "aic",
@@ -262,7 +267,7 @@ def client_run_view(db: Session, run: AnalysisRun, portfolio: Portfolio, audit_u
         d["reliability"] = run.reliability
         rec_list.append(d)
     out = {**base, "result": payload, "recommendations": rec_list, "section_reliability": SECTION_RELIABILITY,
-           "trust": client_trust(db, run), "disclaimer": get_settings()["recommend"]["disclaimer"]}
+           "trust": client_trust(db, run), "disclaimer": cfg_text(get_settings()["recommend"], "disclaimer")}
     assert_client_safe(out)
     already = audit_user is not None and any(
         (a.detail or {}).get("run_id") == run.id and (a.detail or {}).get("reliability") == run.reliability

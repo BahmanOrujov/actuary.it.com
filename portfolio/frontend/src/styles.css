@@ -627,3 +627,22 @@ table.lots tr.lot-group td { background: var(--surface-2); padding-top: 9px; pad
 table.lots td.lot-date { padding-left: 26px; color: var(--fg-2); }
 table.lots th, table.lots td { padding-left: 8px; padding-right: 8px; }
 table.lots th { white-space: normal; }
+
+/* language switch, shared view, what-if */
+.lang-switch { display: inline-flex; gap: 2px; padding: 3px; background: var(--surface-2); border-radius: 9px; }
+.lang-switch button { border: none; background: transparent; padding: 4px 10px; border-radius: 7px; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.lang-switch button.on { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
+.shared-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.brand-mini { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
+.share-link { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.share-link input { flex: 1 1 320px; min-width: 0; font-family: ui-monospace, Consolas, monospace; font-size: 13.5px; }
+.whatif-trades { display: grid; gap: 6px; margin: 10px 0; }
+.whatif-trades .trade { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 12px; background: var(--surface-2); border-radius: 9px; }
+.whatif-trades .trade .x { margin-left: auto; }
+.compare td.num, .compare th.num { text-align: right; white-space: nowrap; }
+.compare .better { color: var(--ok); font-weight: 600; }
+.compare .worse { color: var(--err); font-weight: 600; }
+.sb-lang { padding: 4px 12px 8px; }
+.auth-side .lang-switch { background: rgba(255, 255, 255, 0.16); }
+.auth-side .lang-switch button { color: rgba(255, 255, 255, 0.8); }
+.auth-side .lang-switch button.on { background: rgba(255, 255, 255, 0.95); color: #1b2a4a; }

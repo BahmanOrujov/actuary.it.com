@@ -20,6 +20,7 @@ from app.models import Alert, AnalysisRun, Job, Portfolio, Recommendation, RunDi
 from app.services import risk_limit_for, thaw_composition
 from data.service import MarketData
 from portfolio.snapshot import build_portfolio_data
+from app.i18n import L, bilingual
 from recommend.monitor import monitor_all
 from recommend.risk_based import build_recommendations
 from risk.engine import AnalysisError, _market_returns, drift_index, prepare_returns, run_generate, warm_pool
@@ -282,6 +283,12 @@ def process_validate(job: Job) -> None:
 
 
 def process(job_id: int) -> None:
+    # every text this job stores (results, recommendations, errors, alerts) is kept in both languages
+    with bilingual():
+        _process(job_id)
+
+
+def _process(job_id: int) -> None:
     with SessionLocal() as db:
         job = db.get(Job, job_id)
         db.expunge(job)
@@ -297,9 +304,10 @@ def process(job_id: int) -> None:
     except Exception as exc:  # noqa: BLE001
         tb = traceback.format_exc()
         log.error("job %s failed: %s", job_id, tb)
-        msg = "Təhlil zamanı xəta baş verdi. Admin xəbərdar edildi."
+        msg = L("Təhlil zamanı xəta baş verdi. Admin xəbərdar edildi.",
+                "The analysis failed. The administrator has been notified.")
         if "Məlumat" in str(exc) or "məlumat" in str(exc) or "Yahoo" in str(exc):
-            msg = f"Məlumat mənbəyi xətası: {exc}"
+            msg = L(f"Məlumat mənbəyi xətası: {exc}", f"Data source error: {exc}")
         if job.kind == "generate":
             _set_run(job.run_id, status="failed", error=msg, step="failed")
         else:
@@ -352,7 +360,8 @@ def run_monitor() -> None:
     """Band monitoring for all portfolios (PROMPT.md 7.1); errors never stop the worker."""
     try:
         with SessionLocal() as db:
-            n = monitor_all(db)
+            with bilingual():
+                n = monitor_all(db)
             retry_locked(db.commit)
         if n:
             log.info("monitor: %s notification(s)", n)

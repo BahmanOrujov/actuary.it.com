@@ -4,6 +4,7 @@ import { api, PortfolioSummary } from "../api";
 import { useApp } from "../App";
 import { pct } from "../format";
 import { Key, t } from "../i18n";
+import { L } from "../lang";
 
 export default function NewPortfolioDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { config, reloadPortfolios } = useApp();
@@ -51,12 +52,13 @@ export default function NewPortfolioDialog({ open, onClose }: { open: boolean; o
         <div>
           <h2 id="new-pf-title" style={{ fontSize: 18 }}>{t("newPortfolio")}</h2>
           <p className="muted small" style={{ margin: 0 }}>
-            Hər portfel ayrıca saxlanılır və müstəqil təhlil olunur. Sonradan adını, valyutasını və risk profilini dəyişmək olar.
+            {L("Hər portfel ayrıca saxlanılır və müstəqil təhlil olunur. Sonradan adını, valyutasını və risk profilini dəyişmək olar.",
+              "Each portfolio is stored and analysed separately. You can change its name, currency and risk profile later.")}
           </p>
         </div>
         <label>
           {t("name")}
-          <input required autoFocus maxLength={120} value={name} onChange={(e) => setName(e.target.value)} placeholder="məs. Uzunmüddətli ABŞ səhmləri" />
+          <input required autoFocus maxLength={120} value={name} onChange={(e) => setName(e.target.value)} placeholder={L("məs. Uzunmüddətli ABŞ səhmləri", "e.g. Long-term US stocks")} />
         </label>
         <div className="form-row">
           <label>
@@ -75,7 +77,8 @@ export default function NewPortfolioDialog({ open, onClose }: { open: boolean; o
           </label>
         </div>
         <p className="hint" style={{ margin: 0 }}>
-          Risk profili 3 ayda qəbul etdiyiniz maksimum itkini (CVaR 95%) təyin edir; tövsiyələr bu limitə görə verilir.
+          {L("Risk profili 3 ayda qəbul etdiyiniz maksimum itkini (CVaR 95%) təyin edir; tövsiyələr bu limitə görə verilir.",
+            "The risk profile sets the largest loss you accept over 3 months (CVaR 95%); recommendations follow this limit.")}
         </p>
         {error && <div className="banner err" role="alert">✕ {error}</div>}
         <div className="form-actions">

@@ -93,6 +93,7 @@ portfolio:
     moderate: 0.15
     aggressive: 0.25
   default_risk_profile: moderate
+  whatif_max_trades: 20     # hypothetical trades in one what-if scenario
   annualize_min_days: 91      # lots held shorter than this show no annualised return
 
 model:
@@ -238,6 +239,7 @@ recommend:
   max_cluster_weight: 0.40
   cluster_corr_threshold: 0.5
   disclaimer: "Bu, investisiya məsləhəti deyil; qərar verməyə kömək edən təhlildir. Nəticələr zəmanət deyil, ehtimaldır."
+  disclaimer_en: "This is not investment advice; it is analysis to help you decide. Results are probabilities, not guarantees."
 
 insights:                     # CIO / CRO views of a run; status thresholds as fractions (green below amber)
   limit_use_amber: 0.80       # CVaR95 / risk limit (red above 1)

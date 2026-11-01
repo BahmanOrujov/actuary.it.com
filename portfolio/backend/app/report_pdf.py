@@ -13,6 +13,7 @@ from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 
 from app.config import get_settings
+from app.i18n import L
 
 # palette (matches the light UI theme)
 INK = (21, 27, 40)
@@ -28,8 +29,20 @@ OK = (23, 120, 74)
 WARN = (150, 88, 0)
 ERR = (180, 35, 24)
 RAG = {"green": OK, "amber": WARN, "red": ERR, "none": MUTED}
-RAG_WORD = {"green": "normal", "amber": "diqqət", "red": "kritik", "none": "məlumat"}
-REL_WORD = {"high": "yüksək", "medium": "orta", "low": "aşağı", "checking": "yoxlanılır"}
+# drawn in the request's language (the endpoint renders with bilingual(False)), so these are looked up per call
+def rag_word(k: str) -> str:
+    return {"green": L("normal", "normal"), "amber": L("diqqət", "watch"), "red": L("kritik", "critical"),
+            "none": L("məlumat", "info")}.get(k, "")
+
+
+def rel_word(k: str | None) -> str:
+    return {"high": L("yüksək", "high"), "medium": L("orta", "medium"), "low": L("aşağı", "low"),
+            "checking": L("yoxlanılır", "checking")}.get(k or "", k or "")
+
+
+def _dec(s: str) -> str:
+    """Decimal comma in Azerbaijani, point in English."""
+    return L(s.replace(".", ","), s)
 SYM = {"USD": "$", "EUR": "€", "GBP": "£", "AZN": "₼"}
 
 
@@ -37,7 +50,7 @@ SYM = {"USD": "$", "EUR": "€", "GBP": "£", "AZN": "₼"}
 def pct(x: float | None, sign: bool = False) -> str:
     if x is None or not math.isfinite(x):
         return "—"
-    s = f"{abs(x) * 100:.1f}%".replace(".", ",")
+    s = _dec(f"{abs(x) * 100:.1f}%")
     return ("−" if x < 0 else "+" if sign and x > 0 else "") + s
 
 
@@ -60,7 +73,7 @@ def money(x: float | None, ccy: str, sign: bool = False) -> str:
         v = round(v / mag) * mag
         body = f"{abs(v):,.0f}".replace(",", " ")
     elif abs(v) < 100 and v != int(v):
-        body = f"{abs(v):.2f}".replace(".", ",")
+        body = _dec(f"{abs(v):.2f}")
     else:
         body = f"{abs(v):,.0f}".replace(",", " ")
     sg = "−" if v < 0 else "+" if sign and v > 0 else ""
@@ -70,7 +83,7 @@ def money(x: float | None, ccy: str, sign: bool = False) -> str:
 def num(x: float | None, digits: int = 2) -> str:
     if x is None or not math.isfinite(x):
         return "—"
-    return f"{x:.{digits}f}".replace(".", ",").replace("-", "−")
+    return _dec(f"{x:.{digits}f}").replace("-", "−")
 
 
 def date_az(iso: str | None) -> str:
@@ -117,7 +130,8 @@ class Report(FPDF):
         self.set_y(-12)
         self.set_font("Body", "", 8)
         self.set_text_color(*MUTED)
-        self.cell(0, 5, f"Səhifə {self.page_no()} / {{nb}} · Bu, investisiya məsləhəti deyil; nəticələr zəmanət deyil, ehtimaldır.",
+        self.cell(0, 5, L(f"Səhifə {self.page_no()} / {{nb}} · Bu, investisiya məsləhəti deyil; nəticələr zəmanət deyil, ehtimaldır.",
+                          f"Page {self.page_no()} / {{nb}} · This is not investment advice; results are probabilities, not guarantees."),
                   align="C")
 
     # -- building blocks --------------------------------------------------------------
@@ -294,13 +308,17 @@ class Report(FPDF):
         self.set_y(y0 + h + 2)
         self.set_font("Body", "", 7.5)
         self.set_text_color(*MUTED)
-        self.multi_cell(0, 3.6, "Qara — son 6 ayın faktiki dəyəri (cari say ilə); açıq zolaq — 90% aralıq, tünd zolaq — 50% aralıq, "
-                        "göy xətt — median (proqnoz qiymət deyil); narıncı qırıq xətt — maya dəyəri.",
+        self.multi_cell(0, 3.6, L("Qara — son 6 ayın faktiki dəyəri (cari say ilə); açıq zolaq — 90% aralıq, tünd zolaq — 50% aralıq, "
+                                  "göy xətt — median (proqnoz qiymət deyil); narıncı qırıq xətt — maya dəyəri.",
+                                  "Black — actual value over the last 6 months (at today's quantities); light band — 90% range, "
+                                  "dark band — 50% range, blue line — median (not a price forecast); orange dashed line — cost."),
                         new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
 
 # ---------------------------------------------------------------- content
-FACTOR_WORD = {"market": "bazar", "rates": "faiz", "oil": "neft", "usd": "dollar", "gold": "qızıl", "vix": "VIX"}
+def factor_word(f: str) -> str:
+    return {"market": L("bazar", "market"), "rates": L("faiz", "rates"), "oil": L("neft", "oil"),
+            "usd": L("dollar", "dollar"), "gold": L("qızıl", "gold"), "vix": "VIX"}.get(f, f)
 
 
 def _stress_what(s: dict[str, Any]) -> str:
@@ -309,8 +327,8 @@ def _stress_what(s: dict[str, Any]) -> str:
         return f"{date_az(a)} – {date_az(b)}" if a and b else ""
     parts = []
     for f, v in (s.get("shocks") or {}).items():
-        parts.append(f"{FACTOR_WORD.get(f, f)} {'+' if v > 0 else '−'}{round(abs(v) * 100)} bp" if f == "rates"
-                     else f"{FACTOR_WORD.get(f, f)} {pct(v, True)}")
+        parts.append(f"{factor_word(f)} {'+' if v > 0 else '−'}{round(abs(v) * 100)} bp" if f == "rates"
+                     else f"{factor_word(f)} {pct(v, True)}")
     return ", ".join(parts)
 
 
@@ -334,63 +352,76 @@ def build_pdf(view: dict[str, Any], portfolio_name: str) -> bytes:
     inv, rk = ins.get("investment") or {}, ins.get("risk") or {}
     im, rm = inv.get("metrics") or {}, rk.get("metrics") or {}
     end = res["checkpoints"][-1]
-    rel = REL_WORD.get(view.get("reliability"), view.get("reliability", ""))
+    rel = rel_word(view.get("reliability"))
     pdf = Report(f"Portfel Analizi · {portfolio_name}", f"{date_az(res['as_of'])} → {date_az(res['horizon_end'])}")
     pdf.alias_nb_pages()
 
     # ---- page 1: investment
     pdf.add_page()
-    pdf.h1(f"{portfolio_name}: 3 aylıq təhlil")
-    pdf.para(f"Məlumat tarixi {date_az(res['as_of'])} · dövrün sonu {date_az(res['horizon_end'])} ({res['horizon_days']} ticarət günü) · "
-             f"valyuta {ccy} · {res['scenarios']:,} ssenari · etibarlılıq: {rel}".replace(",", " "), 9, MUTED)
+    pdf.h1(L(f"{portfolio_name}: 3 aylıq təhlil", f"{portfolio_name}: 3-month analysis"))
+    pdf.para(L(f"Məlumat tarixi {date_az(res['as_of'])} · dövrün sonu {date_az(res['horizon_end'])} ({res['horizon_days']} ticarət günü) · "
+               f"valyuta {ccy} · {res['scenarios']:,} ssenari · etibarlılıq: {rel}",
+               f"Data as of {date_az(res['as_of'])} · period end {date_az(res['horizon_end'])} ({res['horizon_days']} trading days) · "
+               f"currency {ccy} · {res['scenarios']:,} scenarios · reliability: {rel}").replace(",", " "), 9, MUTED)
     pdf.ln(3)
     total = res["current"]["total"]
     pdf.tiles([
-        ("Portfelin dəyəri", money(res["V0"], ccy), f"cari m/z {money(total['unrealized'], ccy, True)} ({pct(total['unrealized_pct'], True)})"),
-        ("Gözlənilən gəlir", pct(im.get("expected_return"), True) if im else money(res["pnl_end"]["median"], ccy, True),
-         f"{money(im.get('expected_money'), ccy, True)} — bazar riskinin mükafatı" if im else "m/z medianı"),
-        ("10 ssenaridən 9-u", f"{money(end['p05'], ccy)} – {money(end['p95'], ccy)}", "dövrün sonunda dəyər"),
-        ("Mənfəətdə bitmə", prob(res["pnl_end"]["prob_profit"]), "maya dəyərindən yuxarı"),
+        (L("Portfelin dəyəri", "Portfolio value"), money(res["V0"], ccy),
+         L(f"cari m/z {money(total['unrealized'], ccy, True)} ({pct(total['unrealized_pct'], True)})",
+           f"current P/L {money(total['unrealized'], ccy, True)} ({pct(total['unrealized_pct'], True)})")),
+        (L("Gözlənilən gəlir", "Expected return"), pct(im.get("expected_return"), True) if im else money(res["pnl_end"]["median"], ccy, True),
+         (f"{money(im.get('expected_money'), ccy, True)} — " + L("bazar riskinin mükafatı", "reward for market risk"))
+         if im else L("m/z medianı", "median P/L")),
+        (L("10 ssenaridən 9-u", "9 in 10 scenarios"), f"{money(end['p05'], ccy)} – {money(end['p95'], ccy)}",
+         L("dövrün sonunda dəyər", "value at the period end")),
+        (L("Mənfəətdə bitmə", "Ending in profit"), prob(res["pnl_end"]["prob_profit"]), L("maya dəyərindən yuxarı", "above cost")),
     ])
     if inv.get("memo"):
-        pdf.h2("İnvestisiya brifinqi (CIO)", 1)
+        pdf.h2(L("İnvestisiya brifinqi (CIO)", "Investment briefing (CIO)"), 1)
         pdf.bullets(inv["memo"])
-    pdf.h2("Portfelin dəyəri: harada olacağam?")
+    pdf.h2(L("Portfelin dəyəri: harada olacağam?", "Portfolio value: where will I be?"))
     pdf.fan_chart(res)
     if im:
-        pdf.h2("Əsas göstəricilər")
+        pdf.h2(L("Əsas göstəricilər", "Key measures"))
         rows = [
-            ["Sharpe (illik) / Sortino", f"{num(im.get('sharpe'))} / {num(im.get('sortino'))}",
-             "Bazar həssaslığı (β)", num(im.get("market_sensitivity"))],
-            ["Gəlir / CVaR 95%", num(im.get("return_to_cvar")), "Diversifikasiya faydası", pct(im.get("diversification_benefit"))],
-            ["Qazanc / itki nisbəti", num(im.get("gain_loss_ratio")), "Effektiv səhm sayı", num(im.get("effective_n"), 1)],
-            ["Depozitdən çox qazanma ehtimalı", prob(im.get("prob_beat_rf")), "Bazar riski / şirkətə xas risk",
+            [L("Sharpe (illik) / Sortino", "Sharpe (annual) / Sortino"), f"{num(im.get('sharpe'))} / {num(im.get('sortino'))}",
+             L("Bazar həssaslığı (β)", "Market sensitivity (β)"), num(im.get("market_sensitivity"))],
+            [L("Gəlir / CVaR 95%", "Return / CVaR 95%"), num(im.get("return_to_cvar")),
+             L("Diversifikasiya faydası", "Diversification benefit"), pct(im.get("diversification_benefit"))],
+            [L("Qazanc / itki nisbəti", "Gain / loss ratio"), num(im.get("gain_loss_ratio")),
+             L("Effektiv səhm sayı", "Effective number of stocks"), num(im.get("effective_n"), 1)],
+            [L("Depozitdən çox qazanma ehtimalı", "Probability of beating a deposit"), prob(im.get("prob_beat_rf")),
+             L("Bazar riski / şirkətə xas risk", "Market risk / company-specific risk"),
              f"{pct(im.get('systematic_share'))} / {pct(im.get('specific_share'))}"],
-            ["Yaxşı ssenari (95%)", money(im.get("best_case_money"), ccy, True), "Volatillik (illik)", pct(im.get("vol_annual"))],
+            [L("Yaxşı ssenari (95%)", "Good scenario (95%)"), money(im.get("best_case_money"), ccy, True),
+             L("Volatillik (illik)", "Volatility (annual)"), pct(im.get("vol_annual"))],
         ]
-        pdf.table(["Göstərici", "Dəyər", "Göstərici", "Dəyər"], rows, [34, 16, 34, 16], "LRLR")
+        pdf.table([L("Göstərici", "Measure"), L("Dəyər", "Value"), L("Göstərici", "Measure"), L("Dəyər", "Value")],
+                  rows, [34, 16, 34, 16], "LRLR")
 
     # ---- risk
     pdf.section("Risk")
     if rm.get("limit_use") is not None:
         use = rm["limit_use"]
         color = ERR if use > 1 else WARN if use > get_settings()["insights"]["limit_use_amber"] else OK
-        pdf.bar(f"Risk limitindən istifadə (CVaR 95% {pct(rm['cvar95'])} / limit {pct(rm['limit'])})", use, color, pct(use))
+        pdf.bar(L(f"Risk limitindən istifadə (CVaR 95% {pct(rm['cvar95'])} / limit {pct(rm['limit'])})",
+                  f"Use of the risk limit (CVaR 95% {pct(rm['cvar95'])} / limit {pct(rm['limit'])})"), use, color, pct(use))
         pdf.ln(2)
     if rk.get("memo"):
-        pdf.h2("Risk brifinqi (CRO)", 1)
+        pdf.h2(L("Risk brifinqi (CRO)", "Risk briefing (CRO)"), 1)
         pdf.bullets(rk["memo"])
-    pdf.h2("VaR / CVaR nərdivanı (3 ay)")
+    pdf.h2(L("VaR / CVaR nərdivanı (3 ay)", "VaR / CVaR ladder (3 months)"))
     ladder = []
     for lv in (0.9, 0.95, 0.975, 0.99):
         vc = _var_at(rk.get("quantiles"), res, lv)
         if vc:
             n = round(1 / (1 - lv))
-            ladder.append([pct(lv).replace(",0%", "%"), pct(vc[0]), money(vc[0] * res["V0"], ccy), pct(vc[1]),
-                           money(vc[1] * res["V0"], ccy), f"hər {n} rübdən 1-də"])
-    pdf.table(["Səviyyə", "VaR", "VaR, məbləğ", "CVaR", "CVaR, məbləğ", "Tezlik"], ladder, [14, 12, 18, 12, 18, 22], "LRRRRL")
+            ladder.append([pct(lv).replace(",0%", "%").replace(".0%", "%"), pct(vc[0]), money(vc[0] * res["V0"], ccy), pct(vc[1]),
+                           money(vc[1] * res["V0"], ccy), L(f"hər {n} rübdən 1-də", f"1 quarter in {n}")])
+    pdf.table([L("Səviyyə", "Level"), "VaR", L("VaR, məbləğ", "VaR, amount"), "CVaR", L("CVaR, məbləğ", "CVaR, amount"),
+               L("Tezlik", "Frequency")], ladder, [14, 12, 18, 12, 18, 22], "LRRRRL")
     if rk.get("kri"):
-        pdf.h2("Əsas risk göstəriciləri (svetofor)")
+        pdf.h2(L("Əsas risk göstəriciləri (svetofor)", "Key risk indicators (traffic light)"))
         order = {"red": 0, "amber": 1, "green": 2, "none": 3}
         kri = sorted(rk["kri"], key=lambda k: order.get(k["status"], 3))
         rows, colors = [], []
@@ -398,32 +429,39 @@ def build_pdf(view: dict[str, Any], portfolio_name: str) -> bytes:
             v = k["value"]
             val = "—" if v is None else (pct(v) if k["kind"] == "pct" else prob(v) if k["kind"] == "prob" else
                                          f"{num(v)}×" if k["kind"] == "times" else
-                                         ("<0,1 gün" if v < 0.1 else f"{num(v, 1)} gün") if k["kind"] == "days" else num(v))
-            rows.append([k["label"], val, RAG_WORD.get(k["status"], ""), k.get("hint", "")])
+                                         (L("<0,1 gün", "<0.1 days") if v < 0.1 else f"{num(v, 1)} " + L("gün", "days"))
+                                         if k["kind"] == "days" else num(v))
+            rows.append([k["label"], val, rag_word(k["status"]), k.get("hint", "")])
             colors.append([None, None, RAG.get(k["status"], MUTED), MUTED])
-        pdf.table(["Göstərici", "Dəyər", "Status", "Şərh"], rows, [38, 11, 10, 41], "LRLL", colors, size=8)
+        pdf.table([L("Göstərici", "Indicator"), L("Dəyər", "Value"), "Status", L("Şərh", "Comment")], rows,
+                  [38, 11, 10, 41], "LRLL", colors, size=8)
     if res.get("stress"):
         ranked = sorted(res["stress"], key=lambda s: -s["loss_money"])
         top = int(get_settings()["report"]["stress_rows"])
-        pdf.h2(f"Stress testləri — ən pis {min(top, len(ranked))} / {len(ranked)} ssenari (ehtimal deyil)")
+        pdf.h2(L(f"Stress testləri — ən pis {min(top, len(ranked))} / {len(ranked)} ssenari (ehtimal deyil)",
+                 f"Stress tests — worst {min(top, len(ranked))} of {len(ranked)} scenarios (not probabilities)"))
         rows, colors = [], []
         for s in ranked[:top]:
             rows.append([s["name"], _stress_what(s), money(s["pnl_money"], ccy, True), pct(-s["loss_pct"], True)])
             c = NEG if s["pnl_money"] < 0 else POS
             colors.append([None, MUTED, c, c])
-        pdf.table(["Ssenari", "Dövr / şok", "Portfel", "%"], rows, [34, 40, 14, 10], "LLRR", colors, size=8)
+        pdf.table([L("Ssenari", "Scenario"), L("Dövr / şok", "Period / shock"), L("Portfel", "Portfolio"), "%"], rows,
+                  [34, 40, 14, 10], "LLRR", colors, size=8)
         if len(ranked) > top:
-            pdf.para(f"Qalan {len(ranked) - top} ssenari (o cümlədən ralli ssenariləri) tətbiqin Risk bölməsindədir.", 8, MUTED)
-    pdf.h2("Model nə qədər etibarlıdır?")
-    pdf.para(f"Ümumi etibarlılıq: {rel}. {view.get('reliability_text', '')}", 9.5)
+            pdf.para(L(f"Qalan {len(ranked) - top} ssenari (o cümlədən ralli ssenariləri) tətbiqin Risk bölməsindədir.",
+                       f"The other {len(ranked) - top} scenarios (including rallies) are in the app's Risk section."), 8, MUTED)
+    pdf.h2(L("Model nə qədər etibarlıdır?", "How reliable is the model?"))
+    pdf.para(L(f"Ümumi etibarlılıq: {rel}. ", f"Overall reliability: {rel}. ") + view.get("reliability_text", ""), 9.5)
     tr = view.get("trust")
     if tr and tr.get("var95"):
-        pdf.para(f"Son {tr['backtest_days']} ticarət günündə gündəlik VaR 95% {tr['var95']['observed']} dəfə aşılıb "
-                 f"(gözlənilən ~{num(tr['var95']['expected'], 1)}); {tr['checks_passed']} / {tr['checks_total']} statistik yoxlamadan keçib.",
+        pdf.para(L(f"Son {tr['backtest_days']} ticarət günündə gündəlik VaR 95% {tr['var95']['observed']} dəfə aşılıb "
+                   f"(gözlənilən ~{num(tr['var95']['expected'], 1)}); {tr['checks_passed']} / {tr['checks_total']} statistik yoxlamadan keçib.",
+                   f"Over the last {tr['backtest_days']} trading days the daily VaR 95% was exceeded {tr['var95']['observed']} times "
+                   f"(expected ~{num(tr['var95']['expected'], 1)}); {tr['checks_passed']} of {tr['checks_total']} statistical checks passed."),
                  9.5, MUTED)
 
     # ---- positions, lots, recommendations
-    pdf.section("Mövqelər")
+    pdf.section(L("Mövqelər", "Positions"))
     eff = {p["symbol"]: p for p in inv.get("positions", [])}
     rows = []
     for p in res["current"]["positions"]:
@@ -433,11 +471,12 @@ def build_pdf(view: dict[str, Any], portfolio_name: str) -> bytes:
                      pct(p["weight"]), money(p["unrealized"], ccy, True), pct(e.get("expected_return"), True),
                      f"{pct(a['end']['p05'] / a['price0'] - 1, True)} … {pct(a['end']['p95'] / a['price0'] - 1, True)}" if a else "—",
                      prob(a["prob_up"]) if a else "—", pct(e.get("risk_share"))])
-    pdf.table(["Səhm", "Say", "Dəyər", "Çəki", "Cari m/z", "Gözl. gəlir", "90% aralıq", "Qalxma", "Risk payı"], rows,
+    pdf.table([L("Səhm", "Stock"), L("Say", "Qty"), L("Dəyər", "Value"), L("Çəki", "Weight"), L("Cari m/z", "Current P/L"),
+               L("Gözl. gəlir", "Exp. return"), L("90% aralıq", "90% range"), L("Qalxma", "Up prob."), L("Risk payı", "Risk share")], rows,
               [12, 8, 13, 9, 13, 11, 20, 9, 10], "LRRRRRRRR", size=8)
     lots = [(p, lot) for p in res["current"]["positions"] for lot in p.get("lots", [])]
     if lots:
-        pdf.h2("Alış tarixinə görə mənfəət/zərər")
+        pdf.h2(L("Alış tarixinə görə mənfəət/zərər", "Profit/loss by purchase date"))
         rows, colors = [], []
         for p, lot in lots:
             f = lot.get("forecast") or {}
@@ -448,13 +487,16 @@ def build_pdf(view: dict[str, Any], portfolio_name: str) -> bytes:
                          prob(f.get("prob_profit"))])
             colors.append([None, MUTED, None, None, NEG if lot["unrealized"] < 0 else POS, NEG if lot["unrealized"] < 0 else POS,
                            None, None, None, None])
-        pdf.table(["Səhm", "Alış", "Say", "Maya", "Cari m/z", "%", "İllik", "Təxm. m/z", "90% aralıq", "Mənfəət ehtim."],
+        pdf.table([L("Səhm", "Stock"), L("Alış", "Bought"), L("Say", "Qty"), L("Maya", "Cost"), L("Cari m/z", "Current P/L"), "%",
+                   L("İllik", "Annual"), L("Təxm. m/z", "Est. P/L"), L("90% aralıq", "90% range"), L("Mənfəət ehtim.", "Profit prob.")],
                   rows, [9, 11, 6, 10, 11, 8, 8, 11, 19, 9], "LLRRRRRRRR", colors, size=7.5)
-        pdf.para("Təxmini m/z — alışın öz maya dəyərinə nisbətən dövrün sonundakı mənfəət/zərər (median və 90% aralıq).", 7.5, MUTED)
+        pdf.para(L("Təxmini m/z — alışın öz maya dəyərinə nisbətən dövrün sonundakı mənfəət/zərər (median və 90% aralıq).",
+                   "Est. P/L — profit/loss at the period end against that purchase's own cost (median and 90% range)."), 7.5, MUTED)
     recs = view.get("recommendations") or []
     if recs:
-        pdf.h2("Tövsiyələr")
-        words = {"reduce": "AZALT", "increase": "ARTIR", "hold": "SAXLA", "attention": "DİQQƏT"}
+        pdf.h2(L("Tövsiyələr", "Recommendations"))
+        words = {"reduce": L("AZALT", "REDUCE"), "increase": L("ARTIR", "INCREASE"), "hold": L("SAXLA", "HOLD"),
+                 "attention": L("DİQQƏT", "ATTENTION")}
         for r in recs:
             pdf.set_font("Body", "B", 10)
             pdf.set_text_color(*INK)
@@ -464,5 +506,6 @@ def build_pdf(view: dict[str, Any], portfolio_name: str) -> bytes:
             pdf.ln(1)
     pdf.ln(2)
     pdf.para(view.get("disclaimer") or "", 8.5, MUTED)
-    pdf.para(f"Hazırlanıb: {datetime.now():%d.%m.%Y %H:%M} · Portfel Analizi", 8, MUTED)
+    pdf.para(L(f"Hazırlanıb: {datetime.now():%d.%m.%Y %H:%M} · Portfel Analizi",
+               f"Prepared: {datetime.now():%d.%m.%Y %H:%M} · Portfel Analizi"), 8, MUTED)
     return bytes(pdf.output())

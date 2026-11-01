@@ -1,6 +1,7 @@
 import * as echarts from "echarts";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
+import { L } from "../lang";
 
 export interface Palette {
   fg: string;
@@ -135,7 +136,7 @@ export function ChartCard({ id, title, subtitle, build, table, height, chartHeig
         </div>
         <div className="row-actions">
           {extra}
-          <div className="toggle" role="group" aria-label="Görünüş">
+          <div className="toggle" role="group" aria-label={L("Görünüş", "View")}>
             <button aria-pressed={mode === "chart"} onClick={() => setMode("chart")}>{t("chart")}</button>
             <button aria-pressed={mode === "table"} onClick={() => setMode("table")}>{t("table")}</button>
           </div>
@@ -160,7 +161,7 @@ export function ChartCard({ id, title, subtitle, build, table, height, chartHeig
             }
           }}
           onBlur={() => instRef.current?.dispatchAction({ type: "hideTip" })}
-          title="← →: nöqtələr üzrə gəzmək, Enter: cədvəl görünüşü"
+          title={L("← →: nöqtələr üzrə gəzmək, Enter: cədvəl görünüşü", "← →: move between points, Enter: table view")}
         />
       ) : (
         <div key="table" className="table-wrap">{table}</div>

@@ -4,23 +4,24 @@ import { portfolioState, ReliabilityBadge } from "../components/Badges";
 import { Icon } from "../components/Icons";
 import { dateTimeAz, money, pct, prob } from "../format";
 import { Key, t } from "../i18n";
+import { L } from "../lang";
 
 export default function PortfoliosPage() {
   const { portfolios, openNewPortfolio, config, user } = useApp();
 
-  if (portfolios === null) return <div className="muted">Yüklənir…</div>;
+  if (portfolios === null) return <div className="muted">{L("Yüklənir…", "Loading…")}</div>;
 
   if (portfolios.length === 0) {
     return (
       <div className="card empty">
-        <h1 style={{ marginBottom: 6 }}>Xoş gəlmisiniz</h1>
-        <p className="muted">Portfelinizin növbəti 3 ay üçün risk və mənfəət/zərər təhlilini almaq üç addımdır.</p>
+        <h1 style={{ marginBottom: 6 }}>{L("Xoş gəlmisiniz", "Welcome")}</h1>
+        <p className="muted">{L("Portfelinizin növbəti 3 ay üçün risk və mənfəət/zərər təhlilini almaq üç addımdır.", "Getting a risk and profit/loss analysis of your portfolio for the next 3 months takes three steps.")}</p>
         <div className="steps-intro">
-          <div><span className="stepnum">1</span><b>Portfel yaradın</b><span className="muted small">Ad, valyuta və risk profili seçin.</span></div>
-          <div><span className="stepnum">2</span><b>Səhmləri əlavə edin</b><span className="muted small">Simvol və say kifayətdir; tarix və qiymət istəyə bağlıdır.</span></div>
-          <div><span className="stepnum">3</span><b>Generate basın</b><span className="muted small">1–3 dəqiqəyə ehtimal proqnozu, risk və tövsiyələr hazır olur.</span></div>
+          <div><span className="stepnum">1</span><b>{L("Portfel yaradın", "Create a portfolio")}</b><span className="muted small">{L("Ad, valyuta və risk profili seçin.", "Choose a name, currency and risk profile.")}</span></div>
+          <div><span className="stepnum">2</span><b>{L("Səhmləri əlavə edin", "Add stocks")}</b><span className="muted small">{L("Simvol və say kifayətdir; tarix və qiymət istəyə bağlıdır.", "A symbol and quantity are enough; date and price are optional.")}</span></div>
+          <div><span className="stepnum">3</span><b>{L("Generate basın", "Press Generate")}</b><span className="muted small">{L("1–3 dəqiqəyə ehtimal proqnozu, risk və tövsiyələr hazır olur.", "In 1–3 minutes the probabilistic forecast, risk and recommendations are ready.")}</span></div>
         </div>
-        <button className="primary" onClick={openNewPortfolio}><Icon name="plus" size={16} /> İlk portfeli yarat</button>
+        <button className="primary" onClick={openNewPortfolio}><Icon name="plus" size={16} /> {L("İlk portfeli yarat", "Create your first portfolio")}</button>
       </div>
     );
   }
@@ -29,9 +30,9 @@ export default function PortfoliosPage() {
     <>
       <div className="page-head">
         <div>
-          <h1>Portfellərim</h1>
+          <h1>{L("Portfellərim", "My portfolios")}</h1>
           <div className="lead">
-            {user?.email} · {portfolios.length} portfel. Hər portfel ayrıca yadda saxlanılır və müstəqil təhlil olunur.
+            {user?.email} · {portfolios.length} {L("portfel. Hər portfel ayrıca yadda saxlanılır və müstəqil təhlil olunur.", "portfolio(s). Each is stored and analysed separately.")}
           </div>
         </div>
         <button className="primary" onClick={openNewPortfolio}><Icon name="plus" size={16} /> {t("newPortfolio")}</button>
@@ -60,13 +61,13 @@ export default function PortfoliosPage() {
                     )}
                   </div>
                   <div className="p-stats">
-                    <div>3 ay sonra (90%)<b>{h.range90 ? `${pct(h.range90[0], { sign: true })} … ${pct(h.range90[1], { sign: true })}` : "—"}</b></div>
-                    <div>Mənfəət ehtimalı<b>{h.prob_profit != null ? prob(h.prob_profit) : "—"}</b></div>
+                    <div>{L("3 ay sonra (90%)", "In 3 months (90%)")}<b>{h.range90 ? `${pct(h.range90[0], { sign: true })} … ${pct(h.range90[1], { sign: true })}` : "—"}</b></div>
+                    <div>{L("Mənfəət ehtimalı", "Profit probability")}<b>{h.prob_profit != null ? prob(h.prob_profit) : "—"}</b></div>
                   </div>
                   {use != null && (
-                    <div className="p-risk" title="Ən pis 5% ssenaridə 3 aylıq orta itki (CVaR 95%) risk limitinizə nisbətən">
+                    <div className="p-risk" title={L("Ən pis 5% ssenaridə 3 aylıq orta itki (CVaR 95%) risk limitinizə nisbətən", "Average 3-month loss in the worst 5% of scenarios (CVaR 95%) relative to your risk limit")}>
                       <div className="row-actions" style={{ justifyContent: "space-between" }}>
-                        <span>Risk limitindən istifadə</span>
+                        <span>{L("Risk limitindən istifadə", "Use of the risk limit")}</span>
                         <b className={use > 1 ? "neg" : undefined}>{pct(use)}</b>
                       </div>
                       <div className="mini-bar"><div className={use > 1 ? "over" : use > 0.8 ? "near" : ""} style={{ width: `${Math.min(100, use * 80)}%` }} /><span style={{ left: "80%" }} /></div>
@@ -75,8 +76,8 @@ export default function PortfoliosPage() {
                 </>
               ) : (
                 <div className="p-stats">
-                  <div>Səhm<b>{p.n_instruments}</b></div>
-                  <div>Risk profili<b>{t(p.risk_profile as Key)}{limit != null ? ` · ${pct(limit)}` : ""}</b></div>
+                  <div>{L("Səhm", "Stocks")}<b>{p.n_instruments}</b></div>
+                  <div>{t("riskProfile")}<b>{t(p.risk_profile as Key)}{limit != null ? ` · ${pct(limit)}` : ""}</b></div>
                 </div>
               )}
               <div className="p-foot">
@@ -87,9 +88,9 @@ export default function PortfoliosPage() {
                     <span className={`dot ${st.cls}`} aria-hidden="true" /> {st.label}
                   </span>
                 )}
-                <span className="small muted">{p.n_instruments} səhm · {r ? dateTimeAz(r.created_at) : t("never")}</span>
+                <span className="small muted">{p.n_instruments} {L("səhm", "stocks")} · {r ? dateTimeAz(r.created_at) : t("never")}</span>
                 <span className="spacer" />
-                <span className="go">{h ? "Nəticələr →" : "Aç →"}</span>
+                <span className="go">{h ? L("Nəticələr →", "Results →") : L("Aç →", "Open →")}</span>
               </div>
             </Link>
           );

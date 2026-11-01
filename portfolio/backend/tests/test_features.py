@@ -250,3 +250,78 @@ def test_rate_limiter_blocks_after_limit():
     assert all(rl.allow("k", 3) for _ in range(3))
     assert not rl.allow("k", 3)
     assert rl.allow("other", 3)
+
+
+# ------------------------------------------------------------------ read-only share link
+def test_share_link_shows_results_without_login(dora):
+    pid = dora.post("/api/portfolios", json={"name": "Shared"}).json()["id"]
+    dora.post(f"/api/portfolios/{pid}/transactions", json={"provider_symbol": "MSFT", "quantity": 3})
+    dora.post(f"/api/portfolios/{pid}/generate")
+    _drain()
+    anon = TestClient(app)
+    assert anon.post(f"/api/portfolios/{pid}/share").status_code == 401
+    url = dora.post(f"/api/portfolios/{pid}/share").json()["url"]
+    token = url.rsplit("/shared/", 1)[1]
+    assert dora.get(f"/api/portfolios/{pid}").json()["shared"] is True
+    view = anon.get(f"/api/shared/{token}").json()
+    assert view["name"] == "Shared" and view["run"]["status"] == "done" and "result" in view["run"]
+    assert "owner" not in str(view.keys()) and "email" not in view
+    # a new link replaces the old one; unsharing stops the current one
+    url2 = dora.post(f"/api/portfolios/{pid}/share").json()["url"]
+    assert anon.get(f"/api/shared/{token}").status_code == 404
+    assert dora.delete(f"/api/portfolios/{pid}/share").status_code == 200
+    assert anon.get(f"/api/shared/{url2.rsplit('/shared/', 1)[1]}").status_code == 404
+    assert anon.get("/api/shared/not-a-real-token").status_code == 404
+
+
+# ------------------------------------------------------------------ what-if scenario
+def test_whatif_scenario_is_hidden_and_comparable(dora):
+    pid = dora.post("/api/portfolios", json={"name": "WhatIf"}).json()["id"]
+    dora.post(f"/api/portfolios/{pid}/transactions", json={"provider_symbol": "MSFT", "quantity": 4})
+    dora.post(f"/api/portfolios/{pid}/generate")
+    _drain()
+    assert dora.get(f"/api/portfolios/{pid}/whatif").json() is None
+    # selling more than held is refused like a real trade
+    bad = dora.post(f"/api/portfolios/{pid}/whatif", json={"trades": [{"provider_symbol": "MSFT", "side": "SELL", "quantity": 99}]})
+    assert bad.status_code == 422
+    r = dora.post(f"/api/portfolios/{pid}/whatif", json={"trades": [
+        {"provider_symbol": "MSFT", "side": "SELL", "quantity": 2},
+        {"provider_symbol": "XOM", "side": "BUY", "quantity": 3}]})
+    assert r.status_code == 200, r.text
+    _drain()
+    w = dora.get(f"/api/portfolios/{pid}/whatif").json()
+    assert w["run"]["status"] == "done" and w["base"] and w["scenario"] and len(w["trades"]) == 2
+    # the scenario never appears as a portfolio of its own, and the real portfolio is untouched
+    names = [p["name"] for p in dora.get("/api/portfolios").json()]
+    assert not any("ssenari" in n for n in names)
+    real = dora.get(f"/api/portfolios/{pid}").json()
+    assert [(x["investing_symbol"], x["quantity"]) for x in real["positions"]] == [("MSFT", 4)]
+    # a new scenario replaces the previous one; deleting the portfolio removes it too
+    dora.post(f"/api/portfolios/{pid}/whatif", json={"trades": [{"provider_symbol": "MSFT", "side": "BUY", "quantity": 1}]})
+    assert len(dora.get(f"/api/portfolios/{pid}/whatif").json()["trades"]) == 1
+    assert dora.delete(f"/api/portfolios/{pid}/whatif").json() == {"ok": True}
+    assert dora.get(f"/api/portfolios/{pid}/whatif").json() is None
+
+
+# ------------------------------------------------------------------ interface language
+def test_results_and_errors_follow_the_requested_language(dora):
+    pid = dora.post("/api/portfolios", json={"name": "Lang"}).json()["id"]
+    dora.post(f"/api/portfolios/{pid}/transactions", json={"provider_symbol": "MSFT", "quantity": 3})
+    dora.post(f"/api/portfolios/{pid}/generate")
+    _drain()
+    az = dora.get(f"/api/portfolios/{pid}/runs/latest").json()
+    en = dora.get(f"/api/portfolios/{pid}/runs/latest", headers={"x-lang": "en"}).json()
+    memo_az = az["result"]["insights"]["investment"]["memo"][0]["text"]
+    memo_en = en["result"]["insights"]["investment"]["memo"][0]["text"]
+    assert "gözlənilən gəlir" in memo_az and "Expected return" in memo_en
+    assert "" not in str(az) and "" not in str(en)  # every stored text is resolved before it leaves
+    assert "investisiya məsləhəti" in az["disclaimer"] and "investment advice" in en["disclaimer"]
+    assert any(s["name"] == "COVID 2020" for s in en["result"]["stress"])
+    assert any(s["name"].startswith("Market −") for s in en["result"]["stress"])
+    # errors too
+    bad = dora.post(f"/api/portfolios/{pid}/transactions", json={"provider_symbol": "MSFT", "quantity": -1},
+                    headers={"x-lang": "en"})
+    assert bad.status_code == 422 and "positive" in bad.json()["detail"]
+    # and the PDF (plain link: ?lang=)
+    pdf = dora.get(f"/api/portfolios/{pid}/report.pdf?lang=en")
+    assert pdf.status_code == 200 and pdf.content[:4] == b"%PDF"

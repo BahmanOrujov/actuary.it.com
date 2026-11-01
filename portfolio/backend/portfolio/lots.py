@@ -8,6 +8,8 @@ from typing import Iterable
 
 import pandas as pd
 
+from app.i18n import L
+
 
 class LotError(ValueError):
     pass
@@ -80,7 +82,7 @@ def apply_transactions(
     states: dict[str, PositionState] = {}
     for t in order:
         if t.quantity <= 0:
-            raise LotError("Say müsbət olmalıdır.")
+            raise LotError(L("Say müsbət olmalıdır.", "The quantity must be positive."))
         st = states.setdefault(t.key, PositionState(t.key))
         k = split_factor_after(splits.get(t.key), t.trade_date)
         qty = t.quantity * k
@@ -96,7 +98,8 @@ def apply_transactions(
         elif t.side == "SELL":
             if qty > st.quantity + EPS:
                 raise LotError(
-                    f"{t.key}: {t.trade_date:%d.%m.%Y} tarixində satılan say ({t.quantity:g}) mövcud saydan çoxdur."
+                    L(f"{t.key}: {t.trade_date:%d.%m.%Y} tarixində satılan say ({t.quantity:g}) mövcud saydan çoxdur.",
+                      f"{t.key}: the quantity sold on {t.trade_date:%d.%m.%Y} ({t.quantity:g}) exceeds the holding.")
                 )
             remaining = qty
             proceeds_unit = px - t.fees / qty
@@ -111,7 +114,7 @@ def apply_transactions(
                     st.lots.popleft()
             st.sold_quantity += qty
         else:
-            raise LotError(f"Naməlum əməliyyat növü: {t.side}")
+            raise LotError(L(f"Naməlum əməliyyat növü: {t.side}", f"Unknown transaction type: {t.side}"))
     return states
 
 

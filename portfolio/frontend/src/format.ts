@@ -1,4 +1,8 @@
 // Number formatting without false precision: "1 017 000 $", percentages with one decimal.
+import { L, LANG } from "./lang";
+
+/** Decimal comma in Azerbaijani, point in English. */
+const dec = (s: string) => (LANG === "az" ? s.replace(".", ",") : s);
 
 const SYMBOL: Record<string, string> = { USD: "$", EUR: "€", GBP: "£", AZN: "₼" };
 
@@ -16,13 +20,13 @@ export function money(v: number | null | undefined, ccy: string, opts: { sign?: 
     x = Math.round(x / mag) * mag;
   }
   const sign = x < 0 ? "−" : opts.sign && x > 0 ? "+" : "";
-  const body = Math.abs(x) < 100 && !Number.isInteger(x) ? Math.abs(x).toFixed(2).replace(".", ",") : group(x);
+  const body = Math.abs(x) < 100 && !Number.isInteger(x) ? dec(Math.abs(x).toFixed(2)) : group(x);
   return `${sign}${body} ${SYMBOL[ccy] ?? ccy}`;
 }
 
 export function price(v: number | null | undefined, ccy?: string): string {
   if (v == null || !isFinite(v)) return "—";
-  const s = v >= 1000 ? group(v) : v.toFixed(2).replace(".", ",");
+  const s = v >= 1000 ? group(v) : dec(v.toFixed(2));
   return ccy ? `${s} ${SYMBOL[ccy] ?? ccy}` : s;
 }
 
@@ -30,7 +34,7 @@ export function pct(v: number | null | undefined, opts: { sign?: boolean } = {})
   if (v == null || !isFinite(v)) return "—";
   const x = Math.round(v * 1000) / 10;
   const sign = x < 0 ? "−" : opts.sign && x > 0 ? "+" : "";
-  return `${sign}${Math.abs(x).toFixed(1).replace(".", ",")}%`;
+  return `${sign}${dec(Math.abs(x).toFixed(1))}%`;
 }
 
 /** Probability as a whole percent ("~35%"); extreme values clipped to avoid false certainty. */
@@ -41,11 +45,11 @@ export function prob(v: number | null | undefined): string {
   return `${Math.round(v * 100)}%`;
 }
 
-/** Frequency language for a quarterly horizon: 0.05 -> "hər 20 rübdən 1-də". */
+/** Frequency language for a quarterly horizon: 0.05 -> "hər 20 rübdən 1-də" / "1 quarter in 20". */
 export function frequency(p: number): string {
   if (!(p > 0)) return "";
   const n = Math.round(1 / p);
-  return `hər ${n} rübdən 1-də`;
+  return L(`hər ${n} rübdən 1-də`, `1 quarter in ${n}`);
 }
 
 export function dateAz(iso: string | null | undefined): string {
@@ -55,7 +59,7 @@ export function dateAz(iso: string | null | undefined): string {
 }
 
 export function num(v: number, digits = 4): string {
-  return Number(v.toFixed(digits)).toString().replace(".", ",");
+  return dec(Number(v.toFixed(digits)).toString());
 }
 
 /** Server timestamps are naive UTC: show them in the viewer's local time, "27.10.2026 14:36". */

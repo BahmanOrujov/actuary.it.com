@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.admin_settings import effective, feature_enabled
 from app.config import get_settings
 from app.db import get_db, retry_locked
+from app.i18n import L, bilingual, cfg_text, resolve
 from app.mailer import mail_enabled, send_mail
 from app.models import (
     Alert, AnalysisRun, Instrument, Notification, PasswordReset, Portfolio, PositionTarget, RunResult, Transaction,
@@ -54,14 +55,14 @@ class Credentials(BaseModel):
 def register(body: Credentials, request: Request, response: Response, db: Session = Depends(get_db)):
     if not rate_limiter.allow(f"auth:{request.client.host if request.client else '-'}",
                               get_settings()["security"]["login_rate_limit_per_minute"]):
-        raise HTTPException(429, "Çox cəhd. Bir dəqiqə sonra yenidən yoxlayın.")
+        raise HTTPException(429, L("Çox cəhd. Bir dəqiqə sonra yenidən yoxlayın.", "Too many attempts. Try again in a minute."))
     first = db.scalar(select(func.count(User.id))) == 0
     if not first and not get_settings().open_registration:
-        raise HTTPException(403, "Qeydiyyat bağlıdır. Hesabı administrator açır.")
+        raise HTTPException(403, L("Qeydiyyat bağlıdır. Hesabı administrator açır.", "Registration is closed. The administrator creates accounts."))
     email = body.email.lower()
     validate_new_password(body.password, email)
     if db.scalar(select(User).where(User.email == email)):
-        raise HTTPException(409, "Bu e-poçt artıq qeydiyyatdan keçib.")
+        raise HTTPException(409, L("Bu e-poçt artıq qeydiyyatdan keçib.", "This e-mail is already registered."))
     user = User(email=email, password_hash=hash_password(body.password), role="admin" if first else "client")
     db.add(user)
     db.flush()
@@ -75,7 +76,7 @@ def register(body: Credentials, request: Request, response: Response, db: Sessio
 def login(body: Credentials, request: Request, response: Response, db: Session = Depends(get_db)):
     if not rate_limiter.allow(f"auth:{request.client.host if request.client else '-'}",
                               get_settings()["security"]["login_rate_limit_per_minute"]):
-        raise HTTPException(429, "Çox cəhd. Bir dəqiqə sonra yenidən yoxlayın.")
+        raise HTTPException(429, L("Çox cəhd. Bir dəqiqə sonra yenidən yoxlayın.", "Too many attempts. Try again in a minute."))
     email = body.email.lower()
     user = db.scalar(select(User).where(User.email == email))
     if user is None:
@@ -83,21 +84,23 @@ def login(body: Credentials, request: Request, response: Response, db: Session =
         if unknown_email_locked(email):
             raise HTTPException(429, LOCKED_MESSAGE)
         record_unknown_failure(email)
-        raise HTTPException(401, "E-poçt və ya parol yanlışdır.")
+        raise HTTPException(401, L("E-poçt və ya parol yanlışdır.", "Wrong e-mail or password."))
     if is_locked(user):
         raise HTTPException(429, LOCKED_MESSAGE)
     if not verify_password(user.password_hash, body.password):
         if record_failed_login(user):
             audit(db, user.id, "account_locked", {"until": user.locked_until.isoformat()})
             db.add(Alert(level="warning", kind="auth", user_id=user.id,
-                         message=f"{user.email}: {get_settings()['security']['max_failed_logins']} uğursuz giriş "
-                                 f"cəhdi, hesab müvəqqəti bağlandı."))
+                         message=L(f"{user.email}: {get_settings()['security']['max_failed_logins']} uğursuz giriş "
+                                   "cəhdi, hesab müvəqqəti bağlandı.",
+                                   f"{user.email}: {get_settings()['security']['max_failed_logins']} failed sign-in "
+                                   "attempts, the account was locked temporarily.")))
         else:
             audit(db, user.id, "login_failed")
         commit(db)
-        raise HTTPException(401, "E-poçt və ya parol yanlışdır.")
+        raise HTTPException(401, L("E-poçt və ya parol yanlışdır.", "Wrong e-mail or password."))
     if user.is_blocked:
-        raise HTTPException(403, "Hesab bloklanıb.")
+        raise HTTPException(403, L("Hesab bloklanıb.", "The account is blocked."))
     record_successful_login(user)
     csrf = create_session(db, user, response, secure=request.url.scheme == "https")
     audit(db, user.id, "login")
@@ -126,7 +129,7 @@ class PasswordChange(BaseModel):
 def change_password(body: PasswordChange, request: Request, db: Session = Depends(get_db),
                     user: User = Depends(current_user)):
     if not verify_password(user.password_hash, body.old_password):
-        raise HTTPException(401, "Köhnə parol yanlışdır.")
+        raise HTTPException(401, L("Köhnə parol yanlışdır.", "The current password is wrong."))
     validate_new_password(body.new_password, user.email)
     u = db.get(User, user.id)
     u.password_hash = hash_password(body.new_password)
@@ -166,26 +169,33 @@ def password_reset_request(body: ResetRequest, request: Request, background: Bac
     console, which only the local owner can see."""
     if not rate_limiter.allow(f"auth:{request.client.host if request.client else '-'}",
                               get_settings()["security"]["login_rate_limit_per_minute"]):
-        raise HTTPException(429, "Çox cəhd. Bir dəqiqə sonra yenidən yoxlayın.")
+        raise HTTPException(429, L("Çox cəhd. Bir dəqiqə sonra yenidən yoxlayın.", "Too many attempts. Try again in a minute."))
     user = db.scalar(select(User).where(User.email == body.email.lower()))
     if user is not None and not user.is_blocked:
         minutes = get_settings()["security"]["password_reset_minutes"]
         link = issue_reset_link(db, user, request, timedelta(minutes=minutes))
         if mail_enabled():
-            background.add_task(send_mail, user.email, "Portfel Analizi: parolun bərpası",
-                                f"Parolu yeniləmək üçün bu linki açın ({minutes} dəqiqə etibarlıdır):\n\n{link}\n\n"
-                                "Bərpanı siz istəməmisinizsə, bu məktubu nəzərə almayın.")
+            background.add_task(send_mail, user.email, L("Portfel Analizi: parolun bərpası", "Portfel Analizi: password reset"),
+                                L(f"Parolu yeniləmək üçün bu linki açın ({minutes} dəqiqə etibarlıdır):\n\n{link}\n\n"
+                                  "Bərpanı siz istəməmisinizsə, bu məktubu nəzərə almayın.",
+                                  f"Open this link to set a new password (valid for {minutes} minutes):\n\n{link}\n\n"
+                                  "If you did not ask for a reset, ignore this e-mail."))
         else:
             logging.getLogger("password-reset").warning(
                 "PAROL BƏRPASI %s üçün link (%s dəqiqə etibarlıdır): %s", user.email, minutes, link)
-        db.add(Alert(level="info", kind="auth", message=f"Parol bərpası istəndi: {user.email}", user_id=user.id))
+        db.add(Alert(level="info", kind="auth", message=L(f"Parol bərpası istəndi: {user.email}",
+                                                          f"Password reset requested: {user.email}"), user_id=user.id))
         audit(db, user.id, "password_reset_requested")
         commit(db)
     if mail_enabled():
-        return {"ok": True, "message": "Bu e-poçt qeydiyyatdadırsa, bərpa linki ora göndərildi. "
-                                       "Gələnlər qutusunu (və Spam qovluğunu) yoxlayın."}
-    return {"ok": True, "message": "Bu e-poçt qeydiyyatdadırsa, bərpa linki server konsoluna yazıldı "
-                                   "(lokal rejimdə e-poçt göndərilmir)."}
+        return {"ok": True, "message": L("Bu e-poçt qeydiyyatdadırsa, bərpa linki ora göndərildi. "
+                                         "Gələnlər qutusunu (və Spam qovluğunu) yoxlayın.",
+                                         "If this e-mail is registered, a reset link has been sent to it. "
+                                         "Check the inbox (and the Spam folder).")}
+    return {"ok": True, "message": L("Bu e-poçt qeydiyyatdadırsa, bərpa linki server konsoluna yazıldı "
+                                     "(lokal rejimdə e-poçt göndərilmir).",
+                                     "If this e-mail is registered, a reset link was written to the server console "
+                                     "(no e-mail is sent in local mode).")}
 
 
 @router.post("/auth/password-reset/confirm")
@@ -194,7 +204,7 @@ def password_reset_confirm(body: ResetConfirm, db: Session = Depends(get_db)):
         PasswordReset.token_hash == hashlib.sha256(body.token.encode()).hexdigest()))
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     if row is None or row.used or row.expires_at < now:
-        raise HTTPException(400, "Link etibarsızdır və ya vaxtı bitib. Yenidən bərpa istəyin.")
+        raise HTTPException(400, L("Link etibarsızdır və ya vaxtı bitib. Yenidən bərpa istəyin.", "The link is invalid or has expired. Request a new reset."))
     user = db.get(User, row.user_id)
     validate_new_password(body.new_password, user.email)
     user.password_hash = hash_password(body.new_password)
@@ -226,11 +236,13 @@ def public_config(db: Session = Depends(get_db)):
         "default_currency": cfg["app"]["default_base_currency"],
         "csv_import": feature_enabled(db, "csv_import"),
         "risk_profiles": {p: eff[f"profile.{p}"] for p in PROFILES},
-        "disclaimer": cfg["recommend"]["disclaimer"],
+        "disclaimer": cfg_text(cfg["recommend"], "disclaimer"),
         "horizon_days": cfg["model"]["horizon_days"],
         "fractional_decimals": cfg["portfolio"]["fractional_decimals"],
-        "csv_notice": "investing.com məlumatından yalnız şəxsi və qeyri-kommersiya məqsədilə istifadə etmək olar. "
-                      "Faylı özünüz endirib yükləyirsiniz; proqram investing.com-a sorğu göndərmir.",
+        "csv_notice": L("investing.com məlumatından yalnız şəxsi və qeyri-kommersiya məqsədilə istifadə etmək olar. "
+                        "Faylı özünüz endirib yükləyirsiniz; proqram investing.com-a sorğu göndərmir.",
+                        "investing.com data may be used for personal, non-commercial purposes only. "
+                        "You download and upload the file yourself; the app sends no requests to investing.com."),
     }
 
 
@@ -285,12 +297,14 @@ def _portfolio_summary(db: Session, p: Portfolio) -> dict:
             "stale": run.portfolio_version != p.version, "reliability": run.reliability,
         },
         "headline": _headline(db, p.id),
+        "shared": p.share_token_hash is not None,
     }
 
 
 @router.get("/portfolios")
 def list_portfolios(db: Session = Depends(get_db), user: User = Depends(current_user)):
-    ps = db.scalars(select(Portfolio).where(Portfolio.owner_id == user.id).order_by(Portfolio.id)).all()
+    ps = db.scalars(select(Portfolio).where(Portfolio.owner_id == user.id, Portfolio.scenario_of.is_(None))
+                    .order_by(Portfolio.id)).all()
     return [_portfolio_summary(db, p) for p in ps]
 
 
@@ -320,11 +334,10 @@ def update_portfolio(pid: int, body: PortfolioPatch, db: Session = Depends(get_d
     return _portfolio_summary(db, p)
 
 
-@router.post("/portfolios/{pid}/copy")
-def copy_portfolio(pid: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    p = owned_portfolio(db, user, pid)
-    q = Portfolio(owner_id=user.id, name=f"{p.name} (kopya)"[:120], base_currency=p.base_currency,
-                  risk_profile=p.risk_profile, risk_limit=p.risk_limit, cash=p.cash)
+def _clone(db: Session, p: Portfolio, name: str, **extra) -> Portfolio:
+    """A new portfolio of the same owner with the same settings, transactions and targets."""
+    q = Portfolio(owner_id=p.owner_id, name=name[:120], base_currency=p.base_currency,
+                  risk_profile=p.risk_profile, risk_limit=p.risk_limit, cash=p.cash, **extra)
     db.add(q)
     db.flush()
     for t in p.transactions:
@@ -334,8 +347,23 @@ def copy_portfolio(pid: int, db: Session = Depends(get_db), user: User = Depends
     for tg in p.targets:
         db.add(PositionTarget(portfolio_id=q.id, instrument_id=tg.instrument_id, target_price=tg.target_price,
                               stop_loss=tg.stop_loss))
-    commit(db)
+    db.flush()
     db.refresh(q)
+    return q
+
+
+def _regular_portfolio(db: Session, user: User, pid: int) -> Portfolio:
+    p = owned_portfolio(db, user, pid)
+    if p.scenario_of is not None:
+        raise HTTPException(422, L("Bu, ssenari portfelidir.", "This is a scenario portfolio."))
+    return p
+
+
+@router.post("/portfolios/{pid}/copy")
+def copy_portfolio(pid: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    p = _regular_portfolio(db, user, pid)
+    q = _clone(db, p, f"{p.name} (kopya)")
+    commit(db)
     return _portfolio_summary(db, q)
 
 
@@ -378,12 +406,12 @@ def get_portfolio(pid: int, db: Session = Depends(get_db), user: User = Depends(
 def search_symbols(q: str, db: Session = Depends(get_db), user: User = Depends(current_user)):
     q = q.strip()
     if not q or len(q) > 32:
-        raise HTTPException(422, "Simvol 1–32 simvol olmalıdır.")
+        raise HTTPException(422, L("Simvol 1–32 simvol olmalıdır.", "The symbol must be 1–32 characters."))
     md = MarketData(db)
     try:
         cands = md.search(q)
     except ProviderError as exc:
-        raise HTTPException(502, f"Simvol axtarışı alınmadı: {exc}") from exc
+        raise HTTPException(502, L(f"Simvol axtarışı alınmadı: {exc}", f"Symbol search failed: {exc}")) from exc
     # currency shown in the list is inferred from the exchange; it is confirmed from the provider
     # (fast_info / info) when the candidate is chosen (PROMPT.md 2.2)
     ccy_by_ex = get_settings()["data"]["exchange_currency"]
@@ -400,9 +428,9 @@ def search_symbols(q: str, db: Session = Depends(get_db), user: User = Depends(c
                           "source": i.source})
     msg = None
     if not cands:
-        msg = "Simvol tapılmadı."
+        msg = L("Simvol tapılmadı.", "Symbol not found.")
         if feature_enabled(db, "csv_import"):
-            msg += " investing.com-dan endirdiyiniz CSV faylını yükləyə bilərsiniz."
+            msg += L(" investing.com-dan endirdiyiniz CSV faylını yükləyə bilərsiniz.", " You can upload a CSV file downloaded from investing.com.")
     return {"candidates": cands, "auto_select": len(cands) == 1, "message": msg}
 
 
@@ -434,7 +462,7 @@ class TxIn(BaseModel):
     def _sym(cls, v: str) -> str:
         v = v.strip().upper()
         if not all(c.isalnum() or c in ".-=^:" for c in v):
-            raise ValueError("Simvolda icazəsiz işarə var")
+            raise ValueError(L("Simvolda icazəsiz işarə var", "The symbol contains a character that is not allowed"))
         return v
 
 
@@ -455,7 +483,7 @@ def delete_transaction(pid: int, tx_id: int, db: Session = Depends(get_db), user
     p = owned_portfolio(db, user, pid)
     tx = db.get(Transaction, tx_id)
     if tx is None or tx.portfolio_id != p.id:
-        raise HTTPException(404, "Əməliyyat tapılmadı.")
+        raise HTTPException(404, L("Əməliyyat tapılmadı.", "Transaction not found."))
     check_sells(p, exclude_id=tx.id, instrument=tx.instrument)
     db.delete(tx)
     bump(p)
@@ -473,7 +501,7 @@ class TargetIn(BaseModel):
 def set_target(pid: int, body: TargetIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
     p = owned_portfolio(db, user, pid)
     if body.instrument_id not in {t.instrument_id for t in p.transactions}:
-        raise HTTPException(422, "Bu səhm portfeldə yoxdur.")
+        raise HTTPException(422, L("Bu səhm portfeldə yoxdur.", "This stock is not in the portfolio."))
     upsert_target(db, p, body.instrument_id, body.target_price, body.stop_loss)
     commit(db)
     return {"ok": True}
@@ -486,22 +514,22 @@ async def csv_import(pid: int, file: UploadFile = File(...), symbol: str = Form(
                      db: Session = Depends(get_db), user: User = Depends(current_user)):
     owned_portfolio(db, user, pid)
     if not feature_enabled(db, "csv_import"):
-        raise HTTPException(403, "CSV idxalı bu rejimdə söndürülüb.")
+        raise HTTPException(403, L("CSV idxalı bu rejimdə söndürülüb.", "CSV import is disabled in this mode."))
     source_tag = "csv:investing" if source == "investing" else "csv:user"
     if currency.upper() not in CURRENCIES:
-        raise HTTPException(422, "Dəstəklənməyən valyuta.")
+        raise HTTPException(422, L("Dəstəklənməyən valyuta.", "Unsupported currency."))
     if exchange not in get_settings()["data"]["exchange_calendars"]:
-        raise HTTPException(422, "Dəstəklənməyən birja.")
+        raise HTTPException(422, L("Dəstəklənməyən birja.", "Unsupported exchange."))
     sym = symbol.strip().upper()
     if not sym or not all(c.isalnum() or c in ".-" for c in sym) or len(sym) > 20:
-        raise HTTPException(422, "Simvol düzgün deyil.")
+        raise HTTPException(422, L("Simvol düzgün deyil.", "The symbol is not valid."))
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
-        raise HTTPException(413, "Fayl çox böyükdür (maks. 10 MB).")
+        raise HTTPException(413, L("Fayl çox böyükdür (maks. 10 MB).", "The file is too large (max. 10 MB)."))
     try:
         bars = parse_price_csv(content)
     except CsvFormatError as exc:
-        raise HTTPException(422, f"CSV oxunmadı: {exc}") from exc
+        raise HTTPException(422, L(f"CSV oxunmadı: {exc}", f"The CSV could not be read: {exc}")) from exc
     md = MarketData(db)
     inst = md.create_csv_instrument(sym, name, exchange, currency)
     n = md.store_bars(inst.provider_symbol, bars, source_tag)
@@ -509,7 +537,7 @@ async def csv_import(pid: int, file: UploadFile = File(...), symbol: str = Form(
     commit(db)
     return {"provider_symbol": inst.provider_symbol, "rows": n, "first": str(bars.index.min().date()),
             "last": str(bars.index.max().date()),
-            "note": "CSV qiymətlərinin dividendə görə düzəldilib-düzəldilmədiyi bəlli deyil."}
+            "note": L("CSV qiymətlərinin dividendə görə düzəldilib-düzəldilmədiyi bəlli deyil.", "It is not known whether the CSV prices are adjusted for dividends.")}
 
 
 # ------------------------------------------------------------------ runs
@@ -537,7 +565,7 @@ def latest_run(pid: int, db: Session = Depends(get_db), user: User = Depends(cur
 def get_run(run_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
     run = db.get(AnalysisRun, run_id)
     if run is None:
-        raise HTTPException(404, "Tapılmadı.")
+        raise HTTPException(404, L("Tapılmadı.", "Not found."))
     p = owned_portfolio(db, user, run.portfolio_id)
     view = client_run_view(db, run, p, audit_user=user.id)
     commit(db)
@@ -555,10 +583,11 @@ def report_pdf(pid: int, db: Session = Depends(get_db), user: User = Depends(cur
     run = db.scalar(select(AnalysisRun).where(AnalysisRun.portfolio_id == pid, AnalysisRun.status == "done")
                     .order_by(AnalysisRun.id.desc()).limit(1))
     if run is None:
-        raise HTTPException(404, "Hesabat üçün hələ hazır nəticə yoxdur. Əvvəlcə Generate basın.")
-    view = client_run_view(db, run, p)
+        raise HTTPException(404, L("Hesabat üçün hələ hazır nəticə yoxdur. Əvvəlcə Generate basın.", "There is no finished result for a report yet. Run Generate first."))
+    view = resolve(client_run_view(db, run, p))
     try:
-        data = build_pdf(view, p.name)
+        with bilingual(False):  # the PDF is drawn directly in the request's language
+            data = build_pdf(view, p.name)
     except RuntimeError as exc:  # missing font etc.
         raise HTTPException(500, str(exc)) from exc
     audit(db, user.id, "report_pdf", {"portfolio_id": pid, "run_id": run.id})
@@ -567,6 +596,116 @@ def report_pdf(pid: int, db: Session = Depends(get_db), user: User = Depends(cur
     ascii_name = "".join(c if c.isascii() and (c.isalnum() or c in "._-") else "_" for c in name)
     return Response(data, media_type="application/pdf", headers={
         "Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(name)}"})
+
+
+# ------------------------------------------------------------------ read-only share link
+def _public_base(request: Request) -> str:
+    base = request.headers.get("origin") or str(request.base_url).rstrip("/")
+    return base + request.headers.get("x-forwarded-prefix", "").rstrip("/")
+
+
+@router.post("/portfolios/{pid}/share")
+def share_portfolio(pid: int, request: Request, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """A new secret link (the previous one stops working). Anyone with it sees the results, nothing else."""
+    p = _regular_portfolio(db, user, pid)
+    token = secrets.token_urlsafe(24)
+    p.share_token_hash = token_digest(token)
+    audit(db, user.id, "portfolio_shared", {"portfolio_id": p.id})
+    commit(db)
+    return {"url": f"{_public_base(request)}/shared/{token}"}
+
+
+@router.delete("/portfolios/{pid}/share")
+def unshare_portfolio(pid: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    p = _regular_portfolio(db, user, pid)
+    p.share_token_hash = None
+    audit(db, user.id, "portfolio_unshared", {"portfolio_id": p.id})
+    commit(db)
+    return {"ok": True}
+
+
+@router.get("/shared/{token}")
+def shared_portfolio(token: str, request: Request, db: Session = Depends(get_db)):
+    """No login: the latest finished result of a shared portfolio (the same client-safe view its owner sees)."""
+    if not rate_limiter.allow(f"shared:{request.client.host if request.client else '-'}",
+                              get_settings()["security"]["rate_limit_per_minute"]):
+        raise HTTPException(429, L("Çox sorğu. Bir dəqiqə sonra yenidən yoxlayın.", "Too many requests. Try again in a minute."))
+    p = db.scalar(select(Portfolio).where(Portfolio.share_token_hash == token_digest(token))) if token else None
+    if p is None:
+        raise HTTPException(404, L("Link etibarsızdır və ya paylaşım dayandırılıb.", "The link is invalid or sharing has been stopped."))
+    run = db.scalar(select(AnalysisRun).where(AnalysisRun.portfolio_id == p.id, AnalysisRun.status == "done")
+                    .order_by(AnalysisRun.id.desc()).limit(1))
+    return {"name": p.name, "base_currency": p.base_currency, "risk_profile": p.risk_profile,
+            "run": client_run_view(db, run, p) if run else None}
+
+
+# ------------------------------------------------------------------ what-if scenario
+class WhatIfTrade(BaseModel):
+    provider_symbol: str = Field(min_length=1, max_length=32)
+    investing_symbol: str | None = Field(default=None, max_length=32)
+    side: Literal["BUY", "SELL"]
+    quantity: float = Field(gt=0)
+
+
+class WhatIfIn(BaseModel):
+    trades: list[WhatIfTrade] = Field(min_length=1)
+
+
+def _scenario_of(db: Session, p: Portfolio) -> Portfolio | None:
+    return db.scalar(select(Portfolio).where(Portfolio.scenario_of == p.id).order_by(Portfolio.id.desc()).limit(1))
+
+
+def _whatif_view(db: Session, p: Portfolio, s: Portfolio | None) -> dict | None:
+    if s is None:
+        return None
+    run = _latest_run(db, s.id)
+    return {"trades": s.scenario_trades or [], "created_at": s.created_at.isoformat(),
+            "outdated": s.created_at < p.updated_at,  # the portfolio changed after the scenario was made
+            "base": _headline(db, p.id), "scenario": _headline(db, s.id),
+            "run": client_run_view(db, run, s) if run else None}
+
+
+@router.get("/portfolios/{pid}/whatif")
+def get_whatif(pid: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    p = _regular_portfolio(db, user, pid)
+    return _whatif_view(db, p, _scenario_of(db, p))
+
+
+@router.post("/portfolios/{pid}/whatif")
+def create_whatif(pid: int, body: WhatIfIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Hidden copy of the portfolio plus the hypothetical trades at today's price, analysed by the same Generate
+    pipeline, so the two results compare like for like. Replaces the previous scenario of this portfolio."""
+    p = _regular_portfolio(db, user, pid)
+    if len(body.trades) > get_settings()["portfolio"]["whatif_max_trades"]:
+        raise HTTPException(422, L("Ssenaridə əməliyyat çox çoxdur.", "The scenario has too many trades."))
+    old = _scenario_of(db, p)
+    if old is not None:
+        db.delete(old)
+        db.flush()
+    s = _clone(db, p, f"{p.name} · ssenari", scenario_of=p.id,
+               scenario_trades=[t.model_dump() for t in body.trades])
+    md = MarketData(db)
+    warnings: list[str] = []
+    for t in body.trades:
+        tx, w = add_transaction(db, md, s, provider_symbol=t.provider_symbol, investing_symbol=t.investing_symbol,
+                                side=t.side, quantity=t.quantity, trade_date=None, price=None, fees=0.0)
+        warnings += w
+    db.flush()
+    db.refresh(s)
+    enqueue_generate(db, s)
+    audit(db, user.id, "whatif", {"portfolio_id": p.id, "trades": len(body.trades)})
+    commit(db)
+    return {**_whatif_view(db, p, s), "warnings": warnings}
+
+
+@router.delete("/portfolios/{pid}/whatif")
+def delete_whatif(pid: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    p = _regular_portfolio(db, user, pid)
+    s = _scenario_of(db, p)
+    if s is not None:
+        db.delete(s)
+        commit(db)
+    return {"ok": True}
 
 
 # ------------------------------------------------------------------ notifications (monitoring)
@@ -585,7 +724,7 @@ def list_notifications(db: Session = Depends(get_db), user: User = Depends(curre
 def read_notification(nid: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
     n = db.get(Notification, nid)
     if n is None or n.user_id != user.id:
-        raise HTTPException(404, "Tapılmadı.")
+        raise HTTPException(404, L("Tapılmadı.", "Not found."))
     n.read = True
     commit(db)
     return {"ok": True}

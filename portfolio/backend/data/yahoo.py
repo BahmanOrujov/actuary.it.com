@@ -12,6 +12,7 @@ from typing import Any, Callable, TypeVar
 import pandas as pd
 
 from app.config import get_settings
+from app.i18n import L
 from data.provider import (
     BAR_COLUMNS,
     CorporateActions,
@@ -123,7 +124,7 @@ class YahooProvider:
                 finally:
                     lock.mark()
             time.sleep(self._backoff * 2 ** attempt)
-        raise ProviderError(f"Yahoo Finance cavab vermədi: {last_exc}")
+        raise ProviderError(L(f"Yahoo Finance cavab vermədi: {last_exc}", f"Yahoo Finance did not answer: {last_exc}"))
 
     def _exchange(self, yahoo_code: str | None, symbol: str) -> str:
         if yahoo_code and yahoo_code in self._codes:
