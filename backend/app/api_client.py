@@ -148,6 +148,16 @@ class ResetConfirm(BaseModel):
     new_password: str = Field(min_length=1, max_length=128)
 
 
+def issue_reset_link(db: Session, user: User, request: Request, lifetime: timedelta, query: str = "") -> str:
+    """Stores a one-time token (only its hash) and returns the link that sets the user's password with it."""
+    token = secrets.token_urlsafe(32)
+    db.add(PasswordReset(user_id=user.id, token_hash=hashlib.sha256(token.encode()).hexdigest(),
+                         expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + lifetime))
+    base = request.headers.get("origin") or str(request.base_url).rstrip("/")  # dev: Vite origin
+    base += request.headers.get("x-forwarded-prefix", "").rstrip("/")  # served under /portfolio by Caddy
+    return f"{base}/reset?token={token}{query}"
+
+
 @router.post("/auth/password-reset/request")
 def password_reset_request(body: ResetRequest, request: Request, background: BackgroundTasks,
                            db: Session = Depends(get_db)):
@@ -159,13 +169,8 @@ def password_reset_request(body: ResetRequest, request: Request, background: Bac
         raise HTTPException(429, "Çox cəhd. Bir dəqiqə sonra yenidən yoxlayın.")
     user = db.scalar(select(User).where(User.email == body.email.lower()))
     if user is not None and not user.is_blocked:
-        token = secrets.token_urlsafe(32)
         minutes = get_settings()["security"]["password_reset_minutes"]
-        db.add(PasswordReset(user_id=user.id, token_hash=hashlib.sha256(token.encode()).hexdigest(),
-                             expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=minutes)))
-        base = request.headers.get("origin") or str(request.base_url).rstrip("/")  # dev: Vite origin
-        base += request.headers.get("x-forwarded-prefix", "").rstrip("/")  # served under /portfolio by Caddy
-        link = f"{base}/reset?token={token}"
+        link = issue_reset_link(db, user, request, timedelta(minutes=minutes))
         if mail_enabled():
             background.add_task(send_mail, user.email, "Portfel Analizi: parolun bərpası",
                                 f"Parolu yeniləmək üçün bu linki açın ({minutes} dəqiqə etibarlıdır):\n\n{link}\n\n"
