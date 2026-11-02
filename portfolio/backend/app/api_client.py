@@ -598,6 +598,91 @@ def report_pdf(pid: int, db: Session = Depends(get_db), user: User = Depends(cur
         "Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(name)}"})
 
 
+# daily bar columns the price export offers, in sheet order; close is the default
+PRICE_FIELDS = {
+    "close": ("Close", "Close"), "adj_close": ("Adj Close", "Adj Close"), "open": ("Open", "Open"),
+    "high": ("High", "High"), "low": ("Low", "Low"), "volume": ("Həcm", "Volume"),
+}
+
+
+@router.get("/portfolios/{pid}/prices.xlsx")
+def prices_xlsx(pid: int, start: date, end: date, instruments: str = "", fields: str = "close",
+                db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Daily prices of the portfolio's stocks as an Excel file: one sheet per field, a Date column and one column
+    per stock. `instruments` and `fields` are comma-separated (instrument ids; keys of PRICE_FIELDS)."""
+    from collections import Counter
+    from io import BytesIO
+    from urllib.parse import quote
+
+    import pandas as pd
+    from openpyxl.styles import Font
+    from openpyxl.utils import get_column_letter
+
+    p = _regular_portfolio(db, user, pid)
+    if start > end:
+        raise HTTPException(422, L("Başlanğıc tarixi son tarixdən sonra ola bilməz.", "The start date cannot be after the end date."))
+    insts = {t.instrument_id: t.instrument for t in p.transactions}
+    if instruments.strip():
+        try:
+            wanted = [int(x) for x in instruments.split(",") if x.strip()]
+        except ValueError as exc:
+            raise HTTPException(422, L("Səhm siyahısı düzgün deyil.", "The stock list is not valid.")) from exc
+        insts = {i: insts[i] for i in wanted if i in insts}
+    if not insts:
+        raise HTTPException(422, L("Ən azı bir səhm seçin.", "Select at least one stock."))
+    keys = [f for f in PRICE_FIELDS if f in {x.strip() for x in fields.split(",")}]
+    if not keys:
+        raise HTTPException(422, L("Ən azı bir sütun seçin.", "Select at least one column."))
+
+    md = MarketData(db)
+    lo, hi = pd.Timestamp(start), pd.Timestamp(end)
+    frames: dict[str, pd.DataFrame] = {}
+    missing: list[str] = []
+    counts = Counter(i.investing_symbol for i in insts.values())
+    for inst in sorted(insts.values(), key=lambda i: (i.investing_symbol, i.exchange)):
+        # the same ticker on two exchanges gets the exchange in its column header
+        label = inst.investing_symbol if counts[inst.investing_symbol] == 1 else f"{inst.investing_symbol} ({inst.exchange})"
+        try:
+            bars = md.bars(inst.provider_symbol)
+        except ProviderError:
+            missing.append(label)
+            continue
+        frames[label] = bars.loc[lo:hi]
+    commit(db)  # keep freshly fetched bars in the cache
+    if not frames:
+        raise HTTPException(404, L("Seçilən səhmlər üçün qiymət tarixçəsi tapılmadı.", "No price history was found for the selected stocks."))
+
+    buf = BytesIO()
+    with bilingual(False), pd.ExcelWriter(buf, engine="openpyxl") as xw:  # sheet names in the request's language
+        for k in keys:
+            table = pd.DataFrame({sym: df[k] for sym, df in frames.items()}).sort_index()
+            table = table.dropna(how="all")
+            table.index = table.index.date
+            table.index.name = L("Tarix", "Date")
+            sheet = L(*PRICE_FIELDS[k])
+            table.to_excel(xw, sheet_name=sheet)
+            ws = xw.sheets[sheet]
+            ws.freeze_panes = "B2"
+            ws.column_dimensions["A"].width = 12
+            for c in range(2, table.shape[1] + 2):
+                ws.column_dimensions[get_column_letter(c)].width = 12
+            for row in ws.iter_rows(min_row=2):
+                row[0].number_format = "yyyy-mm-dd"
+                for cell in row[1:]:  # display only: the cell keeps the full value
+                    cell.number_format = "#,##0" if k == "volume" else "#,##0.00##"
+            for cell in ws[1]:
+                cell.font = Font(bold=True)
+        if missing:
+            pd.DataFrame({L("Tarixçəsi tapılmayan səhmlər", "Stocks without price history"): missing}).to_excel(
+                xw, sheet_name=L("Qeyd", "Note"), index=False)
+    audit(db, user.id, "prices_xlsx", {"portfolio_id": pid, "instruments": len(frames), "fields": keys})
+    commit(db)
+    name = f"Qiymetler_{p.name}_{start}_{end}.xlsx"
+    ascii_name = "".join(c if c.isascii() and (c.isalnum() or c in "._-") else "_" for c in name)
+    return Response(buf.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(name)}"})
+
+
 # ------------------------------------------------------------------ read-only share link
 def _public_base(request: Request) -> str:
     base = request.headers.get("origin") or str(request.base_url).rstrip("/")

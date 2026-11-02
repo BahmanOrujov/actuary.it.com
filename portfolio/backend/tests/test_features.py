@@ -325,3 +325,33 @@ def test_results_and_errors_follow_the_requested_language(dora):
     # and the PDF (plain link: ?lang=)
     pdf = dora.get(f"/api/portfolios/{pid}/report.pdf?lang=en")
     assert pdf.status_code == 200 and pdf.content[:4] == b"%PDF"
+
+
+# ------------------------------------------------------------------ price export
+def test_prices_excel_has_a_date_column_and_one_column_per_stock(dora):
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    pid = dora.post("/api/portfolios", json={"name": "Export"}).json()["id"]
+    dora.post(f"/api/portfolios/{pid}/transactions", json={"provider_symbol": "MSFT", "quantity": 3})
+    dora.post(f"/api/portfolios/{pid}/transactions", json={"provider_symbol": "XOM", "quantity": 2})
+    ids = {x["investing_symbol"]: x["instrument_id"] for x in dora.get(f"/api/portfolios/{pid}").json()["positions"]}
+    r = dora.get(f"/api/portfolios/{pid}/prices.xlsx?start=2024-01-01&end=2024-03-31")
+    assert r.status_code == 200, r.text
+    wb = load_workbook(BytesIO(r.content))
+    assert wb.sheetnames == ["Close"]
+    ws = wb["Close"]
+    assert [c.value for c in ws[1]] == ["Tarix", "MSFT", "XOM"]
+    dates = [row[0].value.date() for row in ws.iter_rows(min_row=2)]
+    assert dates == sorted(dates) and dates[0] >= date(2024, 1, 1) and dates[-1] <= date(2024, 3, 31)
+    assert all(isinstance(row[1].value, float) for row in ws.iter_rows(min_row=2))
+    # a chosen stock, extra columns and English headers
+    r = dora.get(f"/api/portfolios/{pid}/prices.xlsx?start=2024-01-01&end=2024-03-31"
+                 f"&instruments={ids['XOM']}&fields=close,volume,open&lang=en")
+    wb = load_workbook(BytesIO(r.content))
+    assert wb.sheetnames == ["Close", "Open", "Volume"]
+    assert [c.value for c in wb["Volume"][1]] == ["Date", "XOM"]
+    assert dora.get(f"/api/portfolios/{pid}/prices.xlsx?start=2024-03-01&end=2024-01-01").status_code == 422
+    assert dora.get(f"/api/portfolios/{pid}/prices.xlsx?start=2024-01-01&end=2024-03-01&fields=bogus").status_code == 422
+    assert TestClient(app).get(f"/api/portfolios/{pid}/prices.xlsx?start=2024-01-01&end=2024-03-01").status_code == 401
