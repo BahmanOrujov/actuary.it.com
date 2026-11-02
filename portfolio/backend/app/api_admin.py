@@ -13,13 +13,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.admin_settings import EDITABLE_KEYS, effective, set_override
-from app.api_client import issue_reset_link
+from app.api_client import issue_reset_link, portfolio_detail, support_access_active
 from app.config import get_settings
 from app.i18n import L
 from app.mailer import mail_enabled, send_mail
 from app.db import get_db, retry_locked
-from app.models import Alert, AnalysisRun, AuditLog, Job, Portfolio, RunDiagnostics, User, UserSession
-from app.security import hash_password, is_locked, record_successful_login, require_admin, validate_new_password
+from app.models import Alert, AnalysisRun, AuditLog, Job, Notification, Portfolio, RunDiagnostics, User, UserSession
+from app.security import hash_password, is_locked, record_successful_login, require_admin
 from app.services import audit
 from data.service import MarketData
 
@@ -30,16 +30,55 @@ def commit(db: Session) -> None:
     retry_locked(db.commit)
 
 
+# Least privilege: model diagnostics need the instruments and the statistics, not how much a client holds.
+# Unless the owner has granted support access, these keys (amounts, quantities, trades, cash) are removed.
+PRIVATE_KEYS = {
+    "name", "cash", "transactions", "closed_positions", "targets", "lots", "quantity", "cost_local", "cost_base",
+    "market_value_base", "realized_base", "dividends_base", "first_open_date", "cvar95_money", "euler_sum",
+}
+
+
+def _redact(o: Any) -> Any:
+    if isinstance(o, dict):
+        out = {k: _redact(v) for k, v in o.items() if k not in PRIVATE_KEYS}
+        mc = o.get("mc")
+        if isinstance(mc, dict) and mc.get("cvar95_money"):
+            # the Euler consistency check survives as a ratio (1 = component CVaRs add up to the total)
+            out["mc"]["euler_ratio"] = mc.get("euler_sum", 0) / mc["cvar95_money"]
+        return out
+    if isinstance(o, list):
+        return [_redact(v) for v in o]
+    return o
+
+
+def _with_ratio(diag: dict | None) -> dict | None:
+    mc = (diag or {}).get("mc")
+    if isinstance(mc, dict) and mc.get("cvar95_money"):
+        mc["euler_ratio"] = mc.get("euler_sum", 0) / mc["cvar95_money"]
+    return diag
+
+
+def _owner(db: Session, portfolio_id: int) -> tuple[Portfolio | None, User | None]:
+    p = db.get(Portfolio, portfolio_id)
+    return p, (db.get(User, p.owner_id) if p else None)
+
+
+def _supported(owner: User | None) -> bool:
+    return owner is not None and support_access_active(owner)
+
+
 @router.get("/runs")
 def runs(limit: int = 200, db: Session = Depends(get_db)):
     rows = db.scalars(select(AnalysisRun).order_by(AnalysisRun.id.desc()).limit(min(limit, 1000))).all()
     out = []
     for r in rows:
-        p = db.get(Portfolio, r.portfolio_id)
-        owner = db.get(User, p.owner_id) if p else None
+        p, owner = _owner(db, r.portfolio_id)
+        open_ = _supported(owner)
         out.append({
-            "id": r.id, "portfolio_id": r.portfolio_id, "portfolio": p.name if p else None,
-            "owner": owner.email if owner else None, "created_at": r.created_at.isoformat(),
+            # pseudonymous unless the owner granted support access
+            "id": r.id, "portfolio_id": r.portfolio_id, "portfolio": p.name if p and open_ else f"#{r.portfolio_id}",
+            "owner": (owner.email if open_ else f"user #{owner.id}") if owner else None,
+            "support_access": open_, "created_at": r.created_at.isoformat(),
             "status": r.status, "step": r.step, "validation_status": r.validation_status,
             "gate_verdict": r.gate_verdict, "reliability": r.reliability, "error": r.error,
             "data_as_of": r.data_as_of.isoformat() if r.data_as_of else None,
@@ -49,27 +88,45 @@ def runs(limit: int = 200, db: Session = Depends(get_db)):
 
 
 @router.get("/runs/{run_id}")
-def run_detail(run_id: int, db: Session = Depends(get_db)):
+def run_detail(run_id: int, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
     r = db.get(AnalysisRun, run_id)
     if r is None:
         raise HTTPException(404, L("Tapılmadı.", "Not found."))
     d = db.get(RunDiagnostics, run_id)
-    return {"run": {"id": r.id, "portfolio_id": r.portfolio_id, "status": r.status, "gate_verdict": r.gate_verdict,
-                    "reliability": r.reliability, "validation_status": r.validation_status, "snapshot": r.snapshot,
-                    "seed": r.seed, "model_version": r.model_version},
-            "diagnostics": d.payload if d else None, "validation": d.validation if d else None}
+    _, owner = _owner(db, r.portfolio_id)
+    out = {"run": {"id": r.id, "portfolio_id": r.portfolio_id, "status": r.status, "gate_verdict": r.gate_verdict,
+                   "reliability": r.reliability, "validation_status": r.validation_status, "snapshot": r.snapshot,
+                   "seed": r.seed, "model_version": r.model_version},
+           "diagnostics": _with_ratio(d.payload) if d else None, "validation": d.validation if d else None,
+           "redacted": not _supported(owner)}
+    audit(db, admin.id, "admin_view_run", {"run_id": run_id, "redacted": out["redacted"]})
+    commit(db)
+    return _redact(out) | {"redacted": True} if out["redacted"] else out
 
 
 @router.get("/runs/{run_id}/report.{fmt}")
 def run_report(run_id: int, fmt: Literal["html", "json"], db: Session = Depends(get_db)):
+    """Rendered from the stored JSON on every request, so the redaction also covers reports written before it."""
+    import json
+
+    from fastapi.responses import HTMLResponse, JSONResponse
+
+    from validation.report import render_html
+
     r = db.get(AnalysisRun, run_id)
     if r is None:
         raise HTTPException(404, L("Tapılmadı.", "Not found."))
-    path = get_settings().reports_dir / str(r.portfolio_id) / str(run_id) / f"report.{fmt}"
+    path = get_settings().reports_dir / str(r.portfolio_id) / str(run_id) / "report.json"
     if not path.exists():
         raise HTTPException(404, L("Hesabat hələ hazır deyil.", "The report is not ready yet."))
-    media = "text/html; charset=utf-8" if fmt == "html" else "application/json"
-    return FileResponse(path, media_type=media, filename=f"run_{run_id}_report.{fmt}" if fmt == "json" else None)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["diagnostics"] = _with_ratio(data.get("diagnostics"))
+    _, owner = _owner(db, r.portfolio_id)
+    if not _supported(owner):
+        data = _redact(data)
+    if fmt == "json":
+        return JSONResponse(data, headers={"Content-Disposition": f'attachment; filename="run_{run_id}_report.json"'})
+    return HTMLResponse(render_html(r.portfolio_id, run_id, data.get("diagnostics") or {}, data.get("validation")))
 
 
 @router.post("/runs/{run_id}/revalidate")
@@ -143,6 +200,7 @@ def put_setting(body: SettingIn, db: Session = Depends(get_db), admin: User = De
 @router.get("/users")
 def users(db: Session = Depends(get_db)):
     return [{"id": u.id, "email": u.email, "role": u.role, "is_blocked": u.is_blocked,
+             "support_access_until": u.support_access_until.isoformat() if support_access_active(u) else None,
              "locked_until": u.locked_until.isoformat() if is_locked(u) else None,
              "failed_logins": u.failed_logins or 0,
              "created_at": u.created_at.isoformat(), "portfolios": len(u.portfolios)}
@@ -158,7 +216,10 @@ class Invite(BaseModel):
 def invite_user(body: Invite, request: Request, background: BackgroundTasks, db: Session = Depends(get_db),
                 admin: User = Depends(require_admin)):
     """Creates the account (registration is closed on a server) with a password nobody knows, and e-mails a link
-    where the invitee sets their own. Without SMTP the link is returned for the admin to pass on."""
+    where the invitee sets their own. The link only ever goes to the invitee's mailbox: an admin who held it
+    could set the password and use the account, so without SMTP there is no invitation."""
+    if not mail_enabled():
+        raise HTTPException(503, L("Dəvət üçün serverdə e-poçt (SMTP) qurulmalıdır.", "Invitations need e-mail (SMTP) set up on the server."))
     email = body.email.lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(409, L("Bu e-poçtla hesab artıq var. Parolu unudubsa, «Parolu unutmusunuz?» ilə bərpa etsin.", "An account with this e-mail already exists. If they forgot the password, they can use “Forgot your password?”."))
@@ -179,14 +240,14 @@ def invite_user(body: Invite, request: Request, background: BackgroundTasks, db:
                               f"Open this link to set your password (valid for {hours} hours):\n\n{link}\n\n"
                               "If the link expires, ask for a new one with “Forgot your password?” on the sign-in page."))
         return {"ok": True, "emailed": True}
-    return {"ok": True, "emailed": False, "link": link}
+    return {"ok": True, "emailed": False}
 
 
 class UserPatch(BaseModel):
     role: Literal["client", "admin"] | None = None
     is_blocked: bool | None = None
-    new_password: str | None = Field(default=None, min_length=1, max_length=128)
     unlock: bool = False
+    sign_out: bool = False  # end every session of the user (e.g. a lost device)
 
 
 @router.patch("/users/{user_id}")
@@ -203,17 +264,57 @@ def patch_user(user_id: int, body: UserPatch, db: Session = Depends(get_db), adm
         if body.is_blocked:
             for s in db.scalars(select(UserSession).where(UserSession.user_id == u.id)).all():
                 db.delete(s)
-    if body.new_password:
-        validate_new_password(body.new_password, u.email)
-        u.password_hash = hash_password(body.new_password)
+    if body.sign_out:
         for s in db.scalars(select(UserSession).where(UserSession.user_id == u.id)).all():
             db.delete(s)
-    if body.unlock or body.new_password:
+    if body.unlock:
         record_successful_login(u)
     audit(db, admin.id, "admin_user_update", {"user_id": u.id, "role": body.role, "blocked": body.is_blocked,
-                                              "password_reset": bool(body.new_password), "unlock": body.unlock})
+                                              "unlock": body.unlock, "sign_out": body.sign_out})
     commit(db)
     return {"ok": True}
+
+
+@router.post("/users/{user_id}/send-reset")
+def send_reset(user_id: int, request: Request, background: BackgroundTasks, db: Session = Depends(get_db),
+               admin: User = Depends(require_admin)):
+    """Admins never set or see a user's password: they can only have a one-time reset link e-mailed to the user."""
+    u = db.get(User, user_id)
+    if u is None:
+        raise HTTPException(404, L("Tapılmadı.", "Not found."))
+    if not mail_enabled():
+        raise HTTPException(503, L("Bərpa linki üçün serverdə e-poçt (SMTP) qurulmalıdır.", "A reset link needs e-mail (SMTP) set up on the server."))
+    minutes = get_settings()["security"]["password_reset_minutes"]
+    link = issue_reset_link(db, u, request, timedelta(minutes=minutes))
+    audit(db, admin.id, "admin_sent_reset", {"user_id": u.id})
+    commit(db)
+    background.add_task(send_mail, u.email, L("Portfel Analizi: parolun bərpası", "Portfel Analizi: password reset"),
+                        L(f"Administrator hesabınız üçün parol bərpası istədi.\n\nYeni parol təyin etmək üçün bu linki açın "
+                          f"({minutes} dəqiqə etibarlıdır):\n\n{link}\n\nBunu gözləmirdinizsə, linki açmayın — köhnə parolunuz işləməyə davam edir.",
+                          f"An administrator requested a password reset for your account.\n\nOpen this link to set a new password "
+                          f"(valid for {minutes} minutes):\n\n{link}\n\nIf you did not expect this, ignore it — your current password keeps working."))
+    return {"ok": True}
+
+
+@router.get("/users/{user_id}/portfolios")
+def user_portfolios(user_id: int, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """Read-only view of a user's portfolios, only while the user has granted support access. Every view is
+    audited and the user gets a notice."""
+    u = db.get(User, user_id)
+    if u is None:
+        raise HTTPException(404, L("Tapılmadı.", "Not found."))
+    if not support_access_active(u):
+        raise HTTPException(403, L("İstifadəçi dəstək üçün icazə verməyib. O, Parametrlər səhifəsindən müvəqqəti icazə verə bilər.",
+                                   "The user has not granted support access. They can grant temporary access on their Settings page."))
+    audit(db, admin.id, "admin_view_portfolios", {"user_id": u.id})
+    key = f"support_view:{u.id}:{u.support_access_until.isoformat()}"  # one notice per granted period
+    if db.scalar(select(Notification).where(Notification.dedup_key == key)) is None:
+        db.add(Notification(user_id=u.id, kind="support_view", dedup_key=key,
+                            message=L("Dəstək komandası verdiyiniz icazə ilə portfellərinizə baxdı. İcazəni Parametrlərdə dayandıra bilərsiniz.",
+                                      "Support looked at your portfolios with the access you granted. You can end the access in Settings.")))
+    out = [portfolio_detail(db, p) for p in u.portfolios if p.scenario_of is None]
+    commit(db)
+    return {"email": u.email, "support_access_until": u.support_access_until.isoformat(), "portfolios": out}
 
 
 @router.get("/provider-status")

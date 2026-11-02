@@ -24,6 +24,8 @@ class User(Base):
     failed_logins: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     lockout_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # until then the user lets admins see their portfolios (support); None or past = no access
+    support_access_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     portfolios: Mapped[list["Portfolio"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
 
