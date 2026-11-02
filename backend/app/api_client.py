@@ -29,7 +29,7 @@ from app.security import (
 
 _DUMMY_HASH = hash_password("timing-equalizer-not-a-real-password")
 from app.services import (
-    add_transaction, audit, bump, check_sells, client_run_view, enqueue_generate, upsert_target,
+    add_transaction, audit, bump, check_sells, client_run_view, enqueue_generate, set_sell_plan, upsert_target,
 )
 from data.csv_investing import CsvFormatError, parse_price_csv
 from data.provider import ProviderError
@@ -346,7 +346,7 @@ def _clone(db: Session, p: Portfolio, name: str, **extra) -> Portfolio:
                            input_flags=dict(t.input_flags or {})))
     for tg in p.targets:
         db.add(PositionTarget(portfolio_id=q.id, instrument_id=tg.instrument_id, target_price=tg.target_price,
-                              stop_loss=tg.stop_loss))
+                              stop_loss=tg.stop_loss, sell_on=tg.sell_on))
     db.flush()
     db.refresh(q)
     return q
@@ -395,7 +395,8 @@ def get_portfolio(pid: int, db: Session = Depends(get_db), user: User = Depends(
         {"instrument_id": iid, "investing_symbol": insts[iid].investing_symbol, "name": insts[iid].name,
          "exchange": insts[iid].exchange, "currency": insts[iid].currency, "quantity": round(q, 6),
          "target_price": targets[iid].target_price if iid in targets else None,
-         "stop_loss": targets[iid].stop_loss if iid in targets else None}
+         "stop_loss": targets[iid].stop_loss if iid in targets else None,
+         "sell_on": targets[iid].sell_on.isoformat() if iid in targets and targets[iid].sell_on else None}
         for iid, q in holdings.items() if abs(q) > 1e-9
     ]
     return {**_portfolio_summary(db, p), "transactions": txs, "positions": positions}
@@ -503,6 +504,28 @@ def set_target(pid: int, body: TargetIn, db: Session = Depends(get_db), user: Us
     if body.instrument_id not in {t.instrument_id for t in p.transactions}:
         raise HTTPException(422, L("Bu səhm portfeldə yoxdur.", "This stock is not in the portfolio."))
     upsert_target(db, p, body.instrument_id, body.target_price, body.stop_loss)
+    commit(db)
+    return {"ok": True}
+
+
+class SellPlanIn(BaseModel):
+    instrument_id: int
+    sell_on: date | None = None  # None cancels the plan
+
+
+@router.put("/portfolios/{pid}/sell-plan")
+def put_sell_plan(pid: int, body: SellPlanIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Sell the whole position on a future date; Generate holds it until then and keeps the proceeds as cash."""
+    p = owned_portfolio(db, user, pid)
+    held = sum(t.quantity if t.side == "BUY" else -t.quantity for t in p.transactions if t.instrument_id == body.instrument_id)
+    if held <= 1e-9:
+        raise HTTPException(422, L("Bu səhm portfeldə yoxdur.", "This stock is not in the portfolio."))
+    if body.sell_on is not None and body.sell_on <= date.today():
+        raise HTTPException(422, L("Satış tarixi gələcəkdə olmalıdır. Bu gün satmaq üçün satış əməliyyatı əlavə edin.",
+                                   "The sale date must be in the future. To sell today, add a sell transaction."))
+    set_sell_plan(db, p, body.instrument_id, body.sell_on)
+    audit(db, user.id, "sell_plan", {"portfolio_id": pid, "instrument_id": body.instrument_id,
+                                     "sell_on": body.sell_on.isoformat() if body.sell_on else None})
     commit(db)
     return {"ok": True}
 

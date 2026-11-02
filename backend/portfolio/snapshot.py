@@ -172,7 +172,8 @@ def build_portfolio_data(db, portfolio: Portfolio, md: MarketData, seed: int | N
             for t in txs
         ],
         "targets": [
-            {"instrument_id": tg.instrument_id, "target_price": tg.target_price, "stop_loss": tg.stop_loss}
+            {"instrument_id": tg.instrument_id, "target_price": tg.target_price, "stop_loss": tg.stop_loss,
+             "sell_on": tg.sell_on.isoformat() if getattr(tg, "sell_on", None) else None}
             for tg in portfolio.targets
         ],
         "data_as_of": as_of.isoformat() if as_of else None,

@@ -577,6 +577,12 @@ export function InvestmentView() {
   return (
     <>
       {res.warnings.map((w) => <div key={w} className="banner warn"><span className="ic">⚠</span> {w}</div>)}
+      {!!res.planned_sells?.length && (
+        <div className="banner info" role="status">
+          <span className="ic">📅</span> {L("Satış planı nəzərə alınıb — bu səhmlər həmin gün satılır, pulu nağd qalır:", "Sale plans are included — these stocks are sold on that day and the money stays as cash:")}{" "}
+          {res.planned_sells.map((s) => `${s.investing_symbol} ${dateAz(s.sell_on)}${s.overdue ? L(" (vaxtı keçib — ilk ticarət günü)", " (overdue — first trading day)") : ""}, ${L("təxmini", "about")} ${money(s.proceeds_median, res.base_currency)}`).join(" · ")}
+        </div>
+      )}
 
       <Hero items={[
         { label: L("Portfelin dəyəri", "Portfolio value"), value: money(res.V0, ccy),
@@ -893,6 +899,12 @@ export function RiskView() {
   return (
     <>
       {res.warnings.map((w) => <div key={w} className="banner warn"><span className="ic">⚠</span> {w}</div>)}
+      {!!res.planned_sells?.length && (
+        <div className="banner info" role="status">
+          <span className="ic">📅</span> {L("Satış planı nəzərə alınıb — bu səhmlər həmin gün satılır, pulu nağd qalır:", "Sale plans are included — these stocks are sold on that day and the money stays as cash:")}{" "}
+          {res.planned_sells.map((s) => `${s.investing_symbol} ${dateAz(s.sell_on)}${s.overdue ? L(" (vaxtı keçib — ilk ticarət günü)", " (overdue — first trading day)") : ""}, ${L("təxmini", "about")} ${money(s.proceeds_median, res.base_currency)}`).join(" · ")}
+        </div>
+      )}
 
       <Hero items={[
         { label: `VaR ${lvText} · ${L("3 ay", "3 months")}`, value: money(risk.var * res.V0, ccy),

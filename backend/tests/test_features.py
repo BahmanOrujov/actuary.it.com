@@ -355,3 +355,42 @@ def test_prices_excel_has_a_date_column_and_one_column_per_stock(dora):
     assert dora.get(f"/api/portfolios/{pid}/prices.xlsx?start=2024-03-01&end=2024-01-01").status_code == 422
     assert dora.get(f"/api/portfolios/{pid}/prices.xlsx?start=2024-01-01&end=2024-03-01&fields=bogus").status_code == 422
     assert TestClient(app).get(f"/api/portfolios/{pid}/prices.xlsx?start=2024-01-01&end=2024-03-01").status_code == 401
+
+
+# ------------------------------------------------------------------ planned sell
+def test_planned_sell_is_taken_into_account_and_can_be_cancelled(dora):
+    from datetime import timedelta
+
+    pid = dora.post("/api/portfolios", json={"name": "SellPlan"}).json()["id"]
+    dora.post(f"/api/portfolios/{pid}/transactions", json={"provider_symbol": "MSFT", "quantity": 3})
+    dora.post(f"/api/portfolios/{pid}/transactions", json={"provider_symbol": "XOM", "quantity": 5})
+    ids = {x["investing_symbol"]: x["instrument_id"] for x in dora.get(f"/api/portfolios/{pid}").json()["positions"]}
+    dora.post(f"/api/portfolios/{pid}/generate")
+    _drain()
+    before = dora.get(f"/api/portfolios/{pid}/runs/latest").json()["result"]
+    assert before["planned_sells"] == []
+
+    # a sale today or in the past is a transaction, not a plan
+    today = date.today()
+    assert dora.put(f"/api/portfolios/{pid}/sell-plan", json={"instrument_id": ids["MSFT"], "sell_on": today.isoformat()}).status_code == 422
+    sell_on = (today + timedelta(days=7)).isoformat()
+    assert dora.put(f"/api/portfolios/{pid}/sell-plan", json={"instrument_id": ids["MSFT"], "sell_on": sell_on}).status_code == 200
+    # saving the target / stop-loss keeps the plan
+    dora.put(f"/api/portfolios/{pid}/targets", json={"instrument_id": ids["MSFT"], "target_price": 9999})
+    pos = {x["investing_symbol"]: x for x in dora.get(f"/api/portfolios/{pid}").json()["positions"]}
+    assert pos["MSFT"]["sell_on"] == sell_on and pos["XOM"]["sell_on"] is None
+
+    dora.post(f"/api/portfolios/{pid}/generate")
+    _drain()
+    after = dora.get(f"/api/portfolios/{pid}/runs/latest").json()["result"]
+    [plan] = after["planned_sells"]
+    assert plan["investing_symbol"] == "MSFT" and plan["sell_on"] >= sell_on and plan["proceeds_median"] > 0
+    msft = lambda r: next(a for a in r["assets"] if a["investing_symbol"] == "MSFT")
+    xom = lambda r: next(a for a in r["assets"] if a["investing_symbol"] == "XOM")
+    # sold after a week: its P&L spread at the horizon is far narrower; the price forecast itself is unchanged
+    spread = lambda a: a["pnl_end"]["p95"] - a["pnl_end"]["p05"]
+    assert spread(msft(after)) < 0.6 * spread(msft(before))
+    assert msft(after)["end"] == msft(before)["end"] and spread(xom(after)) == spread(xom(before))
+
+    assert dora.put(f"/api/portfolios/{pid}/sell-plan", json={"instrument_id": ids["MSFT"], "sell_on": None}).status_code == 200
+    assert {x["investing_symbol"]: x for x in dora.get(f"/api/portfolios/{pid}").json()["positions"]}["MSFT"]["sell_on"] is None

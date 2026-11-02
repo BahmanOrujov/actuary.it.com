@@ -100,6 +100,7 @@ class PositionTarget(Base):
     instrument_id: Mapped[int] = mapped_column(ForeignKey("instruments.id"))
     target_price: Mapped[float | None] = mapped_column(Float, nullable=True)
     stop_loss: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sell_on: Mapped[date | None] = mapped_column(Date, nullable=True)  # planned sale of the whole position
     __table_args__ = (UniqueConstraint("portfolio_id", "instrument_id"),)
 
 

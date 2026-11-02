@@ -256,7 +256,8 @@ export default function PortfolioLayout() {
           </div>
         </section>
       )}
-      {exportOpen && <PriceExport pid={pid} onClose={() => setExportOpen(false)} />}
+      {exportOpen && <PriceExport pid={pid} onClose={() => setExportOpen(false)}
+        refresh={`${summary.version}:${run?.status === "done" ? run.id : ""}`} />}
       <div aria-live="polite">
         {busy && run && (
           <section className="card run-panel">
