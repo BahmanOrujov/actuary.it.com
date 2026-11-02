@@ -3,6 +3,7 @@ import { NavLink, Route, Routes, useParams } from "react-router-dom";
 import { api, apiUrl } from "../api";
 import { ReliabilityBadge, StatusBadge } from "../components/Badges";
 import { dateAz, dateTimeAz } from "../format";
+import { useApp } from "../App";
 import { L } from "../lang";
 
 interface RunRow {
@@ -197,7 +198,7 @@ function Settings() {
 }
 
 function Users() {
-  const [rows, setRows] = useState<{ id: number; email: string; role: string; is_blocked: boolean; portfolios: number; locked_until: string | null; failed_logins: number; support_access_until: string | null }[]>([]);
+  const [rows, setRows] = useState<{ id: number; email: string; role: string; is_blocked: boolean; portfolios: number; locked_until: string | null; failed_logins: number; support_access_until: string | null; two_factor: boolean }[]>([]);
   const load = () => api.get<typeof rows>("/api/admin/users").then(setRows);
   useEffect(() => {
     load();
@@ -268,6 +269,7 @@ function Users() {
               <td className="num">{u.portfolios}</td>
               <td>
                 {u.is_blocked ? <span className="badge err">✕ {L("bloklanıb", "blocked")}</span> : <span className="badge ok">✓ {L("aktiv", "active")}</span>}
+                {u.two_factor ? <span className="badge ok" style={{ marginLeft: 6 }}>2FA</span> : <span className="badge checking" style={{ marginLeft: 6 }}>{L("2FA yox", "no 2FA")}</span>}
                 {u.locked_until && <span className="badge warn" style={{ marginLeft: 6 }}>⚠ {L(`kilidli: ${dateTimeAz(u.locked_until)}-dək`, `locked until ${dateTimeAz(u.locked_until)}`)}</span>}
                 {!u.locked_until && u.failed_logins > 0 && <span className="small muted"> · {L("uğursuz cəhd", "failed attempts")}: {u.failed_logins}</span>}
                 {u.support_access_until && (
@@ -282,6 +284,13 @@ function Users() {
                     onClick={() => sendReset(u.id, u.email)}>{L("Bərpa linki göndər", "Send a reset link")}</button>
                   <button title={L("Bütün cihazlarda hesabdan çıxarır (məs., itmiş telefon)", "Signs the account out on every device (e.g. a lost phone)")}
                     onClick={() => { if (confirm(L(`${u.email} bütün cihazlardan çıxarılsın?`, `Sign ${u.email} out on every device?`))) patch(u.id, { sign_out: true }); }}>{L("Hər yerdən çıxar", "Sign out everywhere")}</button>
+                  {u.two_factor && (
+                    <button title={L("Telefonu və bərpa kodlarını itirən istifadəçi üçün. İstifadəçiyə e-poçtla bildirilir.", "For a user who lost the phone and the recovery codes. The user is told by e-mail.")}
+                      onClick={async () => {
+                        if (!confirm(L(`${u.email} üçün 2FA sıfırlansın? Yalnız istifadəçinin kimliyini başqa yolla təsdiqlədikdən sonra edin.`, `Reset 2FA for ${u.email}? Only after you confirmed the user's identity another way.`))) return;
+                        try { await api.post(`/api/admin/users/${u.id}/reset-2fa`); load(); } catch (err) { alert((err as Error).message); }
+                      }}>{L("2FA-nı sıfırla", "Reset 2FA")}</button>
+                  )}
                 </div>
               </td>
             </tr>
@@ -301,6 +310,7 @@ function Provider() {
   return (
     <>
       <section className="card">
+        <MailTest />
         <h2>{L("Məlumat provayderi", "Data provider")}</h2>
         <p>{L("Rejim", "Mode")}: {d.mode} · {L("Provayder", "Provider")}: {d.provider} · {L("Bu prosesdə sorğu sayı", "Requests in this process")}: {d.requests_this_process ?? "—"}</p>
         <table>
@@ -328,6 +338,30 @@ function Provider() {
         </table>
       </section>
     </>
+  );
+}
+
+/** Sends a test e-mail to the signed-in admin and shows the SMTP error if there is one. */
+function MailTest() {
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <h2>{L("E-poçt xidməti", "E-mail service")}</h2>
+      <p className="small muted">{L("Test məktubu yalnız sizin admin e-poçtunuza göndərilir.", "The test e-mail goes only to your own admin address.")}</p>
+      <button disabled={busy} onClick={async () => {
+        setBusy(true); setMsg(null);
+        try {
+          const r = await api.post<{ to: string }>("/api/admin/mail-test");
+          setMsg({ ok: true, text: L(`Göndərildi: ${r.to}. Gələn qutusunu (və spam qovluğunu) yoxlayın.`, `Sent to ${r.to}. Check the inbox (and the spam folder).`) });
+        } catch (err) {
+          setMsg({ ok: false, text: (err as Error).message });
+        } finally {
+          setBusy(false);
+        }
+      }}>{busy ? L("Göndərilir…", "Sending…") : L("Test e-poçtu göndər", "Send a test e-mail")}</button>
+      {msg && <div className={`banner ${msg.ok ? "ok" : "err"}`} role="status" style={{ marginTop: 8 }}>{msg.ok ? "✓" : "✕"} {msg.text}</div>}
+    </div>
   );
 }
 
@@ -382,6 +416,15 @@ function UserPortfolios() {
 }
 
 export default function AdminPage() {
+  const { user } = useApp();
+  if (user && !user.two_factor) {
+    return (
+      <div className="banner warn" role="alert">
+        <span className="ic">⚠</span> {L("Admin bölməsi üçün əvvəlcə iki mərhələli girişi (2FA) aktivləşdirin.", "Turn on two-factor sign-in (2FA) first to use the admin section.")}{" "}
+        <NavLink to="/settings">{L("Parametrlərə keç", "Go to Settings")}</NavLink>
+      </div>
+    );
+  }
   return (
     <>
       <div className="page-head">

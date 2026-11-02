@@ -92,6 +92,8 @@ export interface User {
   role: "client" | "admin";
   /** While set, admins may view this user's portfolios (support); the user grants and ends it. */
   support_access_until?: string | null;
+  /** Two-factor sign-in (authenticator app) is on. */
+  two_factor?: boolean;
 }
 
 export interface PublicConfig {

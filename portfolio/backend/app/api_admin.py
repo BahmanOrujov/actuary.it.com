@@ -201,6 +201,7 @@ def put_setting(body: SettingIn, db: Session = Depends(get_db), admin: User = De
 def users(db: Session = Depends(get_db)):
     return [{"id": u.id, "email": u.email, "role": u.role, "is_blocked": u.is_blocked,
              "support_access_until": u.support_access_until.isoformat() if support_access_active(u) else None,
+             "two_factor": u.totp_enabled,
              "locked_until": u.locked_until.isoformat() if is_locked(u) else None,
              "failed_logins": u.failed_logins or 0,
              "created_at": u.created_at.isoformat(), "portfolios": len(u.portfolios)}
@@ -294,6 +295,50 @@ def send_reset(user_id: int, request: Request, background: BackgroundTasks, db: 
                           f"An administrator requested a password reset for your account.\n\nOpen this link to set a new password "
                           f"(valid for {minutes} minutes):\n\n{link}\n\nIf you did not expect this, ignore it — your current password keeps working."))
     return {"ok": True}
+
+
+@router.post("/users/{user_id}/reset-2fa")
+def reset_two_factor(user_id: int, background: BackgroundTasks, db: Session = Depends(get_db),
+                     admin: User = Depends(require_admin)):
+    """For a user who lost the phone and the recovery codes. Their sessions end and they are told by e-mail."""
+    from app import twofactor
+
+    u = db.get(User, user_id)
+    if u is None:
+        raise HTTPException(404, L("Tapılmadı.", "Not found."))
+    if u.id == admin.id:
+        raise HTTPException(422, L("Öz iki mərhələli girişinizi buradan sıfırlaya bilməzsiniz.", "You cannot reset your own two-factor sign-in here."))
+    twofactor.clear(u)
+    for s in db.scalars(select(UserSession).where(UserSession.user_id == u.id)).all():
+        db.delete(s)
+    audit(db, admin.id, "admin_reset_2fa", {"user_id": u.id})
+    commit(db)
+    if mail_enabled():
+        background.add_task(send_mail, u.email, L("Portfel Analizi: iki mərhələli giriş sıfırlandı", "Portfel Analizi: two-factor sign-in was reset"),
+                            L("Administrator hesabınızda iki mərhələli girişi sıfırladı. Bunu siz istəmisinizsə, daxil olub Parametrlərdə yenidən aktivləşdirin. "
+                              "İstəməmisinizsə, dərhal parolunuzu dəyişin və bizə yazın.",
+                              "An administrator reset two-factor sign-in on your account. If you asked for it, sign in and turn it on again in Settings. "
+                              "If you did not, change your password at once and contact us."))
+    return {"ok": True}
+
+
+@router.post("/mail-test")
+def mail_test(admin: User = Depends(require_admin)):
+    """Sends a test e-mail to the admin who asks, and reports the SMTP error if there is one."""
+    import smtplib
+
+    if not mail_enabled():
+        raise HTTPException(503, L("Serverdə e-poçt (SMTP) qurulmayıb: PA_SMTP_USER və PA_SMTP_PASSWORD.", "E-mail (SMTP) is not set up on the server: PA_SMTP_USER and PA_SMTP_PASSWORD."))
+    try:
+        send_mail(admin.email, L("Portfel Analizi: test e-poçtu", "Portfel Analizi: test e-mail"),
+                  L("Bu, admin panelindən göndərilən test məktubudur. Gəlibsə, e-poçt xidməti işləyir.",
+                    "This is a test e-mail from the admin panel. If it arrived, e-mail works."), raise_errors=True)
+    except smtplib.SMTPAuthenticationError as e:
+        raise HTTPException(502, L(f"SMTP girişi rədd edildi ({e.smtp_code}): tətbiq parolunu yoxlayın.",
+                                   f"The SMTP login was refused ({e.smtp_code}): check the app password.")) from e
+    except (OSError, smtplib.SMTPException) as e:
+        raise HTTPException(502, L(f"Göndərilmədi: {type(e).__name__}.", f"Not sent: {type(e).__name__}.")) from e
+    return {"ok": True, "to": admin.email}
 
 
 @router.get("/users/{user_id}/portfolios")

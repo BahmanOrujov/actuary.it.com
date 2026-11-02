@@ -26,8 +26,22 @@ class User(Base):
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # until then the user lets admins see their portfolios (support); None or past = no access
     support_access_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # two-factor sign-in (TOTP): the secret is stored while setting up, totp_enabled once a code confirmed it
+    totp_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    totp_last_step: Mapped[int | None] = mapped_column(Integer, nullable=True)  # last used code: no replay
+    recovery_codes: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)  # digests of unused codes
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     portfolios: Mapped[list["Portfolio"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
+
+
+class LoginChallenge(Base):
+    """Password accepted, two-factor code pending: no session exists until the code is right."""
+    __tablename__ = "login_challenges"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class UserSession(Base):

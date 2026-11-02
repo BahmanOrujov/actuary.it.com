@@ -34,7 +34,9 @@ def _drain() -> None:
 
 @pytest.fixture(scope="module")
 def admin():
-    return _client("admin@example.com")
+    from tests.conftest import admin_client
+
+    return admin_client()
 
 
 @pytest.fixture(scope="module")
@@ -447,3 +449,87 @@ def test_admin_cannot_set_passwords_or_see_holdings_without_consent(admin, monke
     # sign out everywhere ends the user's sessions
     admin.patch(f"/api/admin/users/{uid}", json={"sign_out": True})
     assert ivy.get("/api/portfolios").status_code == 401
+
+
+# ------------------------------------------------------------------ two-factor sign-in
+def test_two_factor_sign_in(admin):
+    from app.twofactor import code_now
+    from tests.conftest import totp_for
+
+    jo = _client("jo@example.com")
+    assert jo.get("/api/auth/2fa").json() == {"enabled": False, "recovery_codes_left": 0, "required": False}
+    assert jo.post("/api/auth/2fa/setup", json={"password": "wrong-password"}).status_code == 401
+    s = jo.post("/api/auth/2fa/setup", json={"password": "secret-pass-1"}).json()
+    assert s["uri"].startswith("otpauth://totp/") and "<svg" in s["qr_svg"]
+    wrong = "000000" if code_now(s["secret"]) != "000000" else "111111"
+    assert jo.post("/api/auth/2fa/enable", json={"code": wrong}).status_code == 401
+    codes = jo.post("/api/auth/2fa/enable", json={"code": code_now(s["secret"])}).json()["recovery_codes"]
+    assert len(codes) == 10 and jo.get("/api/auth/me").json()["two_factor"] is True
+
+    # the password alone gives no session
+    anon = TestClient(app)
+    r = anon.post("/api/auth/login", json={"email": "jo@example.com", "password": "secret-pass-1"}).json()
+    assert r == {"two_factor": True, "ticket": r["ticket"]} and anon.get("/api/portfolios").status_code == 401
+    assert anon.post("/api/auth/login/2fa", json={"ticket": r["ticket"], "code": "12345"}).status_code == 401
+    assert anon.post("/api/auth/login/2fa", json={"ticket": "made-up", "code": totp_for("jo@example.com")}).status_code == 400
+    ok = anon.post("/api/auth/login/2fa", json={"ticket": r["ticket"], "code": totp_for("jo@example.com")})
+    assert ok.status_code == 200 and anon.get("/api/portfolios").status_code == 200
+    # a ticket works once
+    assert anon.post("/api/auth/login/2fa", json={"ticket": r["ticket"], "code": "123456"}).status_code == 400
+
+    # a recovery code works once
+    other = TestClient(app)
+    t = other.post("/api/auth/login", json={"email": "jo@example.com", "password": "secret-pass-1"}).json()["ticket"]
+    r = other.post("/api/auth/login/2fa", json={"ticket": t, "code": codes[0]})
+    assert r.status_code == 200 and r.json()["recovery_codes_left"] == 9
+    c = TestClient(app)
+    t = c.post("/api/auth/login", json={"email": "jo@example.com", "password": "secret-pass-1"}).json()["ticket"]
+    assert c.post("/api/auth/login/2fa", json={"ticket": t, "code": codes[0]}).status_code == 401
+
+    # too many wrong codes end the attempt
+    t = c.post("/api/auth/login", json={"email": "jo@example.com", "password": "secret-pass-1"}).json()
+    statuses = [c.post("/api/auth/login/2fa", json={"ticket": t.get("ticket", "-"), "code": "000001"}).status_code for _ in range(5)]
+    assert statuses[-1] in (400, 403)
+    from app.db import SessionLocal
+    from app.models import User
+    from app.security import record_successful_login
+    with SessionLocal() as s_:  # the wrong codes also counted towards the lock: lift it for the rest of the test
+        record_successful_login(s_.query(User).filter_by(email="jo@example.com").one())
+        s_.commit()
+
+    # admin: users list shows it, an admin can reset it for a lost phone (sessions end)
+    row = next(u for u in admin.get("/api/admin/users").json() if u["email"] == "jo@example.com")
+    assert row["two_factor"] is True
+    assert admin.post(f"/api/admin/users/{row['id']}/reset-2fa").json() == {"ok": True}
+    assert anon.get("/api/portfolios").status_code == 401
+    assert "csrf" in TestClient(app).post("/api/auth/login", json={"email": "jo@example.com", "password": "secret-pass-1"}).json()
+
+
+def test_admin_section_requires_two_factor(admin, monkeypatch):
+    import smtplib
+
+    from app import api_admin
+
+    # a second admin without 2FA: signed in, but the admin section stays closed
+    kim = _client("kim@example.com")
+    kim_id = next(u["id"] for u in admin.get("/api/admin/users").json() if u["email"] == "kim@example.com")
+    admin.patch(f"/api/admin/users/{kim_id}", json={"role": "admin"})
+    r = kim.get("/api/admin/users")
+    assert r.status_code == 403 and "2FA" in r.json()["detail"]
+    # admins cannot turn it off
+    assert admin.post("/api/auth/2fa/disable", json={"password": "secret-pass-1", "code": "000000"}).status_code == 403
+
+    # the test e-mail goes to the admin who asks, and SMTP errors come back readable
+    monkeypatch.delenv("PA_SMTP_USER", raising=False)
+    assert admin.post("/api/admin/mail-test").status_code == 503
+    monkeypatch.setenv("PA_SMTP_USER", "site@example.com")
+    monkeypatch.setenv("PA_SMTP_PASSWORD", "app-password")
+    sent = []
+    monkeypatch.setattr(api_admin, "send_mail", lambda to, subject, body, raise_errors=False: sent.append(to))
+    assert admin.post("/api/admin/mail-test").json() == {"ok": True, "to": "admin@example.com"} and sent == ["admin@example.com"]
+
+    def refuse(*a, **k):
+        raise smtplib.SMTPAuthenticationError(535, b"bad credentials")
+    monkeypatch.setattr(api_admin, "send_mail", refuse)
+    r = admin.post("/api/admin/mail-test")
+    assert r.status_code == 502 and "535" in r.json()["detail"]

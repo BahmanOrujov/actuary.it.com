@@ -38,7 +38,9 @@ def _walk_keys(obj):
 
 @pytest.fixture(scope="module")
 def admin():
-    return _client("admin@example.com")
+    from tests.conftest import admin_client
+
+    return admin_client()
 
 
 @pytest.fixture(scope="module")

@@ -41,6 +41,9 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [showForgot, setShowForgot] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** Password accepted, the authenticator code is next. */
+  const [ticket, setTicket] = useState<string | null>(null);
+  const [code, setCode] = useState("");
   const nav = useNavigate();
 
   async function submit(e: FormEvent) {
@@ -48,11 +51,37 @@ export default function LoginPage() {
     setError(null);
     setBusy(true);
     try {
-      const u = await api.post<User>(`/api/auth/${mode}`, { email, password });
+      const u = await api.post<User | { two_factor: true; ticket: string }>(`/api/auth/${mode}`, { email, password });
+      if ("ticket" in u) {
+        setTicket(u.ticket);
+        setPassword("");
+        return;
+      }
       setUser(u);
       nav("/");
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitCode(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setBusy(true);
+    try {
+      const u = await api.post<User & { recovery_codes_left: number }>("/api/auth/login/2fa", { ticket, code });
+      if (u.recovery_codes_left <= 2) {
+        alert(L(`Cəmi ${u.recovery_codes_left} bərpa kodunuz qalıb. Parametrlərdə yenilərini yaradın.`, `You have only ${u.recovery_codes_left} recovery codes left. Create new ones in Settings.`));
+      }
+      setUser(u);
+      nav("/");
+    } catch (err) {
+      const msg = (err as Error).message;
+      setError(msg);
+      setCode("");
+      if (!/kod|code/i.test(msg)) setTicket(null);  // expired or too many tries: back to the password
     } finally {
       setBusy(false);
     }
@@ -96,6 +125,22 @@ export default function LoginPage() {
           <button aria-pressed={mode === "login"} onClick={() => setMode("login")}>{t("login")}</button>
           <button aria-pressed={mode === "register"} onClick={() => setMode("register")}>{t("register")}</button>
         </div>
+        {ticket ? (
+          <form onSubmit={submitCode} className="grid">
+            <p className="muted small">
+              {L("Autentifikator tətbiqindəki (Google Authenticator, Microsoft Authenticator və s.) 6 rəqəmli kodu daxil edin. Telefon əlinizdə deyilsə, bərpa kodlarından birini yazın.",
+                "Enter the 6-digit code from your authenticator app (Google Authenticator, Microsoft Authenticator, etc.). Without your phone, type one of your recovery codes.")}
+            </p>
+            <label>
+              {L("Kod", "Code")}
+              <input autoFocus required inputMode="numeric" autoComplete="one-time-code" maxLength={20} value={code}
+                onChange={(e) => setCode(e.target.value)} style={{ fontSize: 20, letterSpacing: 4 }} />
+            </label>
+            {error && <div className="banner err" role="alert">✕ {error}</div>}
+            <button className="primary" disabled={busy || !code.trim()} type="submit">{L("Təsdiqlə", "Verify")}</button>
+            <button type="button" className="link" onClick={() => { setTicket(null); setCode(""); setError(null); }}>{L("Geri", "Back")}</button>
+          </form>
+        ) : (
         <form onSubmit={submit} className="grid">
           <label>
             {t("email")}
@@ -117,6 +162,7 @@ export default function LoginPage() {
             {mode === "login" ? t("login") : t("register")}
           </button>
         </form>
+        )}
         <p style={{ marginTop: 14 }}>
           <button className="link" onClick={() => setShowForgot((x) => !x)}>{t("forgot")}</button>
         </p>

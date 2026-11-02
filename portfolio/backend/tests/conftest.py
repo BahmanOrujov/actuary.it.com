@@ -64,3 +64,44 @@ def db():
     finally:
         s.rollback()
         s.close()
+
+
+def totp_for(email: str) -> str:
+    """A fresh authenticator code for a test account (the step after the last used one, so never a replay)."""
+    import time
+
+    from app.db import SessionLocal
+    from app.models import User
+    from app.twofactor import STEP, _code
+
+    with SessionLocal() as s:
+        u = s.query(User).filter_by(email=email).one()
+        now = int(time.time() // STEP)
+        step = now if u.totp_last_step is None or u.totp_last_step < now else u.totp_last_step + 1
+        if step > now + 1:  # both usable steps already used: wait for the next one
+            time.sleep(STEP - time.time() % STEP + 0.1)
+            step = int(time.time() // STEP)
+        return _code(u.totp_secret, step)
+
+
+def admin_client(email: str = "admin@example.com", password: str = "secret-pass-1"):
+    """Signed-in admin with two-factor sign-in on, as the admin section requires."""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+    from app.twofactor import code_now
+
+    c = TestClient(app)
+    r = c.post("/api/auth/login", json={"email": email, "password": password})
+    if r.status_code == 401:
+        r = c.post("/api/auth/register", json={"email": email, "password": password})
+    assert r.status_code == 200, r.text
+    if r.json().get("two_factor"):
+        r = c.post("/api/auth/login/2fa", json={"ticket": r.json()["ticket"], "code": totp_for(email)})
+        assert r.status_code == 200, r.text
+        c.headers["x-csrf-token"] = r.json()["csrf"]
+        return c
+    c.headers["x-csrf-token"] = r.json()["csrf"]
+    secret = c.post("/api/auth/2fa/setup", json={"password": password}).json()["secret"]
+    assert c.post("/api/auth/2fa/enable", json={"code": code_now(secret)}).status_code == 200
+    return c
