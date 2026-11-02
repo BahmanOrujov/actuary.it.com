@@ -142,9 +142,15 @@ def current_user(request: Request, db: Session = Depends(get_db)) -> User:
     return user
 
 
+ADMIN_NEEDS_2FA = B("Admin bölməsi üçün əvvəlcə iki mərhələli girişi (2FA) aktivləşdirin: Parametrlər səhifəsində.",
+                    "Turn on two-factor sign-in (2FA) first to use the admin section: on the Settings page.")
+
+
 def require_admin(user: User = Depends(current_user)) -> User:
     if user.role != "admin":
         raise HTTPException(403, L("Bu bölmə yalnız admin üçündür.", "This section is for administrators only."))
+    if get_settings()["security"]["admin_requires_2fa"] and not user.totp_enabled:
+        raise HTTPException(403, ADMIN_NEEDS_2FA)
     return user
 
 

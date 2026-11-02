@@ -14,8 +14,9 @@ def mail_enabled() -> bool:
     return bool(os.getenv("PA_SMTP_USER") and os.getenv("PA_SMTP_PASSWORD"))
 
 
-def send_mail(to: str, subject: str, body: str) -> None:
-    """Runs in a background task: failures are logged (without the body, which may hold a token), not raised."""
+def send_mail(to: str, subject: str, body: str, raise_errors: bool = False) -> None:
+    """Runs in a background task: failures are logged (without the body, which may hold a token), not raised
+    unless `raise_errors` (the admin's test e-mail shows the error)."""
     user = os.environ["PA_SMTP_USER"]
     msg = EmailMessage()
     msg["From"] = os.getenv("PA_MAIL_FROM", user)
@@ -30,3 +31,5 @@ def send_mail(to: str, subject: str, body: str) -> None:
             s.send_message(msg)
     except (OSError, smtplib.SMTPException) as e:
         logging.getLogger("mailer").error("e-mail to %s failed: %s", to, e)
+        if raise_errors:
+            raise

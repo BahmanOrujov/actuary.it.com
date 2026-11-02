@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useApp } from "../App";
@@ -41,6 +41,7 @@ export default function SettingsPage() {
         </form>
         {msg && <p className="small">{msg}</p>}
       </section>
+      <TwoFactor />
       <section className="card">
         <h2>{L("Dəstək üçün giriş icazəsi", "Support access")}</h2>
         <p className="muted">
@@ -92,5 +93,93 @@ export default function SettingsPage() {
         </button>
       </section>
     </>
+  );
+}
+
+/** Two-factor sign-in: QR code for an authenticator app, a first code to confirm, recovery codes shown once. */
+function TwoFactor() {
+  const { setUser } = useApp();
+  const [st, setSt] = useState<{ enabled: boolean; recovery_codes_left: number; required: boolean } | null>(null);
+  const [setup, setSetup] = useState<{ secret: string; qr_svg: string } | null>(null);
+  const [codes, setCodes] = useState<string[] | null>(null);
+  const [pw, setPw] = useState("");
+  const [code, setCode] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const load = () => api.get<typeof st>("/api/auth/2fa").then(setSt);
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function run(f: () => Promise<void>) {
+    setMsg(null);
+    try {
+      await f();
+    } catch (err) {
+      setMsg(`✕ ${(err as Error).message}`);
+    }
+  }
+  const qrUrl = setup ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(setup.qr_svg)}` : "";
+
+  if (!st) return null;
+  return (
+    <section className="card">
+      <h2>{L("İki mərhələli giriş (2FA)", "Two-factor sign-in (2FA)")} {st.enabled ? <span className="badge ok">✓ {L("aktiv", "on")}</span> : <span className="badge warn">{L("aktiv deyil", "off")}</span>}</h2>
+      <p className="muted">
+        {L("Girişdə paroldan əlavə telefonunuzdakı autentifikator tətbiqinin (Google Authenticator, Microsoft Authenticator, 1Password və s.) 30 saniyəlik kodu soruşulur. Parol oğurlansa belə, hesaba girmək olmur.",
+          "Signing in asks, besides the password, for the 30-second code of an authenticator app on your phone (Google Authenticator, Microsoft Authenticator, 1Password, etc.). Even a stolen password is not enough.")}
+        {st.required && !st.enabled && <b> {L("Admin hesabı üçün məcburidir: aktivləşdirənə qədər admin bölməsi bağlıdır.", "Required for admin accounts: the admin section stays closed until it is on.")}</b>}
+      </p>
+      {msg && <div className="banner err" role="alert">{msg}</div>}
+      {codes && (
+        <div className="banner warn" role="status">
+          <div>
+            <b>{L("Bərpa kodları — indi saxlayın, bir daha göstərilməyəcək.", "Recovery codes — save them now, they will not be shown again.")}</b>{" "}
+            {L("Telefon itsə, hər biri ilə bir dəfə daxil ola bilərsiniz.", "If you lose your phone, each one signs you in once.")}
+            <pre style={{ margin: "8px 0", fontSize: 15 }}>{codes.join("\n")}</pre>
+            <button onClick={() => navigator.clipboard?.writeText(codes.join("\n"))}>{t("copy")}</button>{" "}
+            <button onClick={() => setCodes(null)}>{L("Saxladım", "I saved them")}</button>
+          </div>
+        </div>
+      )}
+      {!st.enabled && !setup && (
+        <form className="form-row" onSubmit={(e) => { e.preventDefault(); run(async () => { setSetup(await api.post("/api/auth/2fa/setup", { password: pw })); setPw(""); }); }}>
+          <label>{L("Parolunuz (təsdiq üçün)", "Your password (to confirm)")}<input type="password" required autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
+          <button className="primary" type="submit">{L("Aktivləşdir", "Turn on")}</button>
+        </form>
+      )}
+      {!st.enabled && setup && (
+        <div className="grid" style={{ gap: 10 }}>
+          <p className="small">{L("1. Tətbiqdə “+” → “QR kodu skan et” seçin və bu kodu skan edin:", "1. In the app choose “+” → “Scan a QR code” and scan this code:")}</p>
+          <img src={qrUrl} alt={L("2FA üçün QR kod", "QR code for 2FA")} style={{ width: 200, height: 200, background: "#fff", padding: 6, borderRadius: 8 }} />
+          <p className="small muted">{L("Skan alınmırsa, açarı əl ilə daxil edin:", "If scanning fails, enter the key by hand:")} <code style={{ wordBreak: "break-all" }}>{setup.secret}</code></p>
+          <form className="form-row" onSubmit={(e) => { e.preventDefault(); run(async () => {
+            const r = await api.post<{ recovery_codes: string[] }>("/api/auth/2fa/enable", { code });
+            setCodes(r.recovery_codes); setSetup(null); setCode(""); await load(); setUser(await api.get("/api/auth/me"));
+          }); }}>
+            <label>{L("2. Tətbiqdəki 6 rəqəmli kod", "2. The 6-digit code from the app")}<input required inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} /></label>
+            <button className="primary" type="submit">{L("Təsdiqlə və aktivləşdir", "Confirm and turn on")}</button>
+            <button type="button" onClick={() => setSetup(null)}>{t("cancel")}</button>
+          </form>
+        </div>
+      )}
+      {st.enabled && (
+        <>
+          <p className="small">{L(`Qalan bərpa kodları: ${st.recovery_codes_left}.`, `Recovery codes left: ${st.recovery_codes_left}.`)}</p>
+          <form className="form-row" onSubmit={(e) => { e.preventDefault(); run(async () => {
+            const r = await api.post<{ recovery_codes: string[] }>("/api/auth/2fa/recovery-codes", { code });
+            setCodes(r.recovery_codes); setCode(""); await load();
+          }); }}>
+            <label>{L("Tətbiqdəki kod", "Code from the app")}<input required inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} /></label>
+            <button type="submit">{L("Yeni bərpa kodları", "New recovery codes")}</button>
+            {!st.required && (
+              <button type="button" className="danger" onClick={() => {
+                const p = prompt(L("Söndürmək üçün parolunuz:", "Your password to turn it off:"));
+                if (p) run(async () => { await api.post("/api/auth/2fa/disable", { password: p, code }); setCode(""); await load(); setUser(await api.get("/api/auth/me")); });
+              }}>{L("Söndür", "Turn off")}</button>
+            )}
+          </form>
+        </>
+      )}
+    </section>
   );
 }

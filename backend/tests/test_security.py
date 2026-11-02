@@ -59,9 +59,9 @@ def test_lockout_after_failed_attempts_and_admin_unlock(db):
     u = db.query(User).filter(User.email == "lock@example.com").one()
     assert u.locked_until is not None
 
-    admin = TestClient(app)
-    a = admin.post("/api/auth/login", json={"email": "admin@example.com", "password": "secret-pass-1"})
-    admin.headers["x-csrf-token"] = a.json()["csrf"]
+    from tests.conftest import admin_client
+
+    admin = admin_client()
     users = admin.get("/api/admin/users").json()
     assert [x for x in users if x["email"] == "lock@example.com"][0]["locked_until"]
     assert admin.patch(f"/api/admin/users/{u.id}", json={"unlock": True}).status_code == 200

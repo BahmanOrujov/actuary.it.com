@@ -17,8 +17,9 @@ from app.config import get_settings
 from app.db import get_db, retry_locked
 from app.i18n import L, bilingual, cfg_text, resolve
 from app.mailer import mail_enabled, send_mail
+from app import twofactor
 from app.models import (
-    Alert, AnalysisRun, Instrument, Notification, PasswordReset, Portfolio, PositionTarget, RunResult, Transaction,
+    Alert, AnalysisRun, Instrument, LoginChallenge, Notification, PasswordReset, Portfolio, PositionTarget, RunResult, Transaction,
     User, UserSession,
 )
 from app.security import (
@@ -69,7 +70,7 @@ def register(body: Credentials, request: Request, response: Response, db: Sessio
     csrf = create_session(db, user, response, secure=request.url.scheme == "https")
     audit(db, user.id, "register", {"role": user.role})
     commit(db)
-    return {"id": user.id, "email": user.email, "role": user.role, "csrf": csrf}
+    return {"id": user.id, "email": user.email, "role": user.role, "two_factor": False, "csrf": csrf}
 
 
 @router.post("/auth/login")
@@ -101,11 +102,59 @@ def login(body: Credentials, request: Request, response: Response, db: Session =
         raise HTTPException(401, L("E-poçt və ya parol yanlışdır.", "Wrong e-mail or password."))
     if user.is_blocked:
         raise HTTPException(403, L("Hesab bloklanıb.", "The account is blocked."))
+    if user.totp_enabled:
+        # the password was right; the session waits for the authenticator code
+        ticket = secrets.token_urlsafe(32)
+        db.add(LoginChallenge(token_hash=token_digest(ticket), user_id=user.id,
+                              expires_at=datetime.now(timezone.utc).replace(tzinfo=None)
+                              + timedelta(minutes=get_settings()["security"]["two_factor_minutes"])))
+        audit(db, user.id, "login_password_ok")
+        commit(db)
+        return {"two_factor": True, "ticket": ticket}
     record_successful_login(user)
     csrf = create_session(db, user, response, secure=request.url.scheme == "https")
     audit(db, user.id, "login")
     commit(db)
-    return {"id": user.id, "email": user.email, "role": user.role, "csrf": csrf}
+    return {"id": user.id, "email": user.email, "role": user.role, "two_factor": False, "csrf": csrf}
+
+
+class TwoFactorLogin(BaseModel):
+    ticket: str = Field(min_length=1, max_length=100)
+    code: str = Field(min_length=1, max_length=40)
+
+
+@router.post("/auth/login/2fa")
+def login_two_factor(body: TwoFactorLogin, request: Request, response: Response, db: Session = Depends(get_db)):
+    if not rate_limiter.allow(f"auth:{request.client.host if request.client else '-'}",
+                              get_settings()["security"]["login_rate_limit_per_minute"]):
+        raise HTTPException(429, L("Çox cəhd. Bir dəqiqə sonra yenidən yoxlayın.", "Too many attempts. Try again in a minute."))
+    ch = db.get(LoginChallenge, token_digest(body.ticket))
+    again = L("Vaxt bitdi. E-poçt və parolu yenidən daxil edin.", "Time is up. Enter your e-mail and password again.")
+    if ch is None or ch.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        raise HTTPException(400, again)
+    user = db.get(User, ch.user_id)
+    if user is None or user.is_blocked or is_locked(user):
+        db.delete(ch)
+        commit(db)
+        raise HTTPException(403, LOCKED_MESSAGE if user is not None and is_locked(user) else again)
+    kind = twofactor.check(user, body.code)
+    if kind is None:
+        ch.attempts += 1
+        locked = record_failed_login(user)  # wrong codes count towards the account lock like wrong passwords
+        audit(db, user.id, "login_2fa_failed")
+        if locked or ch.attempts >= get_settings()["security"]["two_factor_max_attempts"]:
+            db.delete(ch)
+            commit(db)
+            raise HTTPException(400, again)
+        commit(db)
+        raise HTTPException(401, L("Kod yanlışdır.", "Wrong code."))
+    db.delete(ch)
+    record_successful_login(user)
+    csrf = create_session(db, user, response, secure=request.url.scheme == "https")
+    audit(db, user.id, "login", {"second_factor": kind})
+    commit(db)
+    return {"id": user.id, "email": user.email, "role": user.role, "two_factor": True, "csrf": csrf,
+            "recovery_codes_left": len(user.recovery_codes or [])}
 
 
 @router.post("/auth/logout")
@@ -121,8 +170,82 @@ def support_access_active(user: User) -> bool:
 
 @router.get("/auth/me")
 def me(user: User = Depends(current_user)):
-    return {"id": user.id, "email": user.email, "role": user.role,
+    return {"id": user.id, "email": user.email, "role": user.role, "two_factor": user.totp_enabled,
             "support_access_until": user.support_access_until.isoformat() if support_access_active(user) else None}
+
+
+class PasswordConfirm(BaseModel):
+    password: str = Field(min_length=1, max_length=128)
+
+
+class CodeIn(BaseModel):
+    code: str = Field(min_length=1, max_length=40)
+
+
+class DisableTwoFactor(BaseModel):
+    password: str = Field(min_length=1, max_length=128)
+    code: str = Field(min_length=1, max_length=40)
+
+
+@router.get("/auth/2fa")
+def two_factor_status(user: User = Depends(current_user)):
+    return {"enabled": user.totp_enabled, "recovery_codes_left": len(user.recovery_codes or []),
+            "required": user.role == "admin" and get_settings()["security"]["admin_requires_2fa"]}
+
+
+@router.post("/auth/2fa/setup")
+def two_factor_setup(body: PasswordConfirm, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Step 1: a new secret as a QR code for the authenticator app. Asks for the password again, so an open
+    session alone cannot attach someone else's phone to the account."""
+    if user.totp_enabled:
+        raise HTTPException(409, L("İki mərhələli giriş artıq aktivdir.", "Two-factor sign-in is already on."))
+    if not verify_password(user.password_hash, body.password):
+        raise HTTPException(401, L("Parol yanlışdır.", "Wrong password."))
+    user.totp_secret = twofactor.new_secret()
+    commit(db)
+    uri = twofactor.otpauth_uri(user.email, user.totp_secret)
+    return {"secret": user.totp_secret, "uri": uri, "qr_svg": twofactor.qr_svg(uri)}
+
+
+@router.post("/auth/2fa/enable")
+def two_factor_enable(body: CodeIn, request: Request, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Step 2: the first code from the app proves it is set up; the recovery codes are shown once."""
+    if user.totp_enabled or not user.totp_secret:
+        raise HTTPException(409, L("Əvvəlcə QR kodu yaradın.", "Create the QR code first."))
+    step = twofactor.match_step(user.totp_secret, body.code)
+    if step is None:
+        raise HTTPException(401, L("Kod yanlışdır. Telefonun saatının dəqiq olduğunu yoxlayın.", "Wrong code. Check that the phone's clock is right."))
+    codes, digests = twofactor.new_recovery_codes()
+    user.totp_enabled, user.totp_last_step, user.recovery_codes = True, step, digests
+    # sessions opened with the password alone end; this one stays
+    current = token_digest(request.cookies.get(SESSION_COOKIE, ""))
+    for s in db.scalars(select(UserSession).where(UserSession.user_id == user.id, UserSession.token != current)).all():
+        db.delete(s)
+    audit(db, user.id, "2fa_enabled")
+    commit(db)
+    return {"recovery_codes": codes}
+
+
+@router.post("/auth/2fa/recovery-codes")
+def two_factor_new_codes(body: CodeIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    if twofactor.check(user, body.code) != "totp":
+        raise HTTPException(401, L("Tətbiqdəki kod yanlışdır.", "The code from the app is wrong."))
+    codes, user.recovery_codes = twofactor.new_recovery_codes()
+    audit(db, user.id, "2fa_recovery_codes_renewed")
+    commit(db)
+    return {"recovery_codes": codes}
+
+
+@router.post("/auth/2fa/disable")
+def two_factor_disable(body: DisableTwoFactor, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    if user.role == "admin" and get_settings()["security"]["admin_requires_2fa"]:
+        raise HTTPException(403, L("Admin hesabında iki mərhələli giriş məcburidir.", "Two-factor sign-in is required on admin accounts."))
+    if not verify_password(user.password_hash, body.password) or twofactor.check(user, body.code) is None:
+        raise HTTPException(401, L("Parol və ya kod yanlışdır.", "Wrong password or code."))
+    twofactor.clear(user)
+    audit(db, user.id, "2fa_disabled")
+    commit(db)
+    return {"ok": True}
 
 
 @router.post("/auth/support-access")
