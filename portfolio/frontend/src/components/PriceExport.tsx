@@ -12,8 +12,10 @@ const FIELDS: [string, string][] = [
 // local calendar date (toISOString would shift it to UTC)
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-/** Downloads the daily prices of the portfolio's stocks as Excel: a Date column and one column per stock. */
-export default function PriceExport({ pid, onClose }: { pid: number; onClose: () => void }) {
+/** Downloads the daily prices of the portfolio's stocks as Excel: a Date column and one column per stock.
+ *  `refresh` changes when a Generate finishes or the portfolio changes: the stock list is reloaded and the end
+ *  date moves to today, so the next download has the newest prices. */
+export default function PriceExport({ pid, onClose, refresh }: { pid: number; onClose: () => void; refresh: string }) {
   const [stocks, setStocks] = useState<{ id: number; symbol: string; name: string }[] | null>(null);
   const [picked, setPicked] = useState<Set<number>>(new Set());
   const [fields, setFields] = useState<Set<string>>(new Set(["close"]));
@@ -32,7 +34,8 @@ export default function PriceExport({ pid, onClose }: { pid: number; onClose: ()
       setStocks(list);
       setPicked(new Set(list.map((s) => s.id)));
     }).catch((err) => setError((err as Error).message));
-  }, [pid]);
+    setEnd(iso(new Date()));
+  }, [pid, refresh]);
 
   function toggle<T>(set: Set<T>, v: T, update: (s: Set<T>) => void) {
     const next = new Set(set);

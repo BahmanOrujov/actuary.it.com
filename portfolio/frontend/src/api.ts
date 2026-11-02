@@ -164,6 +164,8 @@ export interface PortfolioDetail extends PortfolioSummary {
     quantity: number;
     target_price: number | null;
     stop_loss: number | null;
+    /** Planned sale of the whole position (YYYY-MM-DD). */
+    sell_on: string | null;
   }[];
 }
 
@@ -351,6 +353,8 @@ export interface RunResult {
   concentration: { hhi: number; effective_n: number };
   stress: StressItem[];
   sensitivity_zero_drift: { median_value: number; prob_profit: number; var95_pct: number; cvar95_pct: number };
+  /** Positions the run sold on their planned date (absent in results older than the feature). */
+  planned_sells?: { symbol: string; investing_symbol: string; sell_on: string; overdue: boolean; proceeds_median: number }[];
   warnings: string[];
   scenarios: number;
   risk_limit: number;

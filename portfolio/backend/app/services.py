@@ -105,7 +105,8 @@ def frozen_composition(portfolio: Portfolio) -> dict[str, Any]:
              "trade_date": t.trade_date.isoformat(), "price": t.price, "fees": t.fees, "input_flags": t.input_flags}
             for t in portfolio.transactions
         ],
-        "targets": [{"instrument_id": t.instrument_id, "target_price": t.target_price, "stop_loss": t.stop_loss}
+        "targets": [{"instrument_id": t.instrument_id, "target_price": t.target_price, "stop_loss": t.stop_loss,
+                     "sell_on": t.sell_on.isoformat() if t.sell_on else None}
                     for t in portfolio.targets],
     }
 
@@ -124,7 +125,8 @@ def thaw_composition(db: Session, portfolio_id: int, owner_id: int, frozen: dict
         id=portfolio_id, owner_id=owner_id, name=frozen["name"], base_currency=frozen["base_currency"],
         risk_profile=frozen["risk_profile"], risk_limit=frozen["risk_limit"], cash=frozen["cash"],
         version=frozen["version"], transactions=txs,
-        targets=[SimpleNamespace(**t) for t in frozen["targets"]],
+        targets=[SimpleNamespace(**{**t, "sell_on": date.fromisoformat(t["sell_on"]) if t.get("sell_on") else None})
+                 for t in frozen["targets"]],
     )
 
 
@@ -290,4 +292,15 @@ def upsert_target(db: Session, portfolio: Portfolio, instrument_id: int, target:
         row = PositionTarget(portfolio_id=portfolio.id, instrument_id=instrument_id)
         db.add(row)
     row.target_price, row.stop_loss = target, stop
+    bump(portfolio)
+
+
+def set_sell_plan(db: Session, portfolio: Portfolio, instrument_id: int, sell_on: date | None) -> None:
+    """Plan (or with None cancel) the sale of the whole position on a date; Generate takes it into account."""
+    row = db.scalar(select(PositionTarget).where(PositionTarget.portfolio_id == portfolio.id,
+                                                 PositionTarget.instrument_id == instrument_id))
+    if row is None:
+        row = PositionTarget(portfolio_id=portfolio.id, instrument_id=instrument_id)
+        db.add(row)
+    row.sell_on = sell_on
     bump(portfolio)

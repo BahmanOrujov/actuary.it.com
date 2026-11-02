@@ -55,11 +55,17 @@ def compute_measures(
     checkpoints: list[int],
     cfg: dict[str, Any],
     sample_paths: int,
+    sell_idx: np.ndarray | None = None,  # N  planned sale session per position (>= H: held to the horizon)
 ) -> dict[str, Any]:
     S, H, N = log_ret.shape
     pct = cfg["model"]["percentiles"]
     cum = np.exp(np.cumsum(log_ret, axis=1, dtype=np.float32))  # S x H x N
     pos_val = cum * mv0[None, None, :].astype(np.float32)
+    if sell_idx is not None:
+        # a planned sale turns the position into cash at that session's close: its value stays put afterwards
+        for i in np.flatnonzero(sell_idx < H - 1):
+            k = int(sell_idx[i])
+            pos_val[:, k + 1:, i] = pos_val[:, k:k + 1, i]
     V = pos_val.sum(axis=2, dtype=np.float64) + cash  # S x H
     V0 = float(mv0.sum() + cash)
     cost_total = float(cost.sum() + cash)
@@ -130,6 +136,7 @@ def compute_measures(
     for i in range(N):
         px_paths = cum[:, :, i] * (mv0[i] / qty[i] if qty[i] else 0)
         end_px = px_paths[:, -1]
+        end_val = pos_val[:, -1, i]  # differs from end_px * qty when the position is sold before the horizon
         unit_cost = cost[i] / qty[i] if qty[i] else 0.0
         a = {
             "fan": np.percentile(px_paths, pct, axis=0).T.tolist(),
@@ -138,8 +145,8 @@ def compute_measures(
             "end_q": np.percentile(end_px, np.arange(1, 100)).round(6).tolist(),
             "price0": float(mv0[i] / qty[i]) if qty[i] else 0.0,
             "prob_up": float(np.mean(end_px > (mv0[i] / qty[i] if qty[i] else 0))),
-            "prob_profit": float(np.mean(end_px * qty[i] > cost[i])),
-            "pnl_end": {p: float(np.percentile(end_px * qty[i] - cost[i], q)) for p, q in
+            "prob_profit": float(np.mean(end_val > cost[i])),
+            "pnl_end": {p: float(np.percentile(end_val - cost[i], q)) for p, q in
                         (("p05", 5), ("p25", 25), ("median", 50), ("p75", 75), ("p95", 95))},
             "component_cvar95": float(comp[i]),
             "weight": float(mv0[i] / V0) if V0 else 0.0,

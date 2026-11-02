@@ -336,6 +336,22 @@ def prepare_returns(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any], s
     return R, market
 
 
+def planned_sell_index(snap: dict[str, Any], positions: list[dict[str, Any]], sessions: list, H: int) -> np.ndarray:
+    """Session index of each position's planned sale (H: not sold within the horizon). A plan whose date has
+    already passed is executed on the first session."""
+    plans = planned_sells(snap)
+    idx = np.full(len(positions), H, dtype=int)
+    for i, p in enumerate(positions):
+        d = plans.get(p["instrument_id"])
+        if d is not None:
+            idx[i] = int(np.searchsorted(np.array(sessions, dtype="datetime64[D]"), np.datetime64(d)))
+    return idx
+
+
+def planned_sells(snap: dict[str, Any]) -> dict[int, date]:
+    return {t["instrument_id"]: date.fromisoformat(t["sell_on"]) for t in snap.get("targets", []) if t.get("sell_on")}
+
+
 def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
                  progress: Callable[[str, float], None], db=None) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Returns (client_payload, admin_diagnostics, recommendation_context)."""
@@ -425,12 +441,14 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
     as_of = R.index[-1].date()
     sessions = future_sessions(main_ex, as_of, H)
     cps = month_end_checkpoints(sessions)
+    sell_idx = planned_sell_index(snap, positions, sessions, H)
+    planned = planned_sells(snap)
     S = int(cfg["model"]["scenarios"])
     rng = np.random.default_rng(int(snap["seed"]))
     sim = simulate_paths(models, fs.corr, fs.pool_u, mu_daily, H, S, cfg["model"]["param_sets"], rng)
     qty = np.array([p["quantity"] for p in positions])
     cost = np.array([p["cost_base"] for p in positions])
-    meas = compute_measures(sim.log_returns, mv0, cost, qty, snap["cash"], cps, cfg, cfg["model"]["sample_paths"])
+    meas = compute_measures(sim.log_returns, mv0, cost, qty, snap["cash"], cps, cfg, cfg["model"]["sample_paths"], sell_idx)
     # adaptive S: relative MC error of VaR95/CVaR95 below target (PROMPT.md 6.7)
     target = cfg["model"]["mc_rel_error_target"]
     S_max = int(cfg["model"]["scenarios_max"])
@@ -453,7 +471,7 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
         extra = simulate_paths(models, fs.corr, fs.pool_u, mu_daily, H, S_new - S, cfg["model"]["param_sets"], rng)
         sim = SimOutput(np.concatenate([sim.log_returns, extra.log_returns]), np.concatenate([sim.param_set, extra.param_set]))
         del extra
-        meas = compute_measures(sim.log_returns, mv0, cost, qty, snap["cash"], cps, cfg, cfg["model"]["sample_paths"])
+        meas = compute_measures(sim.log_returns, mv0, cost, qty, snap["cash"], cps, cfg, cfg["model"]["sample_paths"], sell_idx)
         S = S_new
     # last line of defence: the bounds in simulate_paths should make this impossible; if it happens, name the
     # instrument instead of failing later with an opaque error
@@ -483,7 +501,8 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
     }
 
     # zero-drift sensitivity (drift is additive in log space)
-    ret0 = sim.log_returns.sum(axis=1, dtype=np.float64) - H * mu_daily[None, :]
+    steps = np.minimum(sell_idx + 1, H)  # days each position is held within the horizon
+    ret0 = np.stack([sim.log_returns[:, :steps[i], i].sum(axis=1, dtype=np.float64) for i in range(len(symbols))], axis=1)         - steps[None, :] * mu_daily[None, :]
     V_end0 = (np.exp(ret0) * mv0).sum(axis=1) + snap["cash"]
     V0 = meas["V0"]
     v95_0, c95_0 = var_cvar(V_end0 / V0 - 1, 0.95)
@@ -561,6 +580,14 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
         "concentration": {"hhi": hhi(weights), "effective_n": 1 / hhi(weights)},
         "stress": [{k: v for k, v in sc.items()} for sc in stress],
         "sensitivity_zero_drift": sensitivity,
+        "planned_sells": [
+            {"symbol": symbols[i], "investing_symbol": positions[i]["investing_symbol"],
+             "sell_on": sessions[int(sell_idx[i])].isoformat(),
+             "overdue": planned[positions[i]["instrument_id"]] <= as_of,
+             # median proceeds in base currency on the sale day
+             "proceeds_median": float(np.median(np.exp(sim.log_returns[:, :int(sell_idx[i]) + 1, i].sum(axis=1)) * mv0[i]))}
+            for i in range(len(symbols)) if sell_idx[i] < H
+        ],
         "warnings": list(dict.fromkeys(client_warnings + md.messages)),
         "scenarios": S,
     }

@@ -8,7 +8,13 @@ import { usePortfolio } from "./PortfolioLayout";
 import { Key, t } from "../i18n";
 import { L } from "../lang";
 
-function AddTransaction({ pid, onAdded, csvEnabled }: { pid: number; onAdded: () => void; csvEnabled: boolean }) {
+/** The last change on this page and how to reverse it. */
+interface Undo {
+  text: string;
+  run: () => Promise<unknown>;
+}
+
+function AddTransaction({ pid, onAdded, csvEnabled }: { pid: number; onAdded: (undo?: Undo) => void; csvEnabled: boolean }) {
   const [q, setQ] = useState("");
   const [cands, setCands] = useState<Candidate[] | null>(null);
   const [chosen, setChosen] = useState<Candidate | null>(null);
@@ -61,7 +67,7 @@ function AddTransaction({ pid, onAdded, csvEnabled }: { pid: number; onAdded: ()
     setBusy(true);
     setResult(null);
     try {
-      const r = await api.post<{ trade_date: string; price: number; flags: { note?: string; price_source?: string }; warnings: string[] }>(
+      const r = await api.post<{ id: number; trade_date: string; price: number; flags: { note?: string; price_source?: string }; warnings: string[] }>(
         `/api/portfolios/${pid}/transactions`,
         {
           provider_symbol: chosen.provider_symbol,
@@ -79,7 +85,10 @@ function AddTransaction({ pid, onAdded, csvEnabled }: { pid: number; onAdded: ()
       setDate("");
       setPx("");
       setFees("");
-      onAdded();
+      onAdded({
+        text: `${side === "BUY" ? t("buy") : t("sell")}: ${qty} ${q.trim().toUpperCase()}`,
+        run: () => api.del(`/api/portfolios/${pid}/transactions/${r.id}`),
+      });
     } catch (err) {
       setResult({ ok: false, text: (err as Error).message });
     } finally {
@@ -235,6 +244,8 @@ export default function PortfolioEditor() {
   const [p, setP] = useState<PortfolioDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [settingsMsg, setSettingsMsg] = useState<string | null>(null);
+  const [undo, setUndo] = useState<Undo | null>(null);
+  const [planFor, setPlanFor] = useState<PortfolioDetail["positions"][number] | null>(null);
 
   const load = useCallback(
     () => api.get<PortfolioDetail>(`/api/portfolios/${pid}`).then(setP).catch((e) => setError(e.message)),
@@ -250,18 +261,56 @@ export default function PortfolioEditor() {
     load();
   }, [load]);
 
+  /** Reload after a change; `u` is how to take that change back. */
+  const did = (u?: Undo) => {
+    setUndo(u ?? null);
+    changed();
+  };
+
+  async function takeBack() {
+    if (!undo) return;
+    try {
+      await undo.run();
+      setUndo(null);
+      changed();
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  }
+
   if (error) return <div className="banner err">✕ {error}</div>;
   if (!p) return <div className="muted">{L("Yüklənir…", "Loading…")}</div>;
+
+  async function sellNow(pos: PortfolioDetail["positions"][number]) {
+    if (!confirm(L(`${pos.quantity} ${pos.investing_symbol} səhminin hamısı bu günün son qiyməti ilə satılsın?`,
+      `Sell all ${pos.quantity} ${pos.investing_symbol} shares at today's latest price?`))) return;
+    try {
+      const r = await api.post<{ id: number }>(`/api/portfolios/${pid}/transactions`, {
+        provider_symbol: p!.transactions.find((x) => x.instrument.id === pos.instrument_id)!.instrument.provider_symbol,
+        investing_symbol: pos.investing_symbol, side: "SELL", quantity: pos.quantity,
+      });
+      did({ text: `${t("sell")}: ${pos.quantity} ${pos.investing_symbol}`, run: () => api.del(`/api/portfolios/${pid}/transactions/${r.id}`) });
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  }
 
   return (
     <div className="cols">
       <div style={{ minWidth: 0 }}>
-        <AddTransaction pid={pid} onAdded={changed} csvEnabled={!!config?.csv_import} />
+        {undo && (
+          <div className="banner ok" role="status">
+            ✓ {undo.text}
+            <button className="link" style={{ marginLeft: 12 }} onClick={takeBack}>{L("Geri al", "Undo")}</button>
+            <button className="link" style={{ marginLeft: 8 }} onClick={() => setUndo(null)} aria-label={L("Bağla", "Close")}>×</button>
+          </div>
+        )}
+        <AddTransaction pid={pid} onAdded={did} csvEnabled={!!config?.csv_import} />
         <section className="card">
           <div className="card-head">
             <div>
               <h2>{t("positions")}</h2>
-              <div className="sub">{L("Açıq mövqelər. Hədəf qiymət və stop-loss istəyə bağlıdır — nəticələrdə onlara çatma ehtimalı göstərilir.", "Open positions. Target price and stop-loss are optional — the results show the probability of reaching them.")}</div>
+              <div className="sub">{L("Açıq mövqelər. Hədəf qiymət və stop-loss istəyə bağlıdır — nəticələrdə onlara çatma ehtimalı göstərilir. Satış planı qursanız, Generate səhmi həmin tarixdə satılmış və pulu nağd saxlanılmış kimi hesablayır.", "Open positions. Target price and stop-loss are optional — the results show the probability of reaching them. With a sale plan, Generate treats the stock as sold on that date and keeps the money as cash.")}</div>
             </div>
           </div>
           <div className="table-wrap">
@@ -271,19 +320,22 @@ export default function PortfolioEditor() {
                   <th>{L("Səhm", "Stock")}</th><th className="num">{t("quantity")}</th>
                   <th className="num">{L("Bazar dəyəri", "Market value")}</th><th className="num">{L("Mənfəət/zərər", "Profit/loss")}</th>
                   <th>{t("target")}</th><th>{t("stopLoss")}</th><th />
+                  <th>{L("Satış planı", "Sale plan")}</th><th />
                 </tr>
               </thead>
               <tbody>
                 {p.positions.map((pos) => (
                   <PositionRow key={pos.instrument_id} pid={pid} pos={pos} onSaved={changed} ccy={p.base_currency}
+                    onPlan={() => setPlanFor(pos)} onSellNow={() => sellNow(pos)}
                     live={run?.status === "done" ? run.result?.current.positions.find((x) => x.investing_symbol === pos.investing_symbol) : undefined} />
                 ))}
                 {p.positions.length === 0 && (
-                  <tr><td colSpan={7} className="muted">{L("Açıq mövqe yoxdur. Yuxarıdan səhm əlavə edin.", "No open positions. Add a stock above.")}</td></tr>
+                  <tr><td colSpan={9} className="muted">{L("Açıq mövqe yoxdur. Yuxarıdan səhm əlavə edin.", "No open positions. Add a stock above.")}</td></tr>
                 )}
               </tbody>
             </table>
           </div>
+          {planFor && <SellPlan pid={pid} pos={planFor} onClose={() => setPlanFor(null)} onSaved={(u) => { setPlanFor(null); did(u); }} />}
         </section>
         <section className="card">
           <div className="card-head">
@@ -324,7 +376,13 @@ export default function PortfolioEditor() {
                           if (!confirm(L(`${tx.instrument.investing_symbol} əməliyyatı silinsin?`, `Delete the ${tx.instrument.investing_symbol} transaction?`))) return;
                           try {
                             await api.del(`/api/portfolios/${pid}/transactions/${tx.id}`);
-                            changed();
+                            did({
+                              text: L(`${tx.instrument.investing_symbol} əməliyyatı silindi`, `${tx.instrument.investing_symbol} transaction deleted`),
+                              run: () => api.post(`/api/portfolios/${pid}/transactions`, {
+                                provider_symbol: tx.instrument.provider_symbol, investing_symbol: tx.instrument.investing_symbol,
+                                side: tx.side, quantity: tx.quantity, trade_date: tx.trade_date, price: tx.price, fees: tx.fees,
+                              }),
+                            });
                           } catch (err) {
                             alert((err as Error).message);
                           }
@@ -405,10 +463,12 @@ export default function PortfolioEditor() {
   );
 }
 
-function PositionRow({ pid, pos, onSaved, live, ccy }: {
+function PositionRow({ pid, pos, onSaved, live, ccy, onPlan, onSellNow }: {
   pid: number;
   pos: PortfolioDetail["positions"][number];
   onSaved: () => void;
+  onPlan: () => void;
+  onSellNow: () => void;
   /** This position in the latest finished run (market value, P&L), if any. */
   live?: RunResult["current"]["positions"][number];
   ccy: string;
@@ -454,6 +514,100 @@ function PositionRow({ pid, pos, onSaved, live, ccy }: {
         </button>{" "}
         <span className="small">{msg}</span>
       </td>
+      <td>
+        {pos.sell_on ? (
+          <button className="link" onClick={onPlan} title={L("Planı dəyiş və ya ləğv et", "Change or cancel the plan")}>
+            {dateAz(pos.sell_on)}
+            <div className="small muted">{daysUntil(pos.sell_on) > 0 ? L(`${daysUntil(pos.sell_on)} gün sonra`, `in ${daysUntil(pos.sell_on)} days`) : L("vaxtı keçib", "overdue")}</div>
+          </button>
+        ) : (
+          <button className="link" onClick={onPlan}>{L("Plan qur", "Plan a sale")}</button>
+        )}
+      </td>
+      <td><button onClick={onSellNow} title={L("Hamısını bu günün son qiyməti ilə sat", "Sell all at today's latest price")}>{L("İndi sat", "Sell now")}</button></td>
     </tr>
+  );
+}
+
+const isoLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+function daysUntil(iso: string): number {
+  const [y, m, d] = iso.split("-").map(Number);
+  const now = new Date();
+  return Math.round((new Date(y, m - 1, d).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000);
+}
+
+/** Plan the sale of the whole position after a number of days / weeks / months, or on a date. */
+function SellPlan({ pid, pos, onClose, onSaved }: {
+  pid: number;
+  pos: PortfolioDetail["positions"][number];
+  onClose: () => void;
+  onSaved: (undo: Undo) => void;
+}) {
+  const [n, setN] = useState("");
+  const [unit, setUnit] = useState<"d" | "w" | "m">("m");
+  const [on, setOn] = useState(pos.sell_on ?? "");
+  const [msg, setMsg] = useState<string | null>(null);
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  function after(count: string, u: "d" | "w" | "m") {
+    const k = Number(count);
+    if (!count || !Number.isFinite(k) || k <= 0) return;
+    const d = new Date();
+    if (u === "m") d.setMonth(d.getMonth() + k);
+    else d.setDate(d.getDate() + k * (u === "w" ? 7 : 1));
+    setOn(isoLocal(d));
+  }
+
+  async function save(sell_on: string | null) {
+    const previous = pos.sell_on;
+    try {
+      await api.put(`/api/portfolios/${pid}/sell-plan`, { instrument_id: pos.instrument_id, sell_on });
+      onSaved({
+        text: sell_on
+          ? L(`${pos.investing_symbol}: satış planı ${dateAz(sell_on)}`, `${pos.investing_symbol}: sale planned for ${dateAz(sell_on)}`)
+          : L(`${pos.investing_symbol}: satış planı ləğv edildi`, `${pos.investing_symbol}: sale plan cancelled`),
+        run: () => api.put(`/api/portfolios/${pid}/sell-plan`, { instrument_id: pos.instrument_id, sell_on: previous }),
+      });
+    } catch (err) {
+      setMsg((err as Error).message);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 12, boxShadow: "none" }}>
+      <div className="card-head" style={{ marginBottom: 4 }}>
+        <div>
+          <h3>{L(`${pos.investing_symbol} — satış planı`, `${pos.investing_symbol} — sale plan`)}</h3>
+          <div className="sub">
+            {L(`Bütün ${pos.quantity} səhm seçilən tarixdə satılır. Generate onu həmin günə qədər saxlanmış, sonra pulu nağd kimi hesablayır. Əsl satışı o gün özünüz əlavə edin.`,
+              `All ${pos.quantity} shares are sold on the chosen date. Generate holds them until that day, then counts the money as cash. Add the real sale yourself on that day.`)}
+          </div>
+        </div>
+        <button className="link" onClick={onClose}>{L("Bağla", "Close")}</button>
+      </div>
+      {msg && <div className="banner err" role="alert">✕ {msg}</div>}
+      <form className="form-row" onSubmit={(e) => { e.preventDefault(); if (on) save(on); }}>
+        <label>
+          {L("Neçə", "How many")}
+          <input inputMode="numeric" value={n} placeholder="3" onChange={(e) => { setN(e.target.value); after(e.target.value, unit); }} style={{ width: 80 }} />
+        </label>
+        <label>
+          {L("Vahid", "Unit")}
+          <select value={unit} onChange={(e) => { const u = e.target.value as "d" | "w" | "m"; setUnit(u); after(n, u); }}>
+            <option value="d">{L("gün sonra", "days later")}</option>
+            <option value="w">{L("həftə sonra", "weeks later")}</option>
+            <option value="m">{L("ay sonra", "months later")}</option>
+          </select>
+        </label>
+        <label>
+          {L("Satış tarixi", "Sale date")}
+          <input type="date" value={on} min={isoLocal(tomorrow)} onChange={(e) => setOn(e.target.value)} required />
+        </label>
+        <button className="primary" type="submit" disabled={!on}>{t("save")}</button>
+        {pos.sell_on && <button type="button" className="danger" onClick={() => save(null)}>{L("Planı ləğv et", "Cancel the plan")}</button>}
+      </form>
+    </div>
   );
 }
