@@ -58,7 +58,7 @@ interface Gate { id: number; name: string; pass: boolean | null; note?: string; 
 
 function RunDetail() {
   const { id } = useParams();
-  const [d, setD] = useState<{ run: Record<string, unknown>; diagnostics: Record<string, unknown> | null; validation: { gates?: Gate[]; verdict?: string } | null } | null>(null);
+  const [d, setD] = useState<{ run: Record<string, unknown>; diagnostics: Record<string, unknown> | null; validation: { gates?: Gate[]; verdict?: string } | null; redacted?: boolean } | null>(null);
   const [msg, setMsg] = useState("");
   const load = useCallback(() => api.get<typeof d>(`/api/admin/runs/${id}`).then(setD), [id]);
   useEffect(() => {
@@ -79,6 +79,12 @@ function RunDetail() {
           </div>
         </div>
         {msg && <p className="small">{msg}</p>}
+        {d.redacted && (
+          <div className="banner info" role="status">
+            {L("Müştərinin məbləğləri, sayları və əməliyyatları gizlədilib — model diaqnostikası üçün lazım deyil. Müştəri dəstək icazəsi versə, görünəcək.",
+              "The client's amounts, quantities and transactions are hidden — model diagnostics do not need them. They become visible if the client grants support access.")}
+          </div>
+        )}
         {d.validation?.gates ? (
           <table>
             <thead><tr><th>#</th><th>Gate</th><th>{L("Nəticə", "Result")}</th><th>{L("Qeyd", "Note")}</th></tr></thead>
@@ -191,7 +197,7 @@ function Settings() {
 }
 
 function Users() {
-  const [rows, setRows] = useState<{ id: number; email: string; role: string; is_blocked: boolean; portfolios: number; locked_until: string | null; failed_logins: number }[]>([]);
+  const [rows, setRows] = useState<{ id: number; email: string; role: string; is_blocked: boolean; portfolios: number; locked_until: string | null; failed_logins: number; support_access_until: string | null }[]>([]);
   const load = () => api.get<typeof rows>("/api/admin/users").then(setRows);
   useEffect(() => {
     load();
@@ -200,6 +206,15 @@ function Users() {
     try {
       await api.patch(`/api/admin/users/${id}`, body);
       load();
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  }
+  async function sendReset(id: number, email: string) {
+    if (!confirm(L(`${email} ünvanına parol bərpası linki göndərilsin?`, `E-mail a password reset link to ${email}?`))) return;
+    try {
+      await api.post(`/api/admin/users/${id}/send-reset`);
+      alert(L(`Link ${email} ünvanına göndərildi.`, `The link was sent to ${email}.`));
     } catch (err) {
       alert((err as Error).message);
     }
@@ -255,12 +270,18 @@ function Users() {
                 {u.is_blocked ? <span className="badge err">✕ {L("bloklanıb", "blocked")}</span> : <span className="badge ok">✓ {L("aktiv", "active")}</span>}
                 {u.locked_until && <span className="badge warn" style={{ marginLeft: 6 }}>⚠ {L(`kilidli: ${dateTimeAz(u.locked_until)}-dək`, `locked until ${dateTimeAz(u.locked_until)}`)}</span>}
                 {!u.locked_until && u.failed_logins > 0 && <span className="small muted"> · {L("uğursuz cəhd", "failed attempts")}: {u.failed_logins}</span>}
+                {u.support_access_until && (
+                  <div><NavLink to={`/admin/users/${u.id}`} className="small">{L(`Dəstək icazəsi (${dateTimeAz(u.support_access_until)}-dək) — portfellərə bax`, `Support access (until ${dateTimeAz(u.support_access_until)}) — view portfolios`)}</NavLink></div>
+                )}
               </td>
               <td>
                 <div className="row-actions">
                   <button onClick={() => patch(u.id, { is_blocked: !u.is_blocked })}>{u.is_blocked ? L("Blokdan çıxar", "Unblock") : L("Blokla", "Block")}</button>
                   {u.locked_until && <button onClick={() => patch(u.id, { unlock: true })}>{L("Kilidi aç", "Unlock")}</button>}
-                  <button onClick={() => { const pw = prompt(L("Yeni parol (ən azı 10 simvol, yayılmış parol olmasın):", "New password (at least 10 characters, not a common password):")); if (pw) patch(u.id, { new_password: pw }); }}>{L("Parolu yenilə", "Reset password")}</button>
+                  <button title={L("İstifadəçiyə birdəfəlik parol bərpası linki e-poçtla göndərilir. Parolu yalnız o özü təyin edir.", "A one-time password reset link is e-mailed to the user. Only they set the password.")}
+                    onClick={() => sendReset(u.id, u.email)}>{L("Bərpa linki göndər", "Send a reset link")}</button>
+                  <button title={L("Bütün cihazlarda hesabdan çıxarır (məs., itmiş telefon)", "Signs the account out on every device (e.g. a lost phone)")}
+                    onClick={() => { if (confirm(L(`${u.email} bütün cihazlardan çıxarılsın?`, `Sign ${u.email} out on every device?`))) patch(u.id, { sign_out: true }); }}>{L("Hər yerdən çıxar", "Sign out everywhere")}</button>
                 </div>
               </td>
             </tr>
@@ -310,6 +331,56 @@ function Provider() {
   );
 }
 
+interface SupportView {
+  email: string;
+  support_access_until: string;
+  portfolios: { id: number; name: string; base_currency: string; cash: number;
+    positions: { instrument_id: number; investing_symbol: string; name: string; quantity: number; sell_on: string | null }[];
+    transactions: { id: number; side: string; quantity: number; trade_date: string; price: number; currency: string; instrument: { investing_symbol: string } }[] }[];
+}
+
+/** Read-only, while the user's support access lasts; the server logs every view and notifies the user. */
+function UserPortfolios() {
+  const { id } = useParams();
+  const [v, setV] = useState<SupportView | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    api.get<SupportView>(`/api/admin/users/${id}/portfolios`).then(setV).catch((e) => setError((e as Error).message));
+  }, [id]);
+  if (error) return <div className="banner err" role="alert">✕ {error}</div>;
+  if (!v) return <div className="muted">{L("Yüklənir…", "Loading…")}</div>;
+  return (
+    <>
+      <div className="banner info" role="status">
+        {L(`${v.email} — yalnız baxış, icazə ${dateTimeAz(v.support_access_until)}-dək. Bu baxış qeydə alındı və istifadəçiyə bildirildi.`,
+          `${v.email} — view only, access until ${dateTimeAz(v.support_access_until)}. This view was logged and the user was notified.`)}
+      </div>
+      {v.portfolios.map((p) => (
+        <section className="card" key={p.id}>
+          <h2>{p.name} <span className="small muted">· {p.base_currency} · {L("nağd", "cash")} {p.cash}</span></h2>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>{L("Səhm", "Stock")}</th><th className="num">{L("Say", "Quantity")}</th><th>{L("Satış planı", "Sale plan")}</th></tr></thead>
+              <tbody>
+                {p.positions.map((x) => <tr key={x.instrument_id}><td>{x.investing_symbol} <span className="small muted">{x.name}</span></td><td className="num">{x.quantity}</td><td>{x.sell_on ? dateAz(x.sell_on) : "—"}</td></tr>)}
+                {p.positions.length === 0 && <tr><td colSpan={3} className="muted">{L("Açıq mövqe yoxdur.", "No open positions.")}</td></tr>}
+              </tbody>
+            </table>
+          </div>
+          <details style={{ marginTop: 8 }}>
+            <summary className="small">{L("Əməliyyatlar", "Transactions")} ({p.transactions.length})</summary>
+            <table>
+              <tbody>
+                {p.transactions.map((t) => <tr key={t.id}><td>{dateAz(t.trade_date)}</td><td>{t.instrument.investing_symbol}</td><td>{t.side}</td><td className="num">{t.quantity}</td><td className="num">{t.price} {t.currency}</td></tr>)}
+              </tbody>
+            </table>
+          </details>
+        </section>
+      ))}
+    </>
+  );
+}
+
 export default function AdminPage() {
   return (
     <>
@@ -333,6 +404,7 @@ export default function AdminPage() {
         <Route path="alerts" element={<Alerts />} />
         <Route path="settings" element={<Settings />} />
         <Route path="users" element={<Users />} />
+        <Route path="users/:id" element={<UserPortfolios />} />
         <Route path="provider" element={<Provider />} />
       </Routes>
     </>

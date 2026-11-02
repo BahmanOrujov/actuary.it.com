@@ -2,6 +2,7 @@
 gate-failure fallback, candidate currency, autocomplete, CSV source tags, cache-only market data."""
 from __future__ import annotations
 
+import json
 import logging
 import re
 from datetime import date
@@ -77,23 +78,23 @@ def test_admin_invite_creates_account_and_link(admin, monkeypatch):
     monkeypatch.delenv("PA_SMTP_USER", raising=False)
     anon = TestClient(app)
     assert anon.post("/api/admin/users/invite", json={"email": "gina@example.com"}).status_code in (401, 403)
-    r = admin.post("/api/admin/users/invite", json={"email": "Gina@example.com"})
-    assert r.status_code == 200 and r.json()["emailed"] is False and "invite=1" in r.json()["link"]
-    assert admin.post("/api/admin/users/invite", json={"email": "gina@example.com"}).status_code == 409
-    # nobody knows the initial password; the invitee sets one through the link
-    assert anon.post("/api/auth/login", json={"email": "gina@example.com", "password": "secret-pass-1"}).status_code == 401
-    token = re.search(r"token=([\w-]+)", r.json()["link"]).group(1)
-    assert anon.post("/api/auth/password-reset/confirm", json={"token": token, "new_password": "maple-river-42"}).status_code == 200
-    me = anon.post("/api/auth/login", json={"email": "gina@example.com", "password": "maple-river-42"})
-    assert me.status_code == 200 and me.json()["role"] == "client"
+    # without e-mail there is no invitation: the admin is never handed a link that sets someone's password
+    assert admin.post("/api/admin/users/invite", json={"email": "gina@example.com"}).status_code == 503
 
     sent = []
     monkeypatch.setenv("PA_SMTP_USER", "site@example.com")
     monkeypatch.setenv("PA_SMTP_PASSWORD", "app-password")
     monkeypatch.setattr(api_admin, "send_mail", lambda to, subject, body: sent.append((to, body)))
-    r = admin.post("/api/admin/users/invite", json={"email": "hank@example.com", "role": "admin"})
-    assert r.json() == {"ok": True, "emailed": True}  # the link is not shown when it was e-mailed
-    assert sent[0][0] == "hank@example.com" and "invite=1" in sent[0][1]
+    r = admin.post("/api/admin/users/invite", json={"email": "Gina@example.com"})
+    assert r.json() == {"ok": True, "emailed": True}  # the link goes only to the invitee's mailbox
+    assert admin.post("/api/admin/users/invite", json={"email": "gina@example.com"}).status_code == 409
+    # nobody knows the initial password; the invitee sets one through the link
+    assert anon.post("/api/auth/login", json={"email": "gina@example.com", "password": "secret-pass-1"}).status_code == 401
+    assert sent[0][0] == "gina@example.com" and "invite=1" in sent[0][1]
+    token = re.search(r"token=([\w-]+)", sent[0][1]).group(1)
+    assert anon.post("/api/auth/password-reset/confirm", json={"token": token, "new_password": "maple-river-42"}).status_code == 200
+    me = anon.post("/api/auth/login", json={"email": "gina@example.com", "password": "maple-river-42"})
+    assert me.status_code == 200 and me.json()["role"] == "client"
 
 
 def test_password_reset_link_is_emailed_when_smtp_is_set(monkeypatch, caplog):
@@ -394,3 +395,55 @@ def test_planned_sell_is_taken_into_account_and_can_be_cancelled(dora):
 
     assert dora.put(f"/api/portfolios/{pid}/sell-plan", json={"instrument_id": ids["MSFT"], "sell_on": None}).status_code == 200
     assert {x["investing_symbol"]: x for x in dora.get(f"/api/portfolios/{pid}").json()["positions"]}["MSFT"]["sell_on"] is None
+
+
+# ------------------------------------------------------------------ admin least privilege
+def test_admin_cannot_set_passwords_or_see_holdings_without_consent(admin, monkeypatch):
+    from app import api_admin
+    ivy = _client("ivy@example.com")
+    pid = ivy.post("/api/portfolios", json={"name": "Ivy private"}).json()["id"]
+    ivy.post(f"/api/portfolios/{pid}/transactions", json={"provider_symbol": "MSFT", "quantity": 7})
+    ivy.post(f"/api/portfolios/{pid}/generate")
+    _drain()
+    uid = next(u["id"] for u in admin.get("/api/admin/users").json() if u["email"] == "ivy@example.com")
+    run_id = ivy.get(f"/api/portfolios/{pid}/runs/latest").json()["id"]
+
+    # no password field any more: the old way of setting someone's password does nothing
+    admin.patch(f"/api/admin/users/{uid}", json={"new_password": "admin-chosen-pass"})
+    assert TestClient(app).post("/api/auth/login", json={"email": "ivy@example.com", "password": "admin-chosen-pass"}).status_code == 401
+    # a reset link can only be e-mailed to the user
+    monkeypatch.delenv("PA_SMTP_USER", raising=False)
+    assert admin.post(f"/api/admin/users/{uid}/send-reset").status_code == 503
+    sent = []
+    monkeypatch.setenv("PA_SMTP_USER", "site@example.com")
+    monkeypatch.setenv("PA_SMTP_PASSWORD", "app-password")
+    monkeypatch.setattr(api_admin, "send_mail", lambda to, subject, body: sent.append((to, body)))
+    r = admin.post(f"/api/admin/users/{uid}/send-reset")
+    assert r.json() == {"ok": True} and sent[0][0] == "ivy@example.com" and "token=" in sent[0][1]
+
+    # without consent: pseudonymous run list, diagnostics without amounts, no portfolio view
+    row = next(x for x in admin.get("/api/admin/runs").json() if x["id"] == run_id)
+    assert row["owner"] == f"user #{uid}" and "Ivy" not in row["portfolio"]
+    d = admin.get(f"/api/admin/runs/{run_id}").json()
+    text = json.dumps(d)
+    assert d["redacted"] and d["diagnostics"]["assets"] and '"quantity"' not in text and "Ivy private" not in text
+    assert d["diagnostics"]["mc"]["euler_ratio"] == pytest.approx(1, abs=0.05) and "cvar95_money" not in text
+    rep = admin.get(f"/api/admin/runs/{run_id}/report.json").json()
+    assert "cvar95_money" not in json.dumps(rep) and admin.get(f"/api/admin/runs/{run_id}/report.html").status_code == 200
+    assert admin.get(f"/api/admin/users/{uid}/portfolios").status_code == 403
+
+    # the user grants temporary access: read-only view, audited, the user is told
+    assert ivy.post("/api/auth/support-access").json()["support_access_until"]
+    assert ivy.get("/api/auth/me").json()["support_access_until"]
+    view = admin.get(f"/api/admin/users/{uid}/portfolios").json()
+    assert view["portfolios"][0]["positions"][0]["quantity"] == 7
+    assert not admin.get(f"/api/admin/runs/{run_id}").json()["redacted"]
+    assert any(n["kind"] == "support_view" for n in ivy.get("/api/notifications").json()["items"])
+    actions = [a["action"] for a in admin.get("/api/admin/audit").json()]
+    assert "admin_view_portfolios" in actions and "admin_sent_reset" in actions and "support_access_granted" in actions
+    # and ends it
+    ivy.delete("/api/auth/support-access")
+    assert admin.get(f"/api/admin/users/{uid}/portfolios").status_code == 403
+    # sign out everywhere ends the user's sessions
+    admin.patch(f"/api/admin/users/{uid}", json={"sign_out": True})
+    assert ivy.get("/api/portfolios").status_code == 401

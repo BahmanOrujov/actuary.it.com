@@ -115,9 +115,32 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db), 
     return {"ok": True}
 
 
+def support_access_active(user: User) -> bool:
+    return user.support_access_until is not None and user.support_access_until > datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 @router.get("/auth/me")
 def me(user: User = Depends(current_user)):
-    return {"id": user.id, "email": user.email, "role": user.role}
+    return {"id": user.id, "email": user.email, "role": user.role,
+            "support_access_until": user.support_access_until.isoformat() if support_access_active(user) else None}
+
+
+@router.post("/auth/support-access")
+def grant_support_access(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """The user lets admins see their portfolios (read-only) for a limited time; they can end it any time."""
+    hours = get_settings()["security"]["support_access_hours"]
+    user.support_access_until = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=hours)
+    audit(db, user.id, "support_access_granted", {"hours": hours})
+    commit(db)
+    return {"support_access_until": user.support_access_until.isoformat()}
+
+
+@router.delete("/auth/support-access")
+def revoke_support_access(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    user.support_access_until = None
+    audit(db, user.id, "support_access_revoked", {})
+    commit(db)
+    return {"ok": True}
 
 
 class PasswordChange(BaseModel):
@@ -377,7 +400,10 @@ def delete_portfolio(pid: int, db: Session = Depends(get_db), user: User = Depen
 
 @router.get("/portfolios/{pid}")
 def get_portfolio(pid: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    p = owned_portfolio(db, user, pid)
+    return portfolio_detail(db, owned_portfolio(db, user, pid))
+
+
+def portfolio_detail(db: Session, p: Portfolio) -> dict:
     txs = []
     holdings: dict[int, float] = {}
     for t in sorted(p.transactions, key=lambda x: (x.trade_date, x.id)):

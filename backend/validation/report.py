@@ -237,7 +237,7 @@ Pəncərəsi qısaldılan alətlər: {{ diag.multivariate.breaks|selectattr('app
 <p class="small muted">Rəqiblər: tarixi simulyasiya (250 gün), EWMA-normal, GARCH-CCC-normal, HAR-FHS. LightGBM (volatillik) və HMM Mərhələ B-yə aiddir.</p>{% endif %}
 
 <h2>8. MC və parametr xətası</h2>
-<p>Ssenari sayı {{ diag.mc.scenarios }}; VaR95 nisbi xəta {{ pct(diag.mc.errors['0.95'].var_rel) }}, CVaR95 {{ pct(diag.mc.errors['0.95'].cvar_rel) }} (hədəf {{ pct(diag.mc.target_rel) }}). Euler cəmi {{ fmt(diag.mc.euler_sum) }} vs CVaR95 {{ fmt(diag.mc.cvar95_money) }}.</p>
+<p>Ssenari sayı {{ diag.mc.scenarios }}; VaR95 nisbi xəta {{ pct(diag.mc.errors['0.95'].var_rel) }}, CVaR95 {{ pct(diag.mc.errors['0.95'].cvar_rel) }} (hədəf {{ pct(diag.mc.target_rel) }}). Euler cəmi / CVaR95 = {{ fmt(diag.mc.euler_ratio) }} (1 olmalıdır).</p>
 <p>Parametr qeyri-müəyyənliyi (parametr qrupları üzrə 5–95%): <code>{{ diag.param_uncertainty }}</code></p>
 <p>Drift: rf {{ pct(diag.drift.rf) }}, MRP {{ pct(diag.drift.mrp) }}, indeks {{ diag.drift.index }}; beta: <code>{{ diag.drift.betas }}</code></p>
 
@@ -268,6 +268,20 @@ def write_report(portfolio_id: int, run_id: int, diag: dict[str, Any], val: dict
     d, v = _clean(diag), _clean(val) if val else None
     (folder / "report.json").write_text(json.dumps({"diagnostics": d, "validation": v}, ensure_ascii=False, indent=1),
                                         encoding="utf-8")
-    html = env.from_string(TEMPLATE).render(portfolio_id=portfolio_id, run_id=run_id, diag=d, val=v)
-    (folder / "report.html").write_text(html, encoding="utf-8")
+    (folder / "report.html").write_text(env.from_string(TEMPLATE).render(portfolio_id=portfolio_id, run_id=run_id, diag=d, val=v),
+                                        encoding="utf-8")
     return folder
+
+
+def render_html(portfolio_id: int, run_id: int, diag: dict[str, Any], val: dict[str, Any] | None) -> str:
+    """The report page from (possibly redacted) stored JSON; the admin API serves this, not the file."""
+    alpha = float(get_settings()["validation"]["alpha"])
+    env = Environment(autoescape=select_autoescape(["html"]))
+    env.globals.update(
+        fmt=lambda x: "—" if x is None else (f"{x:.4g}" if isinstance(x, (int, float)) else str(x)),
+        pct=lambda x: "—" if x is None else f"{x * 100:.1f}%",
+        tests_table=lambda rows: Markup(_tests_table(rows, alpha)),
+        qq=lambda pts: Markup(_qq_svg(pts)),
+        curve=lambda rows: Markup(_curve_table(rows)),
+    )
+    return env.from_string(TEMPLATE).render(portfolio_id=portfolio_id, run_id=run_id, diag=diag, val=val)

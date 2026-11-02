@@ -2,7 +2,7 @@ import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useApp } from "../App";
-import { pct } from "../format";
+import { dateTimeAz, pct } from "../format";
 import { Key, t } from "../i18n";
 import { L } from "../lang";
 
@@ -40,6 +40,25 @@ export default function SettingsPage() {
           <button type="submit">{L("Parolu dəyiş", "Change the password")}</button>
         </form>
         {msg && <p className="small">{msg}</p>}
+      </section>
+      <section className="card">
+        <h2>{L("Dəstək üçün giriş icazəsi", "Support access")}</h2>
+        <p className="muted">
+          {L("Administratorlar portfellərinizin tərkibini, saylarını və əməliyyatlarınızı görmür. Kömək lazım olanda müvəqqəti icazə verə bilərsiniz: bu müddətdə admin portfellərinizə yalnız baxa bilər, heç nəyi dəyişə bilməz. Hər baxış qeydə alınır və sizə bildiriş gəlir. İcazə avtomatik bitir, istədiyiniz vaxt dayandıra bilərsiniz.",
+            "Administrators do not see your holdings, quantities or transactions. When you need help, you can grant temporary access: during it an admin can only view your portfolios, not change anything. Every view is logged and you get a notice. The access ends by itself, and you can end it at any time.")}
+        </p>
+        {user?.support_access_until ? (
+          <div className="row-actions">
+            <span className="badge warn">⚠ {L(`icazə aktivdir: ${dateTimeAz(user.support_access_until)}-dək`, `access is on until ${dateTimeAz(user.support_access_until)}`)}</span>
+            <button className="danger" onClick={async () => { await api.del("/api/auth/support-access"); setUser(await api.get("/api/auth/me")); }}>
+              {L("İcazəni dayandır", "End the access")}
+            </button>
+          </div>
+        ) : (
+          <button onClick={async () => { await api.post("/api/auth/support-access"); setUser(await api.get("/api/auth/me")); }}>
+            {L("Müvəqqəti icazə ver", "Grant temporary access")}
+          </button>
+        )}
       </section>
       <section className="card">
         <h2>{L("Risk profilləri (default limitlər)", "Risk profiles (default limits)")}</h2>
