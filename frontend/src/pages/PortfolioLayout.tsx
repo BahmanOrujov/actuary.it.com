@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useNavigate, useOutletContext, useParams } from 
 import { api, apiUrl, DEMO, PortfolioSummary, RunView } from "../api";
 import { useApp } from "../App";
 import { ReliabilityBadge } from "../components/Badges";
+import PriceExport from "../components/PriceExport";
 import { Icon } from "../components/Icons";
 import { dateTimeAz, pct } from "../format";
 import { Key, STEP_ORDER, t } from "../i18n";
@@ -33,6 +34,7 @@ export default function PortfolioLayout() {
   const menuRef = useRef<HTMLDetailsElement>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const nav = useNavigate();
 
   const poll = useCallback(async () => {
@@ -213,6 +215,11 @@ export default function PortfolioLayout() {
                   {summary.shared ? L("Paylaşım linki", "Share link") : L("Paylaş (yalnız baxış)", "Share (view only)")}
                 </button>
               )}
+              {!DEMO && (
+                <button onClick={() => { menuRef.current?.removeAttribute("open"); setExportOpen(true); }}>
+                  {L("Qiymətləri Excel-ə yüklə", "Download prices to Excel")}
+                </button>
+              )}
               <button className="danger" onClick={remove}>{t("delete")}</button>
             </div>
           </details>
@@ -249,6 +256,7 @@ export default function PortfolioLayout() {
           </div>
         </section>
       )}
+      {exportOpen && <PriceExport pid={pid} onClose={() => setExportOpen(false)} />}
       <div aria-live="polite">
         {busy && run && (
           <section className="card run-panel">
