@@ -172,20 +172,46 @@ def prob_target(px_paths_end: np.ndarray, target: float) -> float:
     return float(np.mean(px_paths_end >= target))
 
 
-def actual_measures(val: pd.Series, horizon: int, cfg: dict[str, Any], level: float = 0.95) -> dict[str, Any]:
-    """What the current holdings actually did on past prices, measured the way the model measures the future:
-    return over the last `horizon` sessions, realised annual volatility, maximum drawdown, and CVaR of rolling
-    `horizon`-session returns. A measure without enough history is None."""
-    val = val.dropna()
-    year = val.iloc[-(cfg["vol_days"] + 1):]
-    daily = year.pct_change().dropna()
-    roll = (val / val.shift(horizon) - 1).dropna().iloc[-cfg["tail_days"]:]
-    cvar = var_cvar(roll.to_numpy(), level)[1] if len(roll) >= cfg["min_windows"] else None
-    return {
-        "return_period": float(val.iloc[-1] / val.iloc[-1 - horizon] - 1) if len(val) > horizon else None,
-        "vol_annual": float(daily.std(ddof=1) * np.sqrt(252)) if len(daily) > 1 else None,
-        "max_drawdown": float((year / year.cummax() - 1).min()) if len(year) > 1 else None,
-        "cvar95_pct": cvar,
-        "windows": int(len(roll)),
-        "since": val.index[0].date().isoformat() if len(val) else None,
-    }
+def actual_measures(px: pd.DataFrame, qty: np.ndarray, cash: float, horizon: int, cfg: dict[str, Any],
+                    level: float = 0.95) -> tuple[dict[str, Any], np.ndarray | None]:
+    """What today's holdings did on their own past prices, measured the way the model measures the future.
+
+    Value-based: return over the last `horizon` sessions and the last year, realised annual volatility and maximum
+    drawdown (fixed quantities). Historical simulation: every rolling `horizon`-session price change of the last
+    `tail_days` applied to today's money in each stock gives one past scenario (W x N P&L); CVaR, the worst period
+    and each stock's share of the bad-case loss come from those. Returns (client measures, the scenario P&L or None
+    when there are fewer than `min_windows`). A measure without enough history is None."""
+    px = px.dropna()
+    q = np.asarray(qty, float)
+    val = (px * q).sum(axis=1) + cash
+    yd = cfg["vol_days"]
+
+    def path_stats(v: pd.Series) -> dict[str, float | None]:
+        year = v.iloc[-(yd + 1):]
+        daily = year.pct_change().dropna()
+        return {
+            "return_period": float(v.iloc[-1] / v.iloc[-1 - horizon] - 1) if len(v) > horizon else None,
+            "return_year": float(v.iloc[-1] / v.iloc[-1 - yd] - 1) if len(v) > yd else None,
+            "vol_annual": float(daily.std(ddof=1) * np.sqrt(252)) if len(daily) > 1 else None,
+            "max_drawdown": float((year / year.cummax() - 1).min()) if len(year) > 1 else None,
+        }
+
+    mv0 = px.iloc[-1].to_numpy() * q if len(px) else np.zeros(len(q))
+    V0 = float(mv0.sum() + cash)
+    R = (px / px.shift(horizon) - 1).dropna().iloc[-cfg["tail_days"]:]
+    P = R.to_numpy() * mv0[None, :] if len(R) >= cfg["min_windows"] else None
+    out: dict[str, Any] = {**path_stats(val), "cvar95_pct": None, "var95_pct": None, "worst_period": None,
+                           "windows": int(len(R)), "since": val.index[0].date().isoformat() if len(val) else None}
+    share = np.full(len(q), np.nan)
+    if P is not None and V0 > 0:
+        port = P.sum(axis=1)
+        v, c = var_cvar(port / V0, level)
+        out.update(var95_pct=v, cvar95_pct=c, worst_period=float(port.min() / V0))
+        comp = euler_cvar(P, port, level)
+        if comp.sum() > 0:
+            share = comp / comp.sum()
+    out["assets"] = [{"symbol": col, "weight": float(mv0[i] / V0) if V0 else 0.0,
+                      **path_stats(px[col]),
+                      "cvar_share": None if np.isnan(share[i]) else float(share[i])}
+                     for i, col in enumerate(px.columns)]
+    return out, P

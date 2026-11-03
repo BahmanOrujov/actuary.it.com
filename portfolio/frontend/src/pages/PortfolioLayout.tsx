@@ -4,6 +4,7 @@ import { api, apiUrl, DEMO, PortfolioSummary, RunView } from "../api";
 import { useApp } from "../App";
 import { ReliabilityBadge } from "../components/Badges";
 import PriceExport from "../components/PriceExport";
+import { ResultTabs } from "./Views";
 import { Icon } from "../components/Icons";
 import { dateTimeAz, pct } from "../format";
 import { Key, STEP_ORDER, t } from "../i18n";
@@ -55,7 +56,8 @@ export default function PortfolioLayout() {
     }
     if (r && r.status === "done" && startedHere.current) {
       startedHere.current = false;
-      nav(`/portfolios/${pid}/results`);
+      // stay in the view the user is reading; from the holdings page open "today"
+      if (!/\/(today|forecast|compare)(\/|$)/.test(window.location.pathname)) nav(`/portfolios/${pid}/today`);
     }
     if (r && (r.status === "queued" || r.status === "running")) {
       timer.current = window.setTimeout(poll, 1200);
@@ -289,11 +291,7 @@ export default function PortfolioLayout() {
 
       <nav className="tabs" aria-label={L("Portfel bölmələri", "Portfolio sections")}>
         <NavLink to={`/portfolios/${pid}`} end><Icon name="list" size={16} /> {L("Tərkib", "Holdings")}</NavLink>
-        <NavLink to={`/portfolios/${pid}/valuation`}><Icon name="scale" size={16} /> {L("Bu gün / 3 ay", "Today / 3 months")}</NavLink>
-        <NavLink to={`/portfolios/${pid}/results`}><Icon name="chart" size={16} /> {L("İnvestisiya", "Investment")}</NavLink>
-        <NavLink to={`/portfolios/${pid}/risk`}><Icon name="shield" size={16} /> Risk</NavLink>
-        <NavLink to={`/portfolios/${pid}/recommendations`}><Icon name="bulb" size={16} /> {t("recommendations")}</NavLink>
-        {!DEMO && <NavLink to={`/portfolios/${pid}/whatif`}><Icon name="branch" size={16} /> {L("Nə olardı?", "What if?")}</NavLink>}
+        <ResultTabs base={`/portfolios/${pid}`} />
       </nav>
 
       <Outlet context={{ summary, run, runLoaded } satisfies PortfolioOutlet} />

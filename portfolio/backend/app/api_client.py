@@ -428,7 +428,8 @@ def _headline(db: Session, pid: int) -> dict | None:
     return {"run_id": run.id, "value": r.get("V0"), "unrealized": total.get("unrealized"),
             "unrealized_pct": total.get("unrealized_pct"), "cvar95": cvar, "risk_limit": r.get("risk_limit"),
             "expected_return": inv.get("expected_return"), "range90": inv.get("range90"),
-            "prob_profit": (r.get("pnl_end") or {}).get("prob_profit"), "horizon_end": r.get("horizon_end")}
+            "prob_profit": (r.get("pnl_end") or {}).get("prob_profit"), "horizon_end": r.get("horizon_end"),
+            "actual": {k: v for k, v in (r.get("actual") or {}).items() if k != "assets"} or None}
 
 
 def _portfolio_summary(db: Session, p: Portfolio) -> dict:

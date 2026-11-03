@@ -556,7 +556,7 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
     hist_px = pdata.prices_base[symbols].ffill().loc[:as_of].dropna()
     hist_val = (hist_px.iloc[-cfg["model"]["history_days"]:] * pd.Series(qty, index=symbols)).sum(axis=1) + snap["cash"]
     ac = cfg["model"]["actual"]
-    past_val = (hist_px.iloc[-(max(ac["tail_days"], ac["vol_days"]) + H + 1):] * pd.Series(qty, index=symbols)).sum(axis=1) + snap["cash"]
+    actual, P_hist = actual_measures(hist_px.iloc[-(max(ac["tail_days"], ac["vol_days"]) + H + 1):], qty, snap["cash"], H, ac)
     client = {
         "as_of": as_of.isoformat(),
         "horizon_end": sessions[-1].isoformat(),
@@ -576,7 +576,7 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
         "pnl_end": meas["pnl_end"],
         "histogram": meas["histogram"],
         "drawdown": meas["drawdown"],
-        "actual": actual_measures(past_val, H, ac),
+        "actual": actual,
         "assets": assets_out,
         "correlation": {"symbols": [symbols[i] for i in order], "names": [names[i] for i in order],
                         "matrix": Cnow[np.ix_(order, order)].round(3).tolist()} if len(symbols) > 1 else None,
@@ -600,6 +600,7 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
         "price": (mv0 / qty).tolist(), "pnl_assets": meas["_pnl_assets_end"], "V": V0,
         "clusters": labels, "stress": stress, "asset_end": [a["end"] for a in meas["assets"]],
         "sim_cum_end": None,
+        "pnl_assets_hist": P_hist,  # today's holdings through the past 3-month periods (None: too little history)
     }
     # CIO / CRO views: finished in the worker once the portfolio's risk limit is known
     if len(symbols) > 1:
