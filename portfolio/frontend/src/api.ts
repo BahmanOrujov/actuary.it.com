@@ -348,6 +348,15 @@ export interface RunResult {
     loss_cvar95_vs_cost: number;
   };
   histogram: { edges: number[]; counts: number[]; below?: number; above?: number };
+  /** The current holdings on their own past prices (absent in results older than the feature). */
+  actual?: {
+    return_period: number | null;
+    vol_annual: number | null;
+    max_drawdown: number | null;
+    cvar95_pct: number | null;
+    windows: number;
+    since: string | null;
+  };
   drawdown: {
     mdd_percentiles: Record<string, number>;
     exceedance: { x: number; p_drawdown: number; p_touch: number; p_end: number }[];

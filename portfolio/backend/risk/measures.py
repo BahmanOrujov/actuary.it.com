@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+import pandas as pd
 
 
 def var_cvar(ret: np.ndarray, level: float) -> tuple[float, float]:
@@ -169,3 +170,22 @@ def compute_measures(
 
 def prob_target(px_paths_end: np.ndarray, target: float) -> float:
     return float(np.mean(px_paths_end >= target))
+
+
+def actual_measures(val: pd.Series, horizon: int, cfg: dict[str, Any], level: float = 0.95) -> dict[str, Any]:
+    """What the current holdings actually did on past prices, measured the way the model measures the future:
+    return over the last `horizon` sessions, realised annual volatility, maximum drawdown, and CVaR of rolling
+    `horizon`-session returns. A measure without enough history is None."""
+    val = val.dropna()
+    year = val.iloc[-(cfg["vol_days"] + 1):]
+    daily = year.pct_change().dropna()
+    roll = (val / val.shift(horizon) - 1).dropna().iloc[-cfg["tail_days"]:]
+    cvar = var_cvar(roll.to_numpy(), level)[1] if len(roll) >= cfg["min_windows"] else None
+    return {
+        "return_period": float(val.iloc[-1] / val.iloc[-1 - horizon] - 1) if len(val) > horizon else None,
+        "vol_annual": float(daily.std(ddof=1) * np.sqrt(252)) if len(daily) > 1 else None,
+        "max_drawdown": float((year / year.cummax() - 1).min()) if len(year) > 1 else None,
+        "cvar95_pct": cvar,
+        "windows": int(len(roll)),
+        "since": val.index[0].date().isoformat() if len(val) else None,
+    }

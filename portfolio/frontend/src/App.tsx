@@ -11,7 +11,7 @@ import PortfolioEditor from "./pages/PortfolioEditor";
 import PortfolioLayout from "./pages/PortfolioLayout";
 import PortfoliosPage from "./pages/Portfolios";
 import RecommendationsPage from "./pages/Recommendations";
-import { InvestmentView, RiskView } from "./pages/Results";
+import { InvestmentView, RiskView, ValuationView } from "./pages/Results";
 import ResetPage from "./pages/Reset";
 import SettingsPage from "./pages/Settings";
 import SharedLayout from "./pages/Shared";
@@ -91,6 +91,7 @@ export default function App() {
       <Routes>
         <Route path="/shared/:token" element={<SharedLayout />}>
           <Route index element={<Navigate to="results" replace />} />
+          <Route path="valuation" element={<ValuationView />} />
           <Route path="results" element={<InvestmentView />} />
           <Route path="risk" element={<RiskView />} />
           <Route path="recommendations" element={<RecommendationsPage />} />
@@ -146,6 +147,7 @@ export default function App() {
               <Route path="/" element={<PortfoliosPage />} />
               <Route path="/portfolios/:id" element={<PortfolioLayout />}>
                 <Route index element={<PortfolioEditor />} />
+                <Route path="valuation" element={<ValuationView />} />
                 <Route path="results" element={<InvestmentView />} />
                 <Route path="risk" element={<RiskView />} />
                 <Route path="recommendations" element={<RecommendationsPage />} />

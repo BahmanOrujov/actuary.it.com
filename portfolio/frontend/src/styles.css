@@ -646,3 +646,14 @@ table.lots th { white-space: normal; }
 .auth-side .lang-switch { background: rgba(255, 255, 255, 0.16); }
 .auth-side .lang-switch button { color: rgba(255, 255, 255, 0.8); }
 .auth-side .lang-switch button.on { background: rgba(255, 255, 255, 0.95); color: #1b2a4a; }
+
+/* valuation: today vs the model, side by side */
+table.valuation td.num { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+table.valuation td.num .sub { display: block; font-size: 13.5px; font-weight: 400; color: var(--muted); }
+table.valuation tr.group th { background: none; color: var(--fg); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; padding-top: 18px; }
+table.valuation td .hint { display: block; font-size: 13.5px; color: var(--muted); }
+@media (max-width: 600px) {
+  table.valuation th, table.valuation td { padding: 6px 5px; }
+  table.valuation td.num { font-size: 15px; }
+  table.valuation td .hint, table.valuation td.num .sub { font-size: 12px; }
+}
