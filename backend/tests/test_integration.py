@@ -108,6 +108,8 @@ def test_full_generate_flow(alice, bob, admin):
     res = latest["result"]
     assert len(res["dates"]) == 63
     assert res["risk"]["0.95"]["cvar_pct"] >= res["risk"]["0.95"]["var_pct"] > 0
+    act = res["actual"]  # the same holdings on past prices, beside the model's view
+    assert act["vol_annual"] > 0 and act["max_drawdown"] <= 0 and act["return_period"] is not None
     assert latest["validation_status"] == "done"
     assert latest["reliability"] in ("high", "medium", "low")
     assert latest["recommendations"] and all("disclaimer" in r for r in latest["recommendations"])

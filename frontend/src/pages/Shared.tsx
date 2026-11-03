@@ -60,6 +60,7 @@ export default function SharedLayout() {
         <Link className="btn" to="/login">{L("Öz portfelinizi təhlil edin", "Analyse your own portfolio")}</Link>
       </div>
       <nav className="tabs" aria-label={L("Bölmələr", "Sections")}>
+        <NavLink to={`${base}/valuation`}><Icon name="scale" size={16} /> {L("Bu gün / 3 ay", "Today / 3 months")}</NavLink>
         <NavLink to={`${base}/results`}><Icon name="chart" size={16} /> {L("İnvestisiya", "Investment")}</NavLink>
         <NavLink to={`${base}/risk`}><Icon name="shield" size={16} /> {L("Risk", "Risk")}</NavLink>
         <NavLink to={`${base}/recommendations`}><Icon name="bulb" size={16} /> {t("recommendations")}</NavLink>

@@ -106,6 +106,10 @@ model:
   seed: 20261027
   sample_paths: 8
   history_days: 252           # past value shown before the fan chart (6-12 months)
+  actual:                     # "today" view: the current holdings measured on their own past prices
+    vol_days: 252             # realised volatility and maximum drawdown window (1 year)
+    tail_days: 756            # rolling horizon-length returns for the historical CVaR (3 years)
+    min_windows: 60           # fewer rolling windows than this -> no historical CVaR
   percentiles: [5, 25, 50, 75, 95]
   garch:
     vol_models: [GARCH, GJR, EGARCH]

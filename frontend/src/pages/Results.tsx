@@ -563,6 +563,90 @@ function holding(days: number): string {
   return `${dec(y.toFixed(1))} ${L("il", "yr")}`;
 }
 
+/** Two columns a reader can compare at a glance: what the holdings actually did (their own past prices) and
+ *  what the model expects by the period end — the same investment and risk questions for both. */
+export function ValuationView() {
+  const r = useResult();
+  if ("empty" in r) return r.empty;
+  const { run, res, ins } = r;
+  const ccy = res.base_currency;
+  const a = res.actual;
+  const H = res.horizon_days;
+  const endMedian = res.checkpoints[res.checkpoints.length - 1].median;
+  const cost = res.cost_total;
+  const cvar = res.risk["0.95"];
+  const tone = (v: number | null | undefined) => (v == null ? "" : signClass(v));
+  type Cell = { v: string; sub?: string; tone?: string };
+  const row = (label: string, hint: string, today: Cell, model: Cell) => (
+    <tr key={label}>
+      <td>{label}<span className="hint">{hint}</span></td>
+      <td className={`num ${today.tone ?? ""}`}>{today.v}{today.sub && <span className="sub">{today.sub}</span>}</td>
+      <td className={`num ${model.tone ?? ""}`}>{model.v}{model.sub && <span className="sub">{model.sub}</span>}</td>
+    </tr>
+  );
+  const loss = (x: number | null | undefined) => (x == null ? "—" : pct(-x));
+
+  return (
+    <>
+      {run.stale && <div className="banner warn"><span className="ic">⚠</span> {L("Portfel dəyişib — Generate düyməsini basın.", "The portfolio has changed — press Generate.")}</div>}
+      {!a && <OlderRun />}
+      {!!res.planned_sells?.length && (
+        <div className="banner info">
+          <span className="ic">📅</span> {L("Model sütunu satış planını nəzərə alır (satılan səhmin pulu nağd qalır), faktiki sütun isə bugünkü tərkibi:", "The model column includes the sale plans (the money from a sold stock stays as cash); the actual column shows today's holdings:")}{" "}
+          {res.planned_sells.map((s) => `${s.investing_symbol} ${dateAz(s.sell_on)}`).join(" · ")}
+        </div>
+      )}
+      <section className="card">
+        <div className="card-head">
+          <div>
+            <h2>{L("Bu gün və 3 ay sonra", "Today and in 3 months")}</h2>
+            <div className="sub">{L("Eyni portfel, iki baxış: faktiki — hazırkı səhmlərinizin öz keçmiş qiymətləri ilə; model — növbəti 3 ayın ssenariləri.",
+              "One portfolio, two views: actual — your current holdings on their own past prices; model — scenarios for the next 3 months.")}</div>
+          </div>
+          <ReliabilityBadge level={run.reliability} />
+        </div>
+        <div className="table-wrap">
+          <table className="valuation">
+            <thead>
+              <tr><th></th><th className="num">{L("Faktiki · bu gün", "Actual · today")}</th><th className="num">{L("Model", "Model")} · {dateAz(res.horizon_end)}</th></tr>
+            </thead>
+            <tbody>
+              <tr className="group"><th colSpan={3}>{L("İnvestisiya", "Investment")}</th></tr>
+              {row(L("Portfelin dəyəri", "Portfolio value"), L("model üçün: ssenarilərin ortası (median)", "for the model: the middle scenario (median)"),
+                { v: money(res.V0, ccy) },
+                { v: money(endMedian, ccy), sub: `${L("10-dan 9-u", "9 in 10")}: ${money(res.checkpoints[res.checkpoints.length - 1].p05, ccy)} – ${money(res.checkpoints[res.checkpoints.length - 1].p95, ccy)}` })}
+              {row(L("Mənfəət / zərər", "Profit / loss"), L("ödədiyiniz maya dəyərinə görə", "against what you paid"),
+                { v: money(res.current.total.unrealized, ccy, { sign: true }), sub: pct(res.current.total.unrealized_pct, { sign: true }), tone: tone(res.current.total.unrealized) },
+                { v: money(res.pnl_end.median, ccy, { sign: true }), sub: `${pct(cost ? res.pnl_end.median / cost : null, { sign: true })} · ${L("mənfəət ehtimalı", "chance of profit")} ${prob(res.pnl_end.prob_profit)}`, tone: tone(res.pnl_end.median) })}
+              {row(L("3 aylıq gəlir", "3-month return"), L(`faktiki: son ${H} ticarət günü · model: növbəti ${H}`, `actual: the last ${H} trading days · model: the next ${H}`),
+                { v: pct(a?.return_period, { sign: true }), sub: a?.return_period != null ? money(a.return_period * res.V0, ccy, { sign: true }) : undefined, tone: tone(a?.return_period) },
+                { v: pct(endMedian / res.V0 - 1, { sign: true }), sub: money(endMedian - res.V0, ccy, { sign: true }), tone: tone(endMedian - res.V0) })}
+
+              <tr className="group"><th colSpan={3}>Risk</th></tr>
+              {row(L("Dəyişkənlik (illik)", "Volatility (annual)"), L("qiymətin nə qədər yellənir; çox = riskli", "how much the value swings; more = riskier"),
+                { v: pct(a?.vol_annual), sub: L("son 1 il", "last year") },
+                { v: pct(ins?.investment.metrics.vol_annual), sub: L("proqnoz", "forecast") })}
+              {row(L("Pis 3 ay", "A bad 3 months"), L("20 haldan ən pis 1-də orta itki (CVaR 95%)", "average loss in the worst 1 of 20 cases (CVaR 95%)"),
+                { v: loss(a?.cvar95_pct), sub: a?.cvar95_pct != null ? money(-a.cvar95_pct * res.V0, ccy) : a ? L("tarixçə qısadır", "history too short") : undefined, tone: a?.cvar95_pct != null ? "neg" : "" },
+                { v: loss(cvar.cvar_pct), sub: money(-cvar.cvar_money, ccy), tone: "neg" })}
+              {row(L("Ən böyük düşüş", "Largest fall"), L("zirvədən ən dərin enmə", "deepest fall from a peak"),
+                { v: pct(a?.max_drawdown), sub: L("son 1 il", "last year"), tone: a?.max_drawdown ? "neg" : "" },
+                { v: pct(res.drawdown.mdd_percentiles["50"]), sub: L("3 ay ərzində, median", "within 3 months, median"), tone: "neg" })}
+            </tbody>
+          </table>
+        </div>
+        <p className="small muted" style={{ marginTop: 10, marginBottom: 0 }}>
+          {L("Faktiki rəqəmlər bugünkü tərkibin keçmişdə necə davranacağını göstərir (alış tarixindən asılı deyil)", "Actual figures show how today's holdings behaved in the past (regardless of when you bought them)")}
+          {a?.since ? L(`; tarixçə ${dateAz(a.since)}-dən`, `; history from ${dateAz(a.since)}`) : ""}.{" "}
+          {L("Keçmiş gələcəyə zəmanət deyil. Ətraflı:", "The past is no guarantee. Details:")}{" "}
+          <Link to="../results" relative="path">{L("İnvestisiya", "Investment")}</Link> · <Link to="../risk" relative="path">Risk</Link>.
+        </p>
+      </section>
+      <p className="disclaimer" role="note">{run.disclaimer}</p>
+    </>
+  );
+}
+
 export function InvestmentView() {
   const r = useResult();
   const [cp, setCp] = useCheckpoint("res" in r ? r.res : undefined, "run" in r ? r.run.id : undefined);

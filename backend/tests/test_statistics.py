@@ -289,3 +289,24 @@ def test_backtest_drift_is_production_capm_and_point_in_time():
     mu0 = _origin_drift(win, fs.models, DriftInputs(), origin)
     s2bar = np.array([m.long_run_var / m.scale ** 2 for m in fs.models])
     np.testing.assert_allclose(mu0, -0.5 * s2bar)
+
+
+def test_actual_measures_on_known_path():
+    import pandas as pd
+
+    from risk.measures import actual_measures
+
+    idx = pd.bdate_range("2023-01-02", periods=900)
+    # steady 0.1% a day, then one 20% fall and a recovery: known drawdown, return and volatility
+    r = np.full(len(idx), 0.001)
+    r[-100] = -0.2
+    val = pd.Series(1000 * np.cumprod(1 + r), index=idx)
+    cfg = {"vol_days": 252, "tail_days": 756, "min_windows": 60}
+    a = actual_measures(val, 63, cfg)
+    assert a["return_period"] == pytest.approx(1.001 ** 63 - 1)
+    assert a["max_drawdown"] == pytest.approx(-0.2)
+    assert a["vol_annual"] == pytest.approx(np.std(r[-252:], ddof=1) * np.sqrt(252), rel=1e-6)
+    assert a["cvar95_pct"] > 0.1 and a["windows"] == 756
+    # too little history: the measures that need it are None, not invented
+    short = actual_measures(val.iloc[:50], 63, cfg)
+    assert short["return_period"] is None and short["cvar95_pct"] is None and short["vol_annual"] > 0

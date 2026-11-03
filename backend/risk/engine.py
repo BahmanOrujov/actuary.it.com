@@ -22,7 +22,7 @@ from risk.diagnostics import return_diagnostics
 from risk.factors import capm_beta, clusters, hhi, multifactor
 from risk.garch import AssetModel, fit_ewma, garch_break_test, select_garch
 from risk.insights import collect as collect_insights
-from risk.measures import compute_measures, var_cvar
+from risk.measures import actual_measures, compute_measures, var_cvar
 from risk.simulate import SimOutput, build_pool, simulate_paths
 from risk.stress_names import stress_group, stress_name
 from validation.stat_tests import engle_sheppard, hosking_portmanteau
@@ -555,6 +555,8 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
     # past value of the current holdings (total-return prices); starts when every holding has a price
     hist_px = pdata.prices_base[symbols].ffill().loc[:as_of].dropna()
     hist_val = (hist_px.iloc[-cfg["model"]["history_days"]:] * pd.Series(qty, index=symbols)).sum(axis=1) + snap["cash"]
+    ac = cfg["model"]["actual"]
+    past_val = (hist_px.iloc[-(max(ac["tail_days"], ac["vol_days"]) + H + 1):] * pd.Series(qty, index=symbols)).sum(axis=1) + snap["cash"]
     client = {
         "as_of": as_of.isoformat(),
         "horizon_end": sessions[-1].isoformat(),
@@ -574,6 +576,7 @@ def run_generate(pdata: PortfolioData, md: MarketData, cfg: dict[str, Any],
         "pnl_end": meas["pnl_end"],
         "histogram": meas["histogram"],
         "drawdown": meas["drawdown"],
+        "actual": actual_measures(past_val, H, ac),
         "assets": assets_out,
         "correlation": {"symbols": [symbols[i] for i in order], "names": [names[i] for i in order],
                         "matrix": Cnow[np.ix_(order, order)].round(3).tolist()} if len(symbols) > 1 else None,
