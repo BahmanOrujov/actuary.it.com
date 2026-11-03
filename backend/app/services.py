@@ -281,6 +281,7 @@ def client_run_view(db: Session, run: AnalysisRun, portfolio: Portfolio, audit_u
         audit(db, audit_user, "recommendations_shown",
               {"run_id": run.id, "model_version": run.model_version, "fingerprint": run.snapshot.get("fingerprint"),
                "reliability": run.reliability, "items": [{"kind": r["kind"], "action": r["action"], "symbol": r.get("symbol"),
+                                                         "basis": r.get("basis", "model"),
                                                          "shares": r.get("shares")} for r in rec_list]})
     return out
 

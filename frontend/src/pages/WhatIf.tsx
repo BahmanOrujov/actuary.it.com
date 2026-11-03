@@ -10,8 +10,9 @@ interface Draft extends WhatIfTrade {
   label: string;
 }
 
-/** "What if I sold X and bought Y?": the same analysis on a hidden copy of the portfolio, next to the real one. */
-export default function WhatIfPage() {
+/** "What if I sold X and bought Y?": the same analysis on a hidden copy of the portfolio, next to the real one.
+ *  One scenario serves both views: "today" compares the past measures, "forecast" the model's. */
+export default function WhatIfPage({ basis = "model" }: { basis?: "model" | "history" }) {
   const { id } = useParams();
   const pid = Number(id);
   const { summary } = usePortfolio();
@@ -73,8 +74,11 @@ export default function WhatIfPage() {
           <div>
             <h2>{L("Nə olardı?", "What if?")}</h2>
             <div className="sub">
-              {L("Hipotetik alış və satışları sınayın: portfelin gözlənilən gəliri və riski necə dəyişərdi? Əsl portfeliniz dəyişmir.",
-                "Try hypothetical buys and sells: how would the expected return and the risk of the portfolio change? Your real portfolio is not changed.")}
+              {basis === "history"
+                ? L("Hipotetik alış və satışları sınayın: dəyişdirilmiş portfel keçmişdə necə gəlir gətirər və nə qədər itirərdi? Əsl portfeliniz dəyişmir.",
+                  "Try hypothetical buys and sells: how would the changed portfolio have earned and how much would it have lost in the past? Your real portfolio is not changed.")
+                : L("Hipotetik alış və satışları sınayın: portfelin gözlənilən gəliri və riski necə dəyişərdi? Əsl portfeliniz dəyişmir.",
+                  "Try hypothetical buys and sells: how would the expected return and the risk of the portfolio change? Your real portfolio is not changed.")}
             </div>
           </div>
         </div>
@@ -128,7 +132,9 @@ export default function WhatIfPage() {
             </p>
           )}
           {view.run?.status === "failed" && <div className="banner err">✕ {view.run.error}</div>}
-          {view.run?.status === "done" && <Compare base={view.base} scen={view.scenario} ccy={ccy} />}
+          {view.run?.status === "done" && (basis === "history"
+            ? <ComparePast base={view.base} scen={view.scenario} ccy={ccy} />
+            : <Compare base={view.base} scen={view.scenario} ccy={ccy} />)}
         </section>
       )}
     </>
@@ -274,6 +280,65 @@ function Compare({ base, scen, ccy }: { base: Headline | null; scen: Headline | 
       <p className="hint" style={{ marginTop: 8 }}>
         {L("Yaşıl — ssenari bu göstəricidə daha yaxşıdır, qırmızı — daha pisdir. Bu, məsləhət deyil; qərarı siz verirsiniz.",
           "Green — the scenario is better on this measure, red — worse. This is not advice; the decision is yours.")}
+      </p>
+    </>
+  );
+}
+
+/** The scenario against the real portfolio on past prices: what each would have earned and lost. */
+function ComparePast({ base, scen, ccy }: { base: Headline | null; scen: Headline | null; ccy: string }) {
+  if (!scen) return null;
+  const a = base?.actual;
+  const b = scen.actual;
+  if (!base || !a || !b) {
+    return (
+      <div className="banner info"><span className="ic">ℹ</span>
+        {L("Müqayisə üçün əsl portfel üçün Generate basın, sonra ssenarini yenidən hesablayın.", "To compare, run Generate for the real portfolio, then analyse the scenario again.")}
+      </div>
+    );
+  }
+  // percentages compare like for like; lower is better for the losses and the swings
+  const rows: { label: string; a: number | null | undefined; b: number | null | undefined; higherBetter: boolean | null; loss?: boolean; plain?: boolean }[] = [
+    { label: L("Son 3 ay gəlir", "Last 3 months' return"), a: a.return_period, b: b.return_period, higherBetter: true },
+    { label: L("Son 1 il gəlir", "Last year's return"), a: a.return_year, b: b.return_year, higherBetter: true },
+    { label: L("Dəyişkənlik (illik)", "Volatility (annual)"), a: a.vol_annual, b: b.vol_annual, higherBetter: false, plain: true },
+    { label: L("Pis 3 ay (CVaR 95%)", "A bad 3 months (CVaR 95%)"), a: a.cvar95_pct, b: b.cvar95_pct, higherBetter: false, loss: true },
+    { label: L("Ən böyük düşüş (1 il)", "Largest fall (1 year)"), a: a.max_drawdown, b: b.max_drawdown, higherBetter: true },
+  ];
+  const show = (v: number | null | undefined, loss?: boolean, plain?: boolean) => (v == null ? "—" : loss ? pct(-v) : pct(v, { sign: !plain }));
+  return (
+    <>
+      <table className="compare">
+        <thead>
+          <tr><th /><th className="num">{L("İndiki portfel", "Current portfolio")}</th><th className="num">{L("Ssenari", "Scenario")}</th><th className="num">{L("Fərq", "Change")}</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>{L("Portfelin dəyəri", "Portfolio value")}</td><td className="num">{money(base.value, ccy)}</td><td className="num">{money(scen.value, ccy)}</td><td className="num">{money(scen.value - base.value, ccy, { sign: true })}</td></tr>
+          {rows.map((r) => {
+            const d = r.a != null && r.b != null ? r.b - r.a : null;
+            const tone = d == null || r.higherBetter == null || Math.abs(d) < 1e-9 ? "" : (d > 0) === r.higherBetter ? "better" : "worse";
+            return (
+              <tr key={r.label}>
+                <td>{r.label}</td>
+                <td className="num">{show(r.a, r.loss, r.plain)}</td>
+                <td className="num">{show(r.b, r.loss, r.plain)}</td>
+                <td className={`num ${tone}`}>{d == null ? "—" : points(r.loss ? -d : d, 2)}</td>
+              </tr>
+            );
+          })}
+          {scen.risk_limit != null && (
+            <tr>
+              <td>{L("Risk limiti", "Risk limit")}</td>
+              <td className="num">{a.cvar95_pct != null ? (a.cvar95_pct <= (base.risk_limit ?? Infinity) ? "✓" : "✕") : "—"} {pct(base.risk_limit)}</td>
+              <td className="num">{b.cvar95_pct != null ? (b.cvar95_pct <= scen.risk_limit ? "✓" : "✕") : "—"} {pct(scen.risk_limit)}</td>
+              <td />
+            </tr>
+          )}
+        </tbody>
+      </table>
+      <p className="hint" style={{ marginTop: 8 }}>
+        {L("Hər iki portfel eyni keçmiş qiymətlərlə ölçülür. Yaşıl — ssenari keçmişdə daha yaxşı olardı, qırmızı — daha pis. Keçmiş gələcəyə zəmanət deyil; qərarı siz verirsiniz.",
+          "Both portfolios are measured on the same past prices. Green — the scenario would have done better, red — worse. The past is no guarantee; the decision is yours.")}
       </p>
     </>
   );

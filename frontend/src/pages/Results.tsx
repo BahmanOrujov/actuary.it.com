@@ -60,7 +60,7 @@ function RagChip({ status }: { status: Rag }) {
   return <span className={`rag ${status}`}><span className="dot" aria-hidden="true" /> {RAG_LABEL[status]}</span>;
 }
 
-function useResult(): { run: RunView; res: RunResult; ins: Insights | undefined } | { empty: JSX.Element } {
+export function useResult(): { run: RunView; res: RunResult; ins: Insights | undefined } | { empty: JSX.Element } {
   const { run, runLoaded } = usePortfolio();
   const res = run?.status === "done" ? run.result : undefined;
   if (!run || !res) return { empty: <NoResults run={run} runLoaded={runLoaded} /> };
@@ -68,7 +68,7 @@ function useResult(): { run: RunView; res: RunResult; ins: Insights | undefined 
   return { run, res, ins: res.insights };
 }
 
-function OlderRun() {
+export function OlderRun() {
   return (
     <div className="banner info">
       <span className="ic">ℹ</span>
@@ -79,7 +79,7 @@ function OlderRun() {
 }
 
 /** The four numbers a reader needs first, large, before any text. */
-function Hero({ items }: {
+export function Hero({ items }: {
   items: { label: string; value: string; sub?: string; tone?: "pos" | "neg" | "warn"; subTone?: "pos" | "neg" }[];
 }) {
   return (
@@ -639,7 +639,7 @@ export function ValuationView() {
           {L("Faktiki rəqəmlər bugünkü tərkibin keçmişdə necə davranacağını göstərir (alış tarixindən asılı deyil)", "Actual figures show how today's holdings behaved in the past (regardless of when you bought them)")}
           {a?.since ? L(`; tarixçə ${dateAz(a.since)}-dən`, `; history from ${dateAz(a.since)}`) : ""}.{" "}
           {L("Keçmiş gələcəyə zəmanət deyil. Ətraflı:", "The past is no guarantee. Details:")}{" "}
-          <Link to="../results" relative="path">{L("İnvestisiya", "Investment")}</Link> · <Link to="../risk" relative="path">Risk</Link>.
+          <Link to="../today/investment" relative="path">{L("Bu gün", "Today")}</Link> · <Link to="../forecast/investment" relative="path">{L("Proqnoz", "Forecast")}</Link>.
         </p>
       </section>
       <p className="disclaimer" role="note">{run.disclaimer}</p>

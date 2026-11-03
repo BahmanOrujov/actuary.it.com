@@ -70,6 +70,9 @@ def build_recommendations(ctx: dict[str, Any], cfg: dict[str, Any], reliability:
     limit_money = ctx["limit"] * V
     recs: list[dict[str, Any]] = []
     disclaimer = cfg_text(rc, "disclaimer")
+    history = ctx.get("basis") == "history"
+    bad = (L("keçmişin ən pis 3 aylıq dövrlərindəki", "the worst past 3-month periods'") if history
+           else L("pis ssenarilərdəki", "bad scenarios'"))
 
     def rec(kind: str, action: str, i: int | None, frac: float, reason: str, extra: dict | None = None) -> None:
         keep = base_keep.copy()
@@ -103,10 +106,10 @@ def build_recommendations(ctx: dict[str, Any], cfg: dict[str, Any], reliability:
                 if frac > 0.005:
                     flagged.add(i)
                     rec("risk_share", "reduce", i, frac,
-                        L(f"{names[i]} portfelin {w[i]:.0%} hissəsidir, amma pis ssenarilərdəki itkinin "
+                        L(f"{names[i]} portfelin {w[i]:.0%} hissəsidir, amma {bad} itkinin "
                           f"{share:.0%}-ni verir. Mövqeni azaltmaq riski payına uyğunlaşdırar.",
-                          f"{names[i]} is {w[i]:.0%} of the portfolio but causes {share:.0%} of the loss in bad "
-                          "scenarios. Reducing the position would bring its risk in line with its weight."))
+                          f"{names[i]} is {w[i]:.0%} of the portfolio but causes {share:.0%} of {bad} loss. "
+                          "Reducing the position would bring its risk in line with its weight."))
 
     # limit breach: greedy sells by marginal CVaR per money unit
     if cvar_now > limit_money and N >= 1:
@@ -138,9 +141,9 @@ def build_recommendations(ctx: dict[str, Any], cfg: dict[str, Any], reliability:
             if i in flagged:
                 continue
             rec("limit", "reduce", i, frac,
-                L(f"Portfelin 3 aylıq CVaR 95%-i ({_pct(cvar_now / V)}) seçdiyiniz limiti ({ctx['limit']:.0%}) keçir. "
+                L(f"Portfelin {'keçmişdəki ' if history else ''}3 aylıq CVaR 95%-i ({_pct(cvar_now / V)}) seçdiyiniz limiti ({ctx['limit']:.0%}) keçir. "
                   f"{names[i]} satılan hər pul vahidi üçün riski ən çox azaldan mövqelərdəndir.",
-                  f"The portfolio's 3-month CVaR 95% ({_pct(cvar_now / V)}) exceeds your limit ({ctx['limit']:.0%}). "
+                  f"The portfolio's {'past ' if history else ''}3-month CVaR 95% ({_pct(cvar_now / V)}) exceeds your limit ({ctx['limit']:.0%}). "
                   f"Per unit of money sold, {names[i]} is among the positions that reduce the risk the most."))
             flagged.add(i)
 
@@ -213,4 +216,6 @@ def build_recommendations(ctx: dict[str, Any], cfg: dict[str, Any], reliability:
         if syms[i] not in mentioned:
             rec("hold", "hold", i, 0.0, L(f"{names[i]} üçün risk göstəriciləri həddlər daxilindədir; dəyişiklik tələb olunmur.",
                                           f"{names[i]}'s risk measures are within the thresholds; no change is needed."))
+    for r in recs:
+        r["basis"] = "history" if history else "model"
     return recs

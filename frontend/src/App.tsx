@@ -10,12 +10,10 @@ import NotificationsPage from "./pages/Notifications";
 import PortfolioEditor from "./pages/PortfolioEditor";
 import PortfolioLayout from "./pages/PortfolioLayout";
 import PortfoliosPage from "./pages/Portfolios";
-import RecommendationsPage from "./pages/Recommendations";
-import { InvestmentView, RiskView, ValuationView } from "./pages/Results";
 import ResetPage from "./pages/Reset";
 import SettingsPage from "./pages/Settings";
 import SharedLayout from "./pages/Shared";
-import WhatIfPage from "./pages/WhatIf";
+import { resultRoutes } from "./pages/Views";
 import { t } from "./i18n";
 import { L } from "./lang";
 
@@ -90,11 +88,8 @@ export default function App() {
     return (
       <Routes>
         <Route path="/shared/:token" element={<SharedLayout />}>
-          <Route index element={<Navigate to="results" replace />} />
-          <Route path="valuation" element={<ValuationView />} />
-          <Route path="results" element={<InvestmentView />} />
-          <Route path="risk" element={<RiskView />} />
-          <Route path="recommendations" element={<RecommendationsPage />} />
+          <Route index element={<Navigate to="today" replace />} />
+          {resultRoutes(false)}
         </Route>
       </Routes>
     );
@@ -147,11 +142,7 @@ export default function App() {
               <Route path="/" element={<PortfoliosPage />} />
               <Route path="/portfolios/:id" element={<PortfolioLayout />}>
                 <Route index element={<PortfolioEditor />} />
-                <Route path="valuation" element={<ValuationView />} />
-                <Route path="results" element={<InvestmentView />} />
-                <Route path="risk" element={<RiskView />} />
-                <Route path="recommendations" element={<RecommendationsPage />} />
-                <Route path="whatif" element={<WhatIfPage />} />
+                {resultRoutes(!DEMO)}
               </Route>
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/notifications" element={<NotificationsPage onChange={refreshUnread} />} />

@@ -294,19 +294,31 @@ def test_backtest_drift_is_production_capm_and_point_in_time():
 def test_actual_measures_on_known_path():
     import pandas as pd
 
+    from recommend.risk_based import build_recommendations
     from risk.measures import actual_measures
 
     idx = pd.bdate_range("2023-01-02", periods=900)
-    # steady 0.1% a day, then one 20% fall and a recovery: known drawdown, return and volatility
+    # A: steady 0.1% a day, then one 20% fall; B: flat. Known drawdown, return, volatility and risk split.
     r = np.full(len(idx), 0.001)
     r[-100] = -0.2
-    val = pd.Series(1000 * np.cumprod(1 + r), index=idx)
+    px = pd.DataFrame({"A": 100 * np.cumprod(1 + r), "B": np.full(len(idx), 50.0)}, index=idx)
     cfg = {"vol_days": 252, "tail_days": 756, "min_windows": 60}
-    a = actual_measures(val, 63, cfg)
-    assert a["return_period"] == pytest.approx(1.001 ** 63 - 1)
-    assert a["max_drawdown"] == pytest.approx(-0.2)
-    assert a["vol_annual"] == pytest.approx(np.std(r[-252:], ddof=1) * np.sqrt(252), rel=1e-6)
-    assert a["cvar95_pct"] > 0.1 and a["windows"] == 756
+    a, P = actual_measures(px, np.array([10.0, 20.0]), 0.0, 63, cfg)
+    val = px["A"] * 10 + 1000
+    assert a["return_period"] == pytest.approx(val.iloc[-1] / val.iloc[-64] - 1)
+    A = a["assets"][0]
+    assert A["return_period"] == pytest.approx(1.001 ** 63 - 1) and A["max_drawdown"] == pytest.approx(-0.2)
+    assert A["vol_annual"] == pytest.approx(np.std(r[-252:], ddof=1) * np.sqrt(252), rel=1e-6)
+    # the flat stock carries no risk: the whole bad-case loss is A's
+    assert a["assets"][1]["cvar_share"] == pytest.approx(0.0) and A["cvar_share"] == pytest.approx(1.0)
+    assert P.shape == (756, 2) and a["cvar95_pct"] > 0 and a["worst_period"] <= -a["cvar95_pct"] + 1e-12
+    # the recommender runs on the past periods unchanged and says which view it used
+    recs = build_recommendations({"symbols": ["A", "B"], "names": ["A", "B"], "qty": [10, 20], "mv": (px.iloc[-1] * [10, 20]).tolist(),
+                                  "price": px.iloc[-1].tolist(), "pnl_assets": P, "V": float((px.iloc[-1] * [10, 20]).sum()),
+                                  "limit": 0.01, "basis": "history"},
+                                 {"recommend": {"disclaimer": "x", "risk_share_ratio": 1.5, "max_position_weight": 0.9,
+                                                "max_cluster_weight": 0.9}}, "high")
+    assert recs and all(x["basis"] == "history" for x in recs) and any(x["action"] == "reduce" for x in recs)
     # too little history: the measures that need it are None, not invented
-    short = actual_measures(val.iloc[:50], 63, cfg)
-    assert short["return_period"] is None and short["cvar95_pct"] is None and short["vol_annual"] > 0
+    short, P2 = actual_measures(px.iloc[:50], np.array([10.0, 20.0]), 0.0, 63, cfg)
+    assert short["return_period"] is None and short["cvar95_pct"] is None and P2 is None and short["vol_annual"] > 0

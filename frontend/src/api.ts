@@ -133,6 +133,7 @@ export interface PortfolioSummary {
     range90: [number, number] | null;
     prob_profit: number | null;
     horizon_end: string | null;
+    actual?: Omit<Actual, "assets"> | null;
   };
 }
 
@@ -203,6 +204,22 @@ export interface NotificationItem {
 }
 
 export type Reliability = "high" | "medium" | "low" | "checking";
+
+/** "Today": the current holdings measured on their own past prices (value path and past 3-month periods). */
+export interface ActualStats {
+  return_period: number | null;
+  return_year?: number | null;
+  vol_annual: number | null;
+  max_drawdown: number | null;
+}
+export interface Actual extends ActualStats {
+  cvar95_pct: number | null;
+  var95_pct?: number | null;
+  worst_period?: number | null;
+  windows: number;
+  since: string | null;
+  assets?: (ActualStats & { symbol: string; weight: number; cvar_share: number | null })[];
+}
 
 export interface Checkpoint {
   h: number;
@@ -275,6 +292,8 @@ export interface Recommendation {
   prob_target?: number;
   prob_touch_target?: number;
   prob_touch_stop?: number;
+  /** Which view made it: the model's scenarios or the past 3-month periods ("today"); absent = model. */
+  basis?: "model" | "history";
 }
 
 export interface RunResult {
@@ -349,14 +368,7 @@ export interface RunResult {
   };
   histogram: { edges: number[]; counts: number[]; below?: number; above?: number };
   /** The current holdings on their own past prices (absent in results older than the feature). */
-  actual?: {
-    return_period: number | null;
-    vol_annual: number | null;
-    max_drawdown: number | null;
-    cvar95_pct: number | null;
-    windows: number;
-    since: string | null;
-  };
+  actual?: Actual;
   drawdown: {
     mdd_percentiles: Record<string, number>;
     exceedance: { x: number; p_drawdown: number; p_touch: number; p_end: number }[];

@@ -45,7 +45,7 @@ export default function PortfoliosPage() {
           const h = p.headline;
           const use = h?.cvar95 != null && h.risk_limit ? h.cvar95 / h.risk_limit : null;
           return (
-            <Link key={p.id} to={`/portfolios/${p.id}${h ? "/results" : ""}`} className="p-card">
+            <Link key={p.id} to={`/portfolios/${p.id}${h ? "/today" : ""}`} className="p-card">
               <div className="p-head">
                 <span className="p-title">{p.name}</span>
                 <span className="badge checking">{p.base_currency}</span>

@@ -115,6 +115,9 @@ def _compute(db, run: AnalysisRun, frozen, cfg: dict, md: MarketData, progress, 
     client, admin, rec_ctx = run_generate(pdata, md, cfg, progress, db)
     rec_ctx["limit"] = risk_limit_for(db, frozen)
     recs = build_recommendations(rec_ctx, cfg, "checking")
+    if rec_ctx.get("pnl_assets_hist") is not None:  # "today": the same rules on the past 3-month periods
+        recs += build_recommendations({**rec_ctx, "pnl_assets": rec_ctx["pnl_assets_hist"], "basis": "history",
+                                       "stress": [], "targets": []}, cfg, "checking")
     client["risk_limit"] = rec_ctx["limit"]
     client["insights"] = build_insights(rec_ctx["insight"], rec_ctx["limit"], cfg)
     admin.update({"as_of": client["as_of"], "model_version": run.model_version, "seed": run.seed,

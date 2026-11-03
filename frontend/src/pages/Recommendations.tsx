@@ -10,14 +10,17 @@ const ACTION: Record<string, [string, string]> = {
   attention: ["⚠", L("diqqət", "attention")],
 };
 
-export default function RecommendationsPage() {
+/** The same rules on two sets of 3-month outcomes: the model's scenarios ("forecast") or the past periods ("today"). */
+export default function RecommendationsPage({ basis = "model" }: { basis?: "model" | "history" }) {
   const { run, runLoaded } = usePortfolio();
   if (!run || run.status !== "done" || !run.result) return <NoResults run={run} runLoaded={runLoaded} />;
 
   const res = run.result;
   const ccy = res.base_currency;
-  const recs = [...(run.recommendations ?? [])].sort((a, b) => order(a.action) - order(b.action));
-  const cvar = res.risk["0.95"];
+  const history = basis === "history";
+  const recs = [...(run.recommendations ?? [])].filter((r) => (r.basis ?? "model") === basis).sort((a, b) => order(a.action) - order(b.action));
+  const hc = res.actual?.cvar95_pct;
+  const cvar = history ? { cvar_pct: hc ?? 0, cvar_money: (hc ?? 0) * res.V0 } : res.risk["0.95"];
   const over = cvar.cvar_pct > res.risk_limit;
   const scale = Math.max(cvar.cvar_pct, res.risk_limit) * 1.25 || 1;
 
@@ -30,7 +33,9 @@ export default function RecommendationsPage() {
         <div className="card-head">
           <div>
             <h2>{L("Risk limitiniz", "Your risk limit")}</h2>
-            <div className="sub">{L("Ən pis 5% ssenaridə 3 aylıq orta itki (CVaR 95%) sizin limitinizlə müqayisədə.", "Average 3-month loss in the worst 5% of scenarios (CVaR 95%) against your limit.")}</div>
+            <div className="sub">{history
+              ? L("Bugünkü tərkib keçmişin ən pis 5% 3 aylıq dövründə orta hesabla nə qədər itirərdi (CVaR 95%) — limitinizlə müqayisədə.", "What today's holdings would have lost on average in the worst 5% of past 3-month periods (CVaR 95%), against your limit.")
+              : L("Ən pis 5% ssenaridə 3 aylıq orta itki (CVaR 95%) sizin limitinizlə müqayisədə.", "Average 3-month loss in the worst 5% of scenarios (CVaR 95%) against your limit.")}</div>
           </div>
           {over ? <span className="badge err">✕ {L("limit keçilib", "limit exceeded")}</span> : <span className="badge ok">✓ {L("limit daxilində", "within the limit")}</span>}
         </div>
@@ -42,12 +47,17 @@ export default function RecommendationsPage() {
           <span className="mark" style={{ left: `${(res.risk_limit / scale) * 100}%` }} title="limit" />
         </div>
         <p className="small muted" style={{ marginTop: 10 }}>
-          {L("Tövsiyələr gələcək risk və gəlirə əsaslanır, mövqenin hazırda mənfəətdə və ya zərərdə olmasına yox.", "Recommendations are based on future risk and return, not on whether a position is currently in profit or loss.")}{" "}
-          {L("Etibarlılıq", "Reliability")}: <ReliabilityBadge level={run.reliability} />
+          {history
+            ? L("Tövsiyələr bugünkü tərkibin keçmiş 3 aylıq dövrlərdəki riskinə əsaslanır, mövqenin hazırda mənfəətdə və ya zərərdə olmasına yox.", "Recommendations are based on the risk today's holdings showed over past 3-month periods, not on whether a position is currently in profit or loss.")
+            : L("Tövsiyələr gələcək risk və gəlirə əsaslanır, mövqenin hazırda mənfəətdə və ya zərərdə olmasına yox.", "Recommendations are based on future risk and return, not on whether a position is currently in profit or loss.")}{" "}
+          {history ? L("Əsas: keçmiş faktiki qiymətlər, model yoxdur.", "Basis: actual past prices, no model.")
+            : <>{L("Etibarlılıq", "Reliability")}: <ReliabilityBadge level={run.reliability} /></>}
         </p>
       </section>
 
-      {recs.length === 0 && <div className="card muted">{L("Bu portfel üçün tövsiyə yoxdur.", "There are no recommendations for this portfolio.")}</div>}
+      {recs.length === 0 && <div className="card muted">{history && !(run.recommendations ?? []).some((r) => r.basis === "history")
+        ? L("Bu nəticədə keçmişə əsaslanan tövsiyə yoxdur: tarixçə qısadır və ya nəticə köhnə versiyadadır — Generate basın.", "This result has no recommendations based on the past: the history is too short or the result is from an older version — press Generate.")
+        : L("Bu portfel üçün tövsiyə yoxdur.", "There are no recommendations for this portfolio.")}</div>}
       {recs.map((r, i) => {
         const [icon, label] = ACTION[r.action] ?? ["•", r.action];
         return (
@@ -56,7 +66,7 @@ export default function RecommendationsPage() {
               <h3 style={{ margin: 0, fontSize: 15 }}>
                 <span aria-hidden="true">{icon}</span> {label.toLocaleUpperCase("az")}: {r.name ?? r.symbol ?? ""}
               </h3>
-              <ReliabilityBadge level={r.reliability} />
+              {!history && <ReliabilityBadge level={r.reliability} />}
             </div>
             <p>{r.reason}</p>
             {(r.action === "reduce" || r.action === "increase") && (
@@ -73,10 +83,10 @@ export default function RecommendationsPage() {
         );
       })}
       <p className="disclaimer" role="note">{run.disclaimer}</p>
-      <p className="small muted">
+      {!history && <p className="small muted">
         {L("Monitorinq: faktiki qiymət 90% aralıqdan çıxanda bildiriş gəlir və mövqeyə yenidən baxmaq tövsiyə olunur. Bu, avtomatik satış deyil.",
           "Monitoring: when the actual price leaves the 90% range you get a notification suggesting a review of the position. This is not an automatic sale.")}
-      </p>
+      </p>}
     </>
   );
 }
