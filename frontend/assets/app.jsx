@@ -800,6 +800,9 @@ const { useState, useEffect } = React;
                 <a className="nav-link" href="/portfolio/" style={{ textDecoration: 'none' }}>
                   <IconTrendingUp /> {lang === 'AZ' ? 'Portfel Analizi' : 'Portfolio Analysis'}
                 </a>
+                <a className="nav-link" href="/learning/" style={{ textDecoration: 'none' }}>
+                  <IconBook /> Learning
+                </a>
                 <button className={`nav-link ${activeTab === 'create-report' ? 'active' : ''}`} onClick={() => { setActiveTab('create-report'); setMobileMenuOpen(false); }}>
                   <IconCpu /> {t.createReport}
                 </button>
@@ -877,6 +880,7 @@ const { useState, useEffect } = React;
                     { icon: <IconLayers />, az: ['Ehtiyat mühərriki', 'Polis üzrə prospektiv ehtiyatlar, illik cədvəllər və qrafiklər.'], en: ['Reserve engine', 'Prospective policy reserves with yearly schedules and charts.'], go: () => setActiveTab('create-report') },
                     { icon: <IconFileText />, az: ['Hesabatlar', 'Portfel göstəriciləri və avtomatlaşdırılmış, ixrac edilə bilən hesabatlar.'], en: ['Reports', 'Portfolio KPIs and automated, exportable reports.'], go: () => setActiveTab('create-report') },
                     { icon: <IconTrendingUp />, az: ['Portfel Analizi', 'Səhm portfeli üçün 3 aylıq ehtimal proqnozu, VaR/CVaR və stress testləri.'], en: ['Portfolio Analysis', '3-month probabilistic outlook, VaR/CVaR and stress tests for an equity portfolio.'], href: '/portfolio/' },
+                    { icon: <IconBook />, az: ['Learning', 'İnteraktiv kurslar: CFA iqtisadiyyat və Deep Learning. Hesabınızla daxil olun, tərəqqinizi izləyin.'], en: ['Learning', 'Interactive courses: CFA economics and Deep Learning. Sign in and track your own progress.'], href: '/learning/' },
                   ].map((f, i) => {
                     const [title, text] = f[lang === 'AZ' ? 'az' : 'en'];
                     const body = (
@@ -2708,6 +2712,7 @@ const { useState, useEffect } = React;
                   <button type="button" onClick={() => { setActiveTab('home'); window.scrollTo(0, 0); }}>{lang === 'AZ' ? 'Ana səhifə' : 'Home'}</button>
                   <button type="button" onClick={() => { setActiveTab('create-report'); window.scrollTo(0, 0); }}>{t.createReport}</button>
                   <a href="/portfolio/">{lang === 'AZ' ? 'Portfel Analizi' : 'Portfolio Analysis'}</a>
+                  <a href="/learning/">Learning</a>
                   <button type="button" onClick={() => { setActiveTab('blog'); window.scrollTo(0, 0); }}>{t.blog}</button>
                   <button type="button" onClick={() => { setActiveTab('actuaries'); window.scrollTo(0, 0); }}>{t.actuaries}</button>
                   <button type="button" onClick={() => { setActiveTab('feedback'); window.scrollTo(0, 0); }}>{lang === 'AZ' ? 'Rəy' : 'Feedback'}</button>

@@ -117,6 +117,11 @@ echo "==> https (Caddy)"
 			header_up X-Forwarded-Prefix /portfolio
 		}
 	}
+	# Learning: courses with accounts, its own service on 8010 (installed from its own project, see deploy/learning.md)
+	redir /learning /learning/ permanent
+	handle /learning/* {
+		reverse_proxy 127.0.0.1:8010
+	}
 	handle {
 		root * /opt/actuary/frontend
 		try_files {path} {path}/index.html
