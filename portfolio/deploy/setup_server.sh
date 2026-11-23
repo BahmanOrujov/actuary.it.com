@@ -75,7 +75,7 @@ echo "==> python environment (first run compiles nothing on x86/arm64 wheels; a 
 "$VENV/bin/pip" install -q -r "$APP/backend/requirements.txt"
 
 echo "==> frontend"
-(cd "$APP/frontend" && npm ci --no-audit --no-fund && npm run build)
+(cd "$APP/frontend" && npm ci --no-audit --no-fund && PA_BASE_PATH=/portfolio/ npm run build)  # served under /portfolio/ by Caddy
 
 echo "==> services"
 install -m 644 "$APP/deploy/portfel-api.service" /etc/systemd/system/

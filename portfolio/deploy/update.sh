@@ -4,6 +4,6 @@ set -euo pipefail
 APP=/opt/actuary/portfolio
 git -C /opt/actuary pull --ff-only
 /opt/portfel-venv/bin/pip install -q -r "$APP/backend/requirements.txt"
-(cd "$APP/frontend" && npm ci --no-audit --no-fund && npm run build)
+(cd "$APP/frontend" && npm ci --no-audit --no-fund && PA_BASE_PATH=/portfolio/ npm run build)  # served under /portfolio/ by Caddy
 systemctl restart portfel-api portfel-worker@generate portfel-worker@validate
 systemctl --no-pager --lines=0 status portfel-api portfel-worker@generate portfel-worker@validate | grep -E "●|Active:"
