@@ -8,10 +8,16 @@ export default function ResetPage() {
   const token = params.get("token") ?? "";
   const invite = params.get("invite") === "1"; // link from an admin's invitation: the first password, not a reset
   const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    // a typo in a hidden field would otherwise lock the user out of the password they think they set
+    if (pw !== pw2) {
+      setMsg({ ok: false, text: L("Parollar eyni deyil. Hər iki xanaya eyni parolu yazın.", "The passwords do not match. Type the same password in both fields.") });
+      return;
+    }
     try {
       await api.post("/api/auth/password-reset/confirm", { token, new_password: pw });
       setMsg({ ok: true, text: invite ? L("Parol təyin edildi. İndi e-poçtunuz və bu parolla daxil ola bilərsiniz.",
@@ -34,6 +40,10 @@ export default function ResetPage() {
             <label>
               {L("Yeni parol (ən azı 10 simvol; yayılmış parollar, ardıcıllıqlar və e-poçt adı qəbul olunmur)", "New password (at least 10 characters; common passwords, sequences and your e-mail name are not accepted)")}
               <input type="password" required minLength={10} autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} />
+            </label>
+            <label>
+              {L("Yeni parolu təkrarlayın", "Repeat the new password")}
+              <input type="password" required minLength={10} autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} />
             </label>
             <button className="primary" type="submit">{invite ? L("Parolu təyin et", "Set the password") : L("Parolu yenilə", "Update the password")}</button>
           </form>
