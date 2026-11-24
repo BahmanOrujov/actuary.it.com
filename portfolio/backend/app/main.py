@@ -8,7 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from app import api_admin, api_client
+from app import api_admin, api_client, api_internal
 from app.config import PROJECT_ROOT, get_settings
 from app.db import init_db
 from app.i18n import L, resolve_text, set_lang, start_bilingual
@@ -87,6 +87,7 @@ async def validation_error(request: Request, exc: RequestValidationError):
 
 app.include_router(api_client.router)
 app.include_router(api_admin.router)
+app.include_router(api_internal.router)
 
 DIST = PROJECT_ROOT / "frontend" / "dist"
 if DIST.exists():
